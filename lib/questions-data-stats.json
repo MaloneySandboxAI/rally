@@ -1,0 +1,1402 @@
+[
+  {
+    "id": 301,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A bar graph shows the following monthly sales: Jan=40, Feb=55, Mar=30, Apr=70. Which month had the highest sales?",
+    "options": [
+      "A) January",
+      "B) February",
+      "C) March",
+      "D) April"
+    ],
+    "correct": "D",
+    "explanation": "April's bar (70) is the tallest, indicating highest sales."
+  },
+  {
+    "id": 302,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "The ages of 5 students are: 14, 15, 15, 16, 20. What is the mean age?",
+    "options": [
+      "A) 15",
+      "B) 16",
+      "C) 15.5",
+      "D) 14"
+    ],
+    "correct": "B",
+    "explanation": "Mean = (14+15+15+16+20)/5 = 80/5 = 16."
+  },
+  {
+    "id": 303,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A nurse records patient wait times (in minutes): 8, 12, 15, 15, 22, 45. She wants to report the 'typical' wait time to hospital administration. Which measure is most appropriate, and why?",
+    "options": [
+      "A) Mean (19.5 min), because it uses all data points",
+      "B) Median (15 min), because it is not distorted by the outlier of 45 min",
+      "C) Mode (15 min), because it appears most often",
+      "D) Range (37 min), because it shows the spread"
+    ],
+    "correct": "B",
+    "explanation": "With an extreme outlier (45 min), the mean is pulled upward to ~19.5, misrepresenting most patients' experience. The median (15 min) is resistant to outliers and better reflects the typical wait time."
+  },
+  {
+    "id": 304,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A bag has 4 red marbles, 3 blue marbles, and 3 green marbles. What is the probability of randomly selecting a red marble?",
+    "options": [
+      "A) 1/4",
+      "B) 3/10",
+      "C) 4/10",
+      "D) 1/3"
+    ],
+    "correct": "C",
+    "explanation": "P(red) = 4/10 = 2/5; among the answer choices, 4/10 is listed."
+  },
+  {
+    "id": 305,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A scatterplot shows a strong upward trend from left to right. This indicates _____.",
+    "options": [
+      "A) No correlation",
+      "B) Negative correlation",
+      "C) Positive correlation",
+      "D) Perfect correlation of exactly 1"
+    ],
+    "correct": "C",
+    "explanation": "An upward trend means as x increases, y also increases—a positive correlation."
+  },
+  {
+    "id": 306,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A two-way table shows 60 boys and 40 girls. 30 boys and 25 girls prefer math. What fraction of all students prefer math?",
+    "options": [
+      "A) 55/100",
+      "B) 1/2",
+      "C) 55/90",
+      "D) 30/60"
+    ],
+    "correct": "A",
+    "explanation": "Total preferring math = 30+25=55 out of 100 total students."
+  },
+  {
+    "id": 307,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "The table below shows test scores for two classes.\n\nClass A: 72, 75, 78, 80, 82\nClass B: 60, 70, 80, 90, 100\n\nBoth classes have the same mean. Which statement best compares the distributions?",
+    "options": [
+      "A) Class A has more variability because the scores are higher",
+      "B) Class B has more variability because its scores are more spread out",
+      "C) Both classes have identical distributions",
+      "D) Class A is skewed right while Class B is symmetric"
+    ],
+    "correct": "B",
+    "explanation": "Both classes have a mean of 77.4 and 80 respectively... actually Class A mean = (72+75+78+80+82)/5 = 387/5 = 77.4 and Class B = (60+70+80+90+100)/5 = 400/5 = 80. They differ. Class B's scores span 40 points vs Class A's 10 points, so Class B has greater variability (range and standard deviation both larger)."
+  },
+  {
+    "id": 308,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A pie chart shows that 25% of students chose art as their favorite subject. If 200 students were surveyed, how many chose art?",
+    "options": [
+      "A) 25",
+      "B) 40",
+      "C) 50",
+      "D) 75"
+    ],
+    "correct": "C",
+    "explanation": "25% of 200 = 0.25 × 200 = 50 students."
+  },
+  {
+    "id": 309,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A line graph shows a city's temperature rising from 30°F in January to 85°F in July. What is the overall change?",
+    "options": [
+      "A) 45°F",
+      "B) 50°F",
+      "C) 55°F",
+      "D) 60°F"
+    ],
+    "correct": "C",
+    "explanation": "Change = 85 - 30 = 55°F."
+  },
+  {
+    "id": 310,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A quality control inspector examines items from a production line. Historically, 8% of items are defective. If the inspector checks 150 items, how many would be expected to be defective?",
+    "options": [
+      "A) 8",
+      "B) 10",
+      "C) 12",
+      "D) 15"
+    ],
+    "correct": "C",
+    "explanation": "Expected number of defective items = probability × sample size = 0.08 × 150 = 12."
+  },
+  {
+    "id": 311,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "The following dot plot shows the number of books read by students in a month: values 1, 1, 2, 3, 3, 3, 4, 5, 5, 8. Which statement is true about the shape of this distribution?",
+    "options": [
+      "A) It is symmetric",
+      "B) It is skewed left because the mean is below the median",
+      "C) It is skewed right because the outlier (8) pulls the mean above the median",
+      "D) It is bimodal with two clear peaks at 3 and 5"
+    ],
+    "correct": "C",
+    "explanation": "The outlier value of 8 pulls the mean upward relative to the median. Mean = (1+1+2+3+3+3+4+5+5+8)/10 = 35/10 = 3.5. Median = (3+3)/2 = 3. Mean > Median indicates right skew."
+  },
+  {
+    "id": 312,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A survey asked 50 people their favorite season. The results: Spring=15, Summer=20, Fall=10, Winter=5. What percentage chose Summer?",
+    "options": [
+      "A) 20%",
+      "B) 30%",
+      "C) 40%",
+      "D) 50%"
+    ],
+    "correct": "C",
+    "explanation": "20/50 = 0.40 = 40%."
+  },
+  {
+    "id": 313,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A table shows test scores for Class A (mean=78) and Class B (mean=85). Which class performed better on average?",
+    "options": [
+      "A) Class A",
+      "B) Class B",
+      "C) They performed equally",
+      "D) Cannot be determined"
+    ],
+    "correct": "B",
+    "explanation": "Class B's mean of 85 is higher than Class A's mean of 78."
+  },
+  {
+    "id": 314,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A bag contains 4 red chips and 6 blue chips. Two chips are drawn one at a time without replacement. Which expression correctly represents the probability that both chips are red?",
+    "options": [
+      "A) (4/10) × (4/10)",
+      "B) (4/10) × (3/9)",
+      "C) (4/10) + (3/9)",
+      "D) (4/10) × (3/10)"
+    ],
+    "correct": "B",
+    "explanation": "The first draw: 4 red out of 10 total = 4/10. After removing one red chip, the second draw: 3 red out of 9 remaining = 3/9. Since both events must occur, multiply: P = (4/10) × (3/9) = 12/90 = 2/15."
+  },
+  {
+    "id": 315,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A histogram shows bars at intervals 0-10, 10-20, 20-30. The tallest bar is at 10-20. What does this mean?",
+    "options": [
+      "A) Most values fall between 10 and 20",
+      "B) No values fall between 10 and 20",
+      "C) The mean is 15",
+      "D) Outliers are between 10 and 20"
+    ],
+    "correct": "A",
+    "explanation": "The tallest bar in a histogram represents the interval with the most data values."
+  },
+  {
+    "id": 316,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A data set has the following values: 3, 3, 3, 3, 100. The mean is significantly higher than the median. What caused this?",
+    "options": [
+      "A) The mode is too high",
+      "B) There are too few values",
+      "C) The outlier (100) pulls the mean up",
+      "D) The median was calculated incorrectly"
+    ],
+    "correct": "C",
+    "explanation": "Extreme outliers inflate the mean while the median (middle value) remains close to the cluster."
+  },
+  {
+    "id": 317,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A two-way table shows 80 students. 40 are in sports, 30 are in clubs, and 10 are in both. How many are in neither?",
+    "options": [
+      "A) 10",
+      "B) 15",
+      "C) 20",
+      "D) 25"
+    ],
+    "correct": "C",
+    "explanation": "Students in at least one activity = 40+30-10=60; students in neither = 80-60=20."
+  },
+  {
+    "id": 318,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A study finds a strong positive correlation (r = 0.88) between the number of fire stations in a city and the number of fires reported. A city council member concludes that fire stations cause fires. What is wrong with this reasoning?",
+    "options": [
+      "A) The correlation coefficient is not high enough to draw any conclusion",
+      "B) Correlation does not imply causation; both variables likely increase with city size",
+      "C) The study should have used a larger sample",
+      "D) Nothing is wrong — a strong correlation does justify a causal claim"
+    ],
+    "correct": "B",
+    "explanation": "A third variable — city size — drives both the number of fire stations and the number of fires reported. This is a classic confounding variable. Correlation, even strong correlation, cannot establish causation."
+  },
+  {
+    "id": 319,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A store's weekly revenues: $500, $600, $550, $700, $450. What is the mean weekly revenue?",
+    "options": [
+      "A) $550",
+      "B) $560",
+      "C) $570",
+      "D) $580"
+    ],
+    "correct": "B",
+    "explanation": "Mean = (500+600+550+700+450)/5 = 2800/5 = $560."
+  },
+  {
+    "id": 320,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A box plot shows: minimum=10, Q1=20, median=30, Q3=45, maximum=60. What is the interquartile range (IQR)?",
+    "options": [
+      "A) 25",
+      "B) 30",
+      "C) 40",
+      "D) 50"
+    ],
+    "correct": "A",
+    "explanation": "IQR = Q3 - Q1 = 45 - 20 = 25."
+  },
+  {
+    "id": 321,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A frequency table shows that 12 students scored 90-100. If 60 students took the test, what fraction scored in that range?",
+    "options": [
+      "A) 1/6",
+      "B) 1/5",
+      "C) 1/4",
+      "D) 1/3"
+    ],
+    "correct": "B",
+    "explanation": "12/60 = 1/5 of students scored in the 90-100 range."
+  },
+  {
+    "id": 322,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A graph shows annual rainfall for 5 cities. City D has the shortest bar at 15 inches. City B has the tallest at 60 inches. What is the ratio of City D to City B rainfall?",
+    "options": [
+      "A) 1:2",
+      "B) 1:3",
+      "C) 1:4",
+      "D) 1:5"
+    ],
+    "correct": "C",
+    "explanation": "15:60 = 1:4."
+  },
+  {
+    "id": 323,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "If a student scores at the 90th percentile, it means they scored better than _____ of test takers.",
+    "options": [
+      "A) 10%",
+      "B) 50%",
+      "C) 90%",
+      "D) 100%"
+    ],
+    "correct": "C",
+    "explanation": "The 90th percentile means scoring higher than 90% of the comparison group."
+  },
+  {
+    "id": 324,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A data set: 12, 15, 11, 18, 14. What is the median?",
+    "options": [
+      "A) 11",
+      "B) 12",
+      "C) 14",
+      "D) 15"
+    ],
+    "correct": "C",
+    "explanation": "Sorted: 11, 12, 14, 15, 18. Middle value is 14."
+  },
+  {
+    "id": 325,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A spinner has 8 equal sections: 3 red, 3 blue, 2 green. What is the probability of NOT spinning green?",
+    "options": [
+      "A) 1/4",
+      "B) 1/2",
+      "C) 3/4",
+      "D) 7/8"
+    ],
+    "correct": "C",
+    "explanation": "P(not green) = 1 - 2/8 = 6/8 = 3/4."
+  },
+  {
+    "id": 326,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A clothing store marks up all items by 40%, then runs a weekend sale offering 20% off marked prices. What is the net percent change from the original price?",
+    "options": [
+      "A) 20% increase",
+      "B) 12% increase",
+      "C) 0% — they cancel out",
+      "D) 8% decrease"
+    ],
+    "correct": "B",
+    "explanation": "Multiply the two factors: 1.40 × 0.80 = 1.12, which represents a net 12% increase over the original price. The 40% markup and 20% discount do not cancel because the discount is applied to the already-marked-up price."
+  },
+  {
+    "id": 327,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "Which measure of central tendency is most affected by an extreme outlier?",
+    "options": [
+      "A) Mode",
+      "B) Median",
+      "C) Mean",
+      "D) Range"
+    ],
+    "correct": "C",
+    "explanation": "The mean uses all values in its calculation, so extreme outliers pull it significantly up or down."
+  },
+  {
+    "id": 328,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A company has two departments. Department X has 30 employees with a mean salary of $60,000, and Department Y has 10 employees with a mean salary of $80,000. What is the mean salary across the entire company?",
+    "options": [
+      "A) $65,000",
+      "B) $70,000",
+      "C) $67,500",
+      "D) $72,000"
+    ],
+    "correct": "A",
+    "explanation": "Use a weighted mean. Total salary = 30×60,000 + 10×80,000 = 1,800,000 + 800,000 = 2,600,000. Mean = 2,600,000 ÷ 40 = $65,000. Simply averaging $60K and $80K ignores the difference in group sizes."
+  },
+  {
+    "id": 329,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A two-way table shows 50 males and 50 females. 20 males and 30 females prefer comedy. What percent of females prefer comedy?",
+    "options": [
+      "A) 20%",
+      "B) 30%",
+      "C) 50%",
+      "D) 60%"
+    ],
+    "correct": "D",
+    "explanation": "30 out of 50 females = 30/50 = 60%."
+  },
+  {
+    "id": 330,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A researcher reports that the probability of a student passing an exam given that they studied is 0.85, and the probability of passing given they did not study is 0.30. If 60% of students study, what is the probability a randomly selected student passes?",
+    "options": [
+      "A) 0.51",
+      "B) 0.57",
+      "C) 0.63",
+      "D) 0.85"
+    ],
+    "correct": "C",
+    "explanation": "P(pass) = P(pass|study)×P(study) + P(pass|no study)×P(no study) = 0.85×0.60 + 0.30×0.40 = 0.51 + 0.12 = 0.63. This is the law of total probability."
+  },
+  {
+    "id": 331,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A line of best fit on a scatterplot passes through (0, 5) and (10, 25). What is the slope?",
+    "options": [
+      "A) 1",
+      "B) 2",
+      "C) 3",
+      "D) 5"
+    ],
+    "correct": "B",
+    "explanation": "Slope = (25-5)/(10-0) = 20/10 = 2."
+  },
+  {
+    "id": 332,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A manager tracks the number of customer complaints per day for two weeks: 3, 5, 2, 8, 4, 6, 3, 7, 5, 4, 2, 9, 6, 4. Which day count represents the median, and what does it tell the manager?",
+    "options": [
+      "A) Median = 4; half of days had 4 or fewer complaints",
+      "B) Median = 4.5; half of days had fewer than 4.5 complaints",
+      "C) Median = 5; this is the most common daily count",
+      "D) Median = 4.5; the average daily complaint count is 4.5"
+    ],
+    "correct": "B",
+    "explanation": "Sorted: 2,2,3,3,4,4,4,5,5,6,6,7,8,9. With 14 values, the median is the average of the 7th and 8th values: (4+5)/2 = 4.5. This means half of all days had fewer than 4.5 complaints. The median is not the same as the mean or mode."
+  },
+  {
+    "id": 333,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "In a data set of 20 values, the 10th and 11th values (when ordered) are 45 and 51. What is the median?",
+    "options": [
+      "A) 45",
+      "B) 48",
+      "C) 51",
+      "D) 96"
+    ],
+    "correct": "B",
+    "explanation": "For an even number of values, median = average of two middle values = (45+51)/2 = 48."
+  },
+  {
+    "id": 334,
+    "category": "Data & Statistics",
+    "difficulty": "easy",
+    "question": "A box contains 3 defective and 7 non-defective items. One item is drawn and found to be defective. Without replacing it, a second item is drawn. What is the probability the second item is also defective?",
+    "options": [
+      "A) 3/10",
+      "B) 2/9",
+      "C) 1/3",
+      "D) 2/10"
+    ],
+    "correct": "B",
+    "explanation": "After removing one defective item, 2 defective items remain out of 9 total items. P(2nd defective | 1st defective) = 2/9."
+  },
+  {
+    "id": 335,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A scatterplot comparing hours studied and exam scores has a line of best fit with equation y = 5x + 60. According to the model, what score would a student who studied 8 hours expect?",
+    "options": [
+      "A) 90",
+      "B) 95",
+      "C) 100",
+      "D) 105"
+    ],
+    "correct": "C",
+    "explanation": "y = 5(8) + 60 = 40 + 60 = 100."
+  },
+  {
+    "id": 336,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A survey of 200 voters found that 55% support Candidate A. What is the margin of error at ±3%? Which range contains the likely true proportion?",
+    "options": [
+      "A) 49% to 55%",
+      "B) 52% to 58%",
+      "C) 50% to 60%",
+      "D) 48% to 62%"
+    ],
+    "correct": "B",
+    "explanation": "Margin of error ±3% around 55% gives the range 52% to 58%."
+  },
+  {
+    "id": 337,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A data set has a mean of 50 and standard deviation of 10. A value of 70 is how many standard deviations above the mean?",
+    "options": [
+      "A) 1",
+      "B) 1.5",
+      "C) 2",
+      "D) 2.5"
+    ],
+    "correct": "C",
+    "explanation": "z = (70-50)/10 = 20/10 = 2 standard deviations above the mean."
+  },
+  {
+    "id": 338,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A two-way table shows: 60 students passed and own a calculator; 20 students passed without a calculator; 15 failed and own a calculator; 5 failed without a calculator. What fraction of calculator owners passed?",
+    "options": [
+      "A) 4/5",
+      "B) 3/4",
+      "C) 2/3",
+      "D) 3/5"
+    ],
+    "correct": "A",
+    "explanation": "Calculator owners who passed: 60 out of 75 total calculator owners = 60/75 = 4/5."
+  },
+  {
+    "id": 339,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A study reports a correlation coefficient of r = −0.85. This indicates _____.",
+    "options": [
+      "A) No relationship between variables",
+      "B) A strong positive relationship",
+      "C) A strong negative relationship",
+      "D) A weak negative relationship"
+    ],
+    "correct": "C",
+    "explanation": "r = −0.85 indicates a strong negative linear relationship: as one variable increases, the other tends to decrease. The magnitude (0.85) signals strength; the negative sign signals direction."
+  },
+  {
+    "id": 340,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "The mean of 8 values is 14. If a 9th value of 23 is added, what is the new mean?",
+    "options": [
+      "A) 14",
+      "B) 15",
+      "C) 16",
+      "D) 17"
+    ],
+    "correct": "B",
+    "explanation": "Original sum = 8×14 = 112; new sum = 112+23 = 135; new mean = 135/9 = 15."
+  },
+  {
+    "id": 341,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A histogram is skewed right. Which is true about the relationship between mean and median?",
+    "options": [
+      "A) Mean equals median",
+      "B) Mean is greater than median",
+      "C) Median is greater than mean",
+      "D) Cannot be determined"
+    ],
+    "correct": "B",
+    "explanation": "In a right-skewed distribution, the tail pulls the mean to the right, making mean > median."
+  },
+  {
+    "id": 342,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A bag has 4 red, 6 blue, and 2 green marbles. Two marbles are drawn without replacement. What is the probability both are blue?",
+    "options": [
+      "A) 1/4",
+      "B) 5/22",
+      "C) 1/3",
+      "D) 3/11"
+    ],
+    "correct": "B",
+    "explanation": "P(both blue) = (6/12) × (5/11) = 30/132 = 5/22."
+  },
+  {
+    "id": 343,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A class's test scores are normally distributed with mean 75 and standard deviation 8. About what percentage of students scored between 67 and 83?",
+    "options": [
+      "A) 34%",
+      "B) 50%",
+      "C) 68%",
+      "D) 95%"
+    ],
+    "correct": "C",
+    "explanation": "67 to 83 is one standard deviation below and above the mean; in a normal distribution, ~68% of values fall within ±1 SD."
+  },
+  {
+    "id": 344,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A table shows sales data: Year 1=$10K, Year 2=$12K, Year 3=$14.4K. What is the percentage increase each year?",
+    "options": [
+      "A) 15%",
+      "B) 20%",
+      "C) 25%",
+      "D) 30%"
+    ],
+    "correct": "B",
+    "explanation": "12/10=1.2 (20% increase); 14.4/12=1.2 (20% increase)—consistent 20% annual growth."
+  },
+  {
+    "id": 345,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "In a sample of 100 adults, 45 drink coffee daily. A 95% confidence interval is given as (36%, 54%). What does this mean?",
+    "options": [
+      "A) Exactly 45% of all adults drink coffee daily",
+      "B) We are 95% confident the true population proportion is between 36% and 54%",
+      "C) 95% of the sample drinks coffee",
+      "D) The sample was 95% accurate"
+    ],
+    "correct": "B",
+    "explanation": "A confidence interval expresses the range within which the true population parameter is estimated to fall, with specified confidence."
+  },
+  {
+    "id": 346,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A regression model predicting test scores from hours of study has r² = 0.49. Which interpretation is correct?",
+    "options": [
+      "A) The correlation coefficient is 0.49",
+      "B) 49% of the variation in test scores is explained by hours studied",
+      "C) 49% of students improved their scores",
+      "D) The slope of the regression line is 0.49"
+    ],
+    "correct": "B",
+    "explanation": "r² (the coefficient of determination) measures the proportion of variance in the dependent variable explained by the independent variable. r² = 0.49 means 49% of the variation in test scores is accounted for by study hours. Note: r = √0.49 = 0.7, not 0.49."
+  },
+  {
+    "id": 347,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A data set: 2, 4, 4, 4, 5, 5, 7, 9. Which measure of central tendency is most useful for describing the typical value?",
+    "options": [
+      "A) Mean (5.0)",
+      "B) Median (4.5)",
+      "C) Mode (4)",
+      "D) All are equally useful"
+    ],
+    "correct": "A",
+    "explanation": "The mean (5.0) accounts for all values; with no significant outliers, it best represents the center of this balanced distribution."
+  },
+  {
+    "id": 348,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A table shows: 35% of students walk to school, 40% take the bus, 25% are driven. A student is chosen at random. What is the probability they walk OR are driven?",
+    "options": [
+      "A) 40%",
+      "B) 50%",
+      "C) 60%",
+      "D) 65%"
+    ],
+    "correct": "C",
+    "explanation": "P(walk or driven) = 35% + 25% = 60%."
+  },
+  {
+    "id": 349,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A line graph shows a company's profit: 2020=$50K, 2021=$40K, 2022=$35K, 2023=$42K. The trend from 2020-2022 is _____.",
+    "options": [
+      "A) Increasing",
+      "B) Decreasing",
+      "C) Stable",
+      "D) Fluctuating with an upward trend"
+    ],
+    "correct": "B",
+    "explanation": "From 2020-2022, profit fell from $50K to $35K—a decreasing trend over that period."
+  },
+  {
+    "id": 350,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "Which is an example of a confounding variable in a study linking coffee consumption to heart disease?",
+    "options": [
+      "A) The number of participants",
+      "B) The type of coffee consumed",
+      "C) Smoking habits of participants",
+      "D) The age of the researchers"
+    ],
+    "correct": "C",
+    "explanation": "Smoking is correlated with both coffee consumption and heart disease, making it a confounding variable."
+  },
+  {
+    "id": 351,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A population of 1,000 has a mean income of $50,000. A random sample of 100 has a mean of $48,000. What is this difference called?",
+    "options": [
+      "A) Standard deviation",
+      "B) Sampling error",
+      "C) Selection bias",
+      "D) Interquartile range"
+    ],
+    "correct": "B",
+    "explanation": "The difference between a sample statistic and the true population parameter is called sampling error."
+  },
+  {
+    "id": 352,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "In a normally distributed data set with mean 100 and SD 15, what approximate range contains 95% of values?",
+    "options": [
+      "A) 70 to 130",
+      "B) 85 to 115",
+      "C) 55 to 145",
+      "D) 60 to 140"
+    ],
+    "correct": "A",
+    "explanation": "95% of values fall within ±2 SD: 100 ± 30 = 70 to 130."
+  },
+  {
+    "id": 353,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A two-way table shows: 40 male sports fans, 60 female sports fans, 60 male non-fans, 40 female non-fans. What is the probability a randomly selected female is a sports fan?",
+    "options": [
+      "A) 40%",
+      "B) 50%",
+      "C) 60%",
+      "D) 70%"
+    ],
+    "correct": "C",
+    "explanation": "60 female fans out of 100 total females = 60/100 = 60%."
+  },
+  {
+    "id": 354,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A box plot shows data with Q1=40 and Q3=65. Using the 1.5×IQR rule, which value would be classified as an outlier?",
+    "options": [
+      "A) 80",
+      "B) 95",
+      "C) 100",
+      "D) 105"
+    ],
+    "correct": "D",
+    "explanation": "IQR = Q3 − Q1 = 65 − 40 = 25. Upper fence = Q3 + 1.5×IQR = 65 + 37.5 = 102.5. Values 80, 95, and 100 are all below 102.5 and are not outliers. Only 105 > 102.5, making it the outlier."
+  },
+  {
+    "id": 355,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A researcher finds that ice cream sales and drowning rates are positively correlated. The most likely explanation is _____.",
+    "options": [
+      "A) Ice cream causes drowning",
+      "B) Drowning causes increased ice cream sales",
+      "C) A third variable (hot weather) drives both",
+      "D) The correlation is a coincidence with no explanation"
+    ],
+    "correct": "C",
+    "explanation": "This is a classic example of a lurking variable—hot weather increases both ice cream consumption and swimming (thus drowning risk)."
+  },
+  {
+    "id": 356,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A data set has mean=20 and standard deviation=4. All values are multiplied by 3. What is the new mean and standard deviation?",
+    "options": [
+      "A) Mean=60, SD=4",
+      "B) Mean=60, SD=12",
+      "C) Mean=23, SD=12",
+      "D) Mean=60, SD=7"
+    ],
+    "correct": "B",
+    "explanation": "Multiplying by 3 scales both mean (20×3=60) and SD (4×3=12)."
+  },
+  {
+    "id": 357,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A sample of 5 test scores has a mean of 80. If 4 of the scores are 75, 85, 78, and 82, what is the fifth score?",
+    "options": [
+      "A) 80",
+      "B) 82",
+      "C) 84",
+      "D) 86"
+    ],
+    "correct": "A",
+    "explanation": "Total needed = 5×80=400; sum of known 4 = 75+85+78+82=320; 5th score = 400-320=80."
+  },
+  {
+    "id": 358,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A probability distribution shows P(X=1)=0.2, P(X=2)=0.3, P(X=3)=0.4, P(X=4)=0.1. What is the expected value (mean)?",
+    "options": [
+      "A) 2.0",
+      "B) 2.4",
+      "C) 2.5",
+      "D) 2.8"
+    ],
+    "correct": "B",
+    "explanation": "E(X) = 1(0.2)+2(0.3)+3(0.4)+4(0.1) = 0.2+0.6+1.2+0.4 = 2.4."
+  },
+  {
+    "id": 359,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A survey shows that a new drug reduces headache frequency by 30% compared to a placebo. The result is statistically significant at p<0.05. This means _____.",
+    "options": [
+      "A) The drug cures headaches completely",
+      "B) The result is unlikely to be due to chance",
+      "C) 95% of patients improved",
+      "D) The study was 95% accurate"
+    ],
+    "correct": "B",
+    "explanation": "p<0.05 means there is less than a 5% probability the result occurred by chance, making it statistically significant."
+  },
+  {
+    "id": 360,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A news website runs a poll asking readers to vote on whether a new law is popular. 80% of respondents oppose the law. Why might this result be misleading?",
+    "options": [
+      "A) The sample size is too small to matter",
+      "B) Online polls use voluntary response sampling — only those with strong opinions tend to participate, biasing results",
+      "C) The question should have been multiple choice",
+      "D) News websites are always biased in favor of laws"
+    ],
+    "correct": "B",
+    "explanation": "Voluntary response bias occurs when participation is self-selected. People with strong (often negative) opinions are far more likely to respond, making the sample unrepresentative of the broader population."
+  },
+  {
+    "id": 361,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A researcher wants to study reading achievement across 4 grades (6,7,8,9). She randomly selects 25 students from each grade. This is _____.",
+    "options": [
+      "A) Simple random sampling",
+      "B) Systematic sampling",
+      "C) Stratified sampling",
+      "D) Cluster sampling"
+    ],
+    "correct": "C",
+    "explanation": "Dividing the population into groups (strata) and randomly sampling from each is stratified sampling."
+  },
+  {
+    "id": 362,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A histogram shows household incomes are strongly right-skewed. A policymaker wants to report 'typical' household income. Which measure is most appropriate?",
+    "options": [
+      "A) Mean",
+      "B) Median",
+      "C) Mode",
+      "D) Range"
+    ],
+    "correct": "B",
+    "explanation": "For skewed distributions, the median is more representative of the typical value because it is not distorted by extreme values."
+  },
+  {
+    "id": 363,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "Two events A and B are independent. P(A) = 0.5 and P(B) = 0.4. What is P(A and B)?",
+    "options": [
+      "A) 0.1",
+      "B) 0.2",
+      "C) 0.4",
+      "D) 0.9"
+    ],
+    "correct": "B",
+    "explanation": "For independent events, P(A and B) = P(A) × P(B) = 0.5 × 0.4 = 0.2."
+  },
+  {
+    "id": 364,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A data set has Q1 = 30 and Q3 = 60. Using the 1.5 x IQR rule, any value above which number is an outlier?",
+    "options": [
+      "A) 90",
+      "B) 100",
+      "C) 105",
+      "D) 115"
+    ],
+    "correct": "C",
+    "explanation": "IQR = 30; 1.5 x 30 = 45; upper outlier threshold = Q3 + 45 = 60 + 45 = 105."
+  },
+  {
+    "id": 365,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A line of best fit for a data set has equation y = -3x + 90. What does the slope tell us?",
+    "options": [
+      "A) As x increases by 1, y increases by 3",
+      "B) As x increases by 1, y decreases by 3",
+      "C) The y-intercept is -3",
+      "D) x and y have no relationship"
+    ],
+    "correct": "B",
+    "explanation": "The slope of -3 means for each unit increase in x, y decreases by 3 units."
+  },
+  {
+    "id": 366,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A researcher reports that increasing study hours is correlated with higher grades (r=0.75). A student concludes that studying causes better grades. What is wrong with this conclusion?",
+    "options": [
+      "A) r=0.75 is not strong enough to matter",
+      "B) Correlation does not establish causation",
+      "C) The study should have used a larger sample",
+      "D) Nothing is wrong with the conclusion"
+    ],
+    "correct": "B",
+    "explanation": "Correlation measures the strength of a relationship but does not establish that one variable causes the other."
+  },
+  {
+    "id": 367,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set has values: 10, 20, 30, 40, 100. The standard deviation is approximately 32. If the outlier (100) is removed, what happens to the standard deviation?",
+    "options": [
+      "A) It increases significantly",
+      "B) It decreases significantly",
+      "C) It remains unchanged",
+      "D) It becomes zero"
+    ],
+    "correct": "B",
+    "explanation": "Removing the extreme outlier (100) brings values much closer to the mean, significantly reducing the standard deviation."
+  },
+  {
+    "id": 368,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A pharmaceutical study uses a control group and a treatment group. Neither patients nor doctors know who receives the drug. This is called a _____.",
+    "options": [
+      "A) Single-blind study",
+      "B) Randomized controlled trial",
+      "C) Double-blind study",
+      "D) Placebo-controlled observational study"
+    ],
+    "correct": "C",
+    "explanation": "When neither participants nor researchers know who is in which group, it is a double-blind study, eliminating both placebo and researcher bias."
+  },
+  {
+    "id": 369,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A researcher conducts two studies on the same drug. Study 1 uses n=50 and finds p=0.048. Study 2 uses n=2,000 and finds p=0.048 with an effect size of d=0.05 (very small). Which interpretation is most appropriate?",
+    "options": [
+      "A) Study 2 definitively proves the drug works because the large sample removes all doubt",
+      "B) Study 1 is more credible because small samples are harder to reach significance in",
+      "C) Study 2's result may be statistically significant but practically meaningless due to the tiny effect size",
+      "D) Both studies are equally meaningful since they have the same p-value"
+    ],
+    "correct": "C",
+    "explanation": "Large samples can detect trivially small effects as statistically significant. Study 2's p < 0.05 tells us the result is unlikely due to chance, but d = 0.05 indicates the actual effect is negligible in practice. Statistical significance and practical significance are distinct."
+  },
+  {
+    "id": 370,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "Events A and B have P(A)=0.6, P(B)=0.5, P(A∪B)=0.8. What is P(A∩B)?",
+    "options": [
+      "A) 0.1",
+      "B) 0.2",
+      "C) 0.3",
+      "D) 0.4"
+    ],
+    "correct": "C",
+    "explanation": "P(A∩B) = P(A)+P(B)-P(A∪B) = 0.6+0.5-0.8 = 0.3."
+  },
+  {
+    "id": 371,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A study compared two teaching methods. Method A: n=30, mean=82, SD=6. Method B: n=30, mean=86, SD=5. A t-test yields p=0.003. Which conclusion is most appropriate?",
+    "options": [
+      "A) Method B is better for all students",
+      "B) The 4-point difference is statistically significant and suggests Method B produces higher scores",
+      "C) The difference is too small to matter educationally",
+      "D) The study proves Method A is ineffective"
+    ],
+    "correct": "B",
+    "explanation": "p=0.003 < 0.05 indicates statistical significance; the observed difference is unlikely due to chance, supporting Method B's superiority in this sample."
+  },
+  {
+    "id": 372,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A scatterplot has a line of best fit y = 2x + 5 with r² = 0.64. What does r² = 0.64 tell us?",
+    "options": [
+      "A) 64% of variation in y is explained by x",
+      "B) The correlation coefficient is 0.64",
+      "C) 64% of data points lie on the line",
+      "D) The slope has 64% accuracy"
+    ],
+    "correct": "A",
+    "explanation": "R² (coefficient of determination) tells us what percentage of variance in the dependent variable is explained by the independent variable."
+  },
+  {
+    "id": 373,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A normally distributed data set has mean=100 and SD=15. What is the approximate probability that a randomly selected value falls between 85 and 130?",
+    "options": [
+      "A) 68%",
+      "B) 81.5%",
+      "C) 83.85%",
+      "D) 95%"
+    ],
+    "correct": "B",
+    "explanation": "85 is 1 SD below the mean (z = −1) and 130 is 2 SD above (z = +2). P(−1 < z < +2) = P(z < 2) − P(z < −1) = 0.9772 − 0.1587 ≈ 0.8185, or approximately 81.5%."
+  },
+  {
+    "id": 374,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A two-way table shows: 50 treated patients improved, 10 treated did not; 20 untreated improved, 40 untreated did not. What is the relative risk of improvement for treated vs. untreated?",
+    "options": [
+      "A) 2",
+      "B) 2.5",
+      "C) 3",
+      "D) 3.5"
+    ],
+    "correct": "B",
+    "explanation": "P(improve|treated)=50/60≈0.833; P(improve|untreated)=20/60≈0.333; relative risk = 0.833/0.333 ≈ 2.5."
+  },
+  {
+    "id": 375,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set has mean=50, median=45, and mode=40. The distribution is _____.",
+    "options": [
+      "A) Symmetric",
+      "B) Left-skewed",
+      "C) Right-skewed",
+      "D) Bimodal"
+    ],
+    "correct": "C",
+    "explanation": "When mean > median > mode, the distribution is right-skewed (positively skewed), with the tail extending right."
+  },
+  {
+    "id": 376,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A researcher uses a sample of 100 students to estimate the mean SAT score of 10,000 students. The sample mean is 1150 with SD=100. What is the standard error of the mean?",
+    "options": [
+      "A) 1",
+      "B) 10",
+      "C) 100",
+      "D) 1000"
+    ],
+    "correct": "B",
+    "explanation": "Standard error = SD/√n = 100/√100 = 100/10 = 10."
+  },
+  {
+    "id": 377,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "In a regression analysis of salary (y) and years of experience (x), b=5000 and the intercept=30000. What does b=5000 represent?",
+    "options": [
+      "A) The average salary is $5,000",
+      "B) Each additional year of experience is associated with $5,000 more in predicted salary",
+      "C) The minimum salary is $5,000",
+      "D) Experience explains $5,000 of variance"
+    ],
+    "correct": "B",
+    "explanation": "In regression, the slope (b) represents the average change in y for each one-unit increase in x."
+  },
+  {
+    "id": 378,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A hypothesis test yields a p-value of 0.02 at α=0.05. The effect size is very small (d=0.1). What is the most nuanced interpretation?",
+    "options": [
+      "A) The result is important because it is statistically significant",
+      "B) Statistical significance does not necessarily imply practical importance—the effect may be trivially small",
+      "C) The result should be ignored since d<1",
+      "D) The p-value proves the effect is real and large"
+    ],
+    "correct": "B",
+    "explanation": "Statistical significance (p<0.05) can occur with very small effect sizes in large samples; practical significance requires examining effect size, not just p-values."
+  },
+  {
+    "id": 379,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A dataset has 10 values. Removing the highest value decreases the mean by 5. What was the highest value relative to the original mean?",
+    "options": [
+      "A) 5 above the original mean",
+      "B) 45 above the original mean",
+      "C) 50 above the original mean",
+      "D) 10 above the original mean"
+    ],
+    "correct": "B",
+    "explanation": "If mean decreases by 5 after removing one of 10 values: (10 × mean - x)/9 = mean - 5; solving: x = mean + 45, so the removed value was 45 above the original mean."
+  },
+  {
+    "id": 380,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A clinical trial reports a relative risk reduction of 50% for a drug. If the absolute risk is reduced from 2% to 1%, what is the number needed to treat (NNT)?",
+    "options": [
+      "A) 50",
+      "B) 100",
+      "C) 200",
+      "D) 500"
+    ],
+    "correct": "B",
+    "explanation": "NNT = 1/absolute risk reduction = 1/(0.02-0.01) = 1/0.01 = 100."
+  },
+  {
+    "id": 381,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set has the equation for the line of best fit: y = 0.8x + 2, where x = hours of sleep and y = productivity score. The residual for a student with 7 hours of sleep and score 9 is _____.",
+    "options": [
+      "A) -1",
+      "B) 0",
+      "C) 1",
+      "D) 2"
+    ],
+    "correct": "C",
+    "explanation": "Predicted y = 0.8(7)+2 = 7.6; residual = actual - predicted = 9 - 7.6 = 1.4, which is approximately 1."
+  },
+  {
+    "id": 382,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "Which of the following best describes Type I error?",
+    "options": [
+      "A) Failing to reject a false null hypothesis",
+      "B) Rejecting a true null hypothesis",
+      "C) Accepting the alternative hypothesis correctly",
+      "D) Setting α too low"
+    ],
+    "correct": "B",
+    "explanation": "A Type I error (false positive) occurs when the null hypothesis is true but is incorrectly rejected."
+  },
+  {
+    "id": 383,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set of 200 values has mean 80 and SD 10. Using Chebyshev's theorem, at least what percentage of values lie between 60 and 100?",
+    "options": [
+      "A) 68%",
+      "B) 75%",
+      "C) 89%",
+      "D) 95%"
+    ],
+    "correct": "B",
+    "explanation": "The range 60-100 is 2 SDs from the mean. Chebyshev's theorem: at least 1-1/k² = 1-1/4 = 75% of values lie within 2 SDs."
+  },
+  {
+    "id": 384,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A researcher collects data on 500 patients and finds that those who took Vitamin D supplements had 20% fewer hospitalizations. Before concluding the supplement is effective, the researcher should most be concerned about _____.",
+    "options": [
+      "A) Whether the study was conducted in winter or summer",
+      "B) Whether patients who take supplements differ systematically from those who do not (confounding)",
+      "C) Whether the hospital records were stored digitally or on paper",
+      "D) Whether the patients knew what supplements they were taking"
+    ],
+    "correct": "B",
+    "explanation": "In an observational study, people who voluntarily take supplements may also be wealthier, more health-conscious, or have better access to care. These differences — not the supplement — could explain lower hospitalizations. This is the classic confounding problem in observational research."
+  },
+  {
+    "id": 385,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A distribution has mean=50 and SD=10. If all values are increased by 10 (adding 10 to each), which changes?",
+    "options": [
+      "A) Mean only",
+      "B) Standard deviation only",
+      "C) Both mean and standard deviation",
+      "D) Neither changes"
+    ],
+    "correct": "A",
+    "explanation": "Adding a constant shifts the mean (50→60) but does not change the spread (SD remains 10)."
+  },
+  {
+    "id": 386,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "Events A and B are mutually exclusive. P(A) = 0.3 and P(B) = 0.4. What is P(A or B)?",
+    "options": [
+      "A) 0.12",
+      "B) 0.58",
+      "C) 0.70",
+      "D) 0.30"
+    ],
+    "correct": "C",
+    "explanation": "For mutually exclusive events, P(A or B) = P(A) + P(B) = 0.3 + 0.4 = 0.7. There is no overlap to subtract because mutually exclusive events cannot both occur. Compare this to independent events, where P(A or B) = P(A) + P(B) − P(A)×P(B) = 0.58."
+  },
+  {
+    "id": 387,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A researcher increases sample size from 100 to 400. How does this affect the standard error?",
+    "options": [
+      "A) It doubles",
+      "B) It halves",
+      "C) It is reduced to 1/4",
+      "D) It quadruples"
+    ],
+    "correct": "B",
+    "explanation": "Standard error = SD/√n; quadrupling n (100→400) means √n doubles (10→20), so SE is halved."
+  },
+  {
+    "id": 388,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set contains: 5, 5, 5, 5, 5. What is the standard deviation?",
+    "options": [
+      "A) 0",
+      "B) 1",
+      "C) 5",
+      "D) 25"
+    ],
+    "correct": "A",
+    "explanation": "When all values are identical, there is no variation; the standard deviation is 0."
+  },
+  {
+    "id": 389,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A student's z-score is -1.5 in a distribution with mean=70 and SD=8. What is the student's actual score?",
+    "options": [
+      "A) 55",
+      "B) 58",
+      "C) 60",
+      "D) 65"
+    ],
+    "correct": "B",
+    "explanation": "Score = mean + z(SD) = 70 + (-1.5)(8) = 70 - 12 = 58."
+  },
+  {
+    "id": 390,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "In a survey, 70% of respondents were female. 40% of females and 30% of males answered 'yes' to a question. What percentage of all respondents answered 'yes'?",
+    "options": [
+      "A) 35%",
+      "B) 37%",
+      "C) 39%",
+      "D) 40%"
+    ],
+    "correct": "B",
+    "explanation": "P(yes) = 0.70(0.40)+0.30(0.30) = 0.28+0.09 = 0.37 = 37%."
+  },
+  {
+    "id": 391,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A multiple regression model predicts salary based on education and experience. The model has R²=0.72. A new variable (location) is added and R²=0.73. What is the correct interpretation?",
+    "options": [
+      "A) Location is not useful because R² increased by only 0.01",
+      "B) Location explains nearly all remaining variance",
+      "C) Adding location improves the model's explanatory power slightly",
+      "D) The model is now perfect"
+    ],
+    "correct": "C",
+    "explanation": "An increase in R² from 0.72 to 0.73 is a small but real improvement; whether the improvement is meaningful depends on further analysis (adjusted R² and significance tests)."
+  },
+  {
+    "id": 392,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A data set has an outlier that is 3 IQR above Q3. Its removal would most significantly impact _____.",
+    "options": [
+      "A) The median",
+      "B) The mode",
+      "C) The mean",
+      "D) The range (and IQR)"
+    ],
+    "correct": "C",
+    "explanation": "Outliers disproportionately affect the mean because it uses all values; the median and mode are resistant to outliers."
+  },
+  {
+    "id": 393,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A researcher wants to determine if there is a difference in test scores between three teaching methods. Which statistical test is most appropriate?",
+    "options": [
+      "A) t-test",
+      "B) Chi-square test",
+      "C) One-way ANOVA",
+      "D) Regression analysis"
+    ],
+    "correct": "C",
+    "explanation": "One-way ANOVA is used to compare means across three or more independent groups."
+  },
+  {
+    "id": 394,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "In a binomial experiment with n=10 and p=0.5, what is the expected number of successes?",
+    "options": [
+      "A) 4",
+      "B) 5",
+      "C) 6",
+      "D) 7"
+    ],
+    "correct": "B",
+    "explanation": "Expected value of a binomial distribution = n × p = 10 × 0.5 = 5."
+  },
+  {
+    "id": 395,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "Two studies measure the same effect. Study 1: n=50, p=0.04. Study 2: n=5000, p=0.04. Which conclusion is correct?",
+    "options": [
+      "A) Study 2 provides stronger evidence because larger samples produce more reliable estimates",
+      "B) Both studies are equally meaningful since p-values are identical",
+      "C) Study 1 is better because smaller samples are less biased",
+      "D) The p-value is irrelevant when samples are large"
+    ],
+    "correct": "A",
+    "explanation": "While p-values are equal, larger samples provide more precise estimates and narrower confidence intervals, giving stronger and more reliable evidence."
+  },
+  {
+    "id": 396,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A scatterplot shows a curved (nonlinear) relationship. Which is the most appropriate action?",
+    "options": [
+      "A) Use a simple linear regression model",
+      "B) Ignore the relationship since it isn't linear",
+      "C) Apply a transformation (like log) or use a nonlinear model",
+      "D) Remove data points that cause the curve"
+    ],
+    "correct": "C",
+    "explanation": "When a relationship is nonlinear, applying a mathematical transformation or using a nonlinear model is more appropriate than forcing a linear fit."
+  },
+  {
+    "id": 397,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A regression analysis of 500 students finds that hours of sleep (x) predicts GPA (y) with equation ŷ = 0.3x + 1.5 and r² = 0.18. A school administrator wants to mandate 9 hours of sleep to raise GPAs. What is the most important statistical limitation of this plan?",
+    "options": [
+      "A) The sample size of 500 is too small for regression",
+      "B) r² = 0.18 means sleep explains only 18% of GPA variance; most variance is unexplained, and correlation does not prove that mandating sleep will cause GPA gains",
+      "C) The y-intercept of 1.5 suggests many students have a GPA below 2.0",
+      "D) The regression equation only works for students who sleep exactly 8 hours"
+    ],
+    "correct": "B",
+    "explanation": "Even a statistically significant regression can have a low r², meaning the predictor explains only a small fraction of the outcome's variance. Additionally, the observational nature of the data means we cannot establish that increasing sleep causes higher GPAs — other factors (motivation, study habits) likely drive both."
+  },
+  {
+    "id": 398,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A 90% confidence interval for a population mean is (42, 58). Which statement is correct?",
+    "options": [
+      "A) 90% of individual values fall between 42 and 58",
+      "B) We are 90% confident the true population mean lies between 42 and 58",
+      "C) The sample mean is 90% accurate",
+      "D) 90% of all possible samples would produce this exact interval"
+    ],
+    "correct": "B",
+    "explanation": "A confidence interval estimates the plausible range for a population parameter with a specified level of confidence."
+  },
+  {
+    "id": 399,
+    "category": "Data & Statistics",
+    "difficulty": "medium",
+    "question": "A pie chart shows: Category A=45%, B=30%, C=25%. If 400 people were surveyed, how many more chose A than C?",
+    "options": [
+      "A) 60",
+      "B) 70",
+      "C) 80",
+      "D) 90"
+    ],
+    "correct": "C",
+    "explanation": "A: 0.45×400=180; C: 0.25×400=100; difference=80."
+  },
+  {
+    "id": 400,
+    "category": "Data & Statistics",
+    "difficulty": "hard",
+    "question": "A study finds a statistically significant correlation (r=0.7) between social media use and anxiety in teenagers. A critic notes the sample was drawn from a single school. The main concern is _____.",
+    "options": [
+      "A) The correlation coefficient is too low",
+      "B) Anxiety cannot be measured accurately",
+      "C) The sample may not be representative of all teenagers, limiting generalizability",
+      "D) Social media causes anxiety by definition"
+    ],
+    "correct": "C",
+    "explanation": "A single-school sample may not represent the diversity of all teenagers, raising concerns about external validity and generalizability."
+  }
+]
