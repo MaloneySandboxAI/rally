@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
@@ -120,10 +121,10 @@ export function SatCountdown() {
             <DialogTitle className="text-xl font-extrabold text-center">
               When is your SAT?
             </DialogTitle>
+            <DialogDescription className="text-center text-[#85B7EB] text-sm">
+              Enter your target test date to see a countdown on your home screen.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-center text-[#85B7EB] text-sm mb-4">
-            Enter your target test date to see a countdown on your home screen.
-          </p>
           <div className="flex flex-col gap-3">
             <Button 
               onClick={handleOpenDatePicker}
@@ -149,6 +150,9 @@ export function SatCountdown() {
             <DialogTitle className="text-xl font-extrabold text-center">
               Set Your SAT Date
             </DialogTitle>
+            <DialogDescription className="text-center text-[#85B7EB] text-sm">
+              Choose when you plan to take the SAT.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <input

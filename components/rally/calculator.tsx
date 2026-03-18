@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { Calculator as CalculatorIcon, X } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface CalculatorProps {
   isOpen: boolean
@@ -134,6 +134,9 @@ export function Calculator({ isOpen, onClose }: CalculatorProps) {
             <CalculatorIcon className="w-5 h-5 text-[#378ADD]" />
             Calculator
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Basic calculator for math questions
+          </DialogDescription>
         </DialogHeader>
         
         {/* Display */}
