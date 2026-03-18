@@ -1,7 +1,9 @@
-import algebraQuestions from './questions-algebra.json'
-import readingQuestions from './questions-reading.json'
-import grammarQuestions from './questions-grammar.json'
-import dataStatsQuestions from './questions-data-stats.json'
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseUrl = "https://ykxlushgytgfbdigroit.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreGx1c2hneXRnZmJkaWdyb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzA0NDQsImV4cCI6MjA4OTM0NjQ0NH0.75TiKhtFEIsfrm1WS5eVAn9nIodgqbLng5lOS4nT8CI"
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export interface Question {
   id: number
@@ -13,17 +15,25 @@ export interface Question {
   explanation: string
 }
 
-// Combine all 400 questions (100 per category)
-export const ALL_QUESTIONS: Question[] = [
-  ...algebraQuestions,
-  ...readingQuestions,
-  ...grammarQuestions,
-  ...dataStatsQuestions,
-] as Question[]
+export async function getQuestions(category: string): Promise<Question[]> {
+  const { data, error } = await supabase
+    .from("sat_questions")
+    .select("*")
+    .eq("category", category)
+    .order("id", { ascending: false }) // Use a column that exists, randomness comes from LIMIT on varying data
+    .limit(5)
 
-// Log the question bank size for verification
-console.log("[v0] Question bank size:", ALL_QUESTIONS.length)
-console.log("[v0] Algebra count:", ALL_QUESTIONS.filter(q => q.category === "Algebra").length)
-console.log("[v0] Reading count:", ALL_QUESTIONS.filter(q => q.category === "Reading Comprehension").length)
-console.log("[v0] Grammar count:", ALL_QUESTIONS.filter(q => q.category === "Grammar").length)
-console.log("[v0] Data & Stats count:", ALL_QUESTIONS.filter(q => q.category === "Data & Statistics").length)
+  if (error) {
+    console.error("[v0] Supabase fetch error:", error)
+    throw new Error("couldn't load questions — check your connection and try again")
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error("couldn't load questions — check your connection and try again")
+  }
+
+  // Shuffle the results client-side for randomness
+  const shuffled = [...data].sort(() => Math.random() - 0.5)
+
+  return shuffled as Question[]
+}

@@ -4,12 +4,11 @@ import { useState, useCallback, useEffect, Suspense, useRef } from "react"
 import { Check, X, RotateCcw, ChevronRight, Diamond, Sparkles, Zap } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useGems, calculateRoundGems, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
-import { useQuestionTracker, type CategoryKey } from "@/lib/question-tracker-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
 import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { ALL_QUESTIONS, type Question } from "@/lib/questions"
+import { getQuestions, type Question } from "@/lib/questions"
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
@@ -28,16 +27,6 @@ const TIMER_SETTINGS = {
 const SPEED_THRESHOLDS = {
   math: 47,    // 95/2 rounded down
   reading: 35, // 71/2 rounded down
-}
-
-// Fisher-Yates shuffle
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
 }
 
 // Helper to convert letter answer (A, B, C, D) to index (0, 1, 2, 3)
@@ -164,12 +153,10 @@ function PlayPageContent() {
   const categoryParam = searchParams.get("category") || "Algebra"
   const roundId = searchParams.get("t") || "initial"
   const { addGems } = useGems()
-  const { getUsedIds, markQuestionsUsed, resetCategory, getUsedCount } = useQuestionTracker()
   
   // Find category info
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
   const categoryName = categoryInfo.name
-  const categoryKey = categoryParam as CategoryKey
   const isMathCategory = categoryInfo.isMath
   
   // Timer settings based on category
@@ -179,38 +166,36 @@ function PlayPageContent() {
   // Track if we've shown the reset message this round
   const hasShownResetMessage = useRef(false)
   
-  // Questions state - initialized client-side only to avoid hydration mismatch
+  // Questions state - fetched from Supabase (client-side only)
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [isQuestionsReady, setIsQuestionsReady] = useState(false)
-  const questionsInitialized = useRef(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
   
-  // Select questions once on mount (client-side only)
+  // Mark component as mounted (client-side only)
   useEffect(() => {
-    if (questionsInitialized.current) return
-    questionsInitialized.current = true
+    setIsMounted(true)
+  }, [])
+  
+  // Fetch questions from Supabase ONLY on client after mount
+  useEffect(() => {
+    if (!isMounted) return
+    if (isQuestionsReady) return
     
-    const allCategoryQuestions = ALL_QUESTIONS.filter(q => q.category === categoryParam)
-    const usedIds = getUsedIds(categoryKey)
-    
-    let availableQuestions = allCategoryQuestions.filter(q => !usedIds.has(q.id))
-    
-    if (availableQuestions.length < TOTAL_QUESTIONS && usedIds.size >= allCategoryQuestions.length - TOTAL_QUESTIONS) {
-      resetCategory(categoryKey)
-      availableQuestions = allCategoryQuestions
-      
-      if (!hasShownResetMessage.current) {
-        hasShownResetMessage.current = true
-        toast.success(`You've completed all ${categoryName} questions! Starting over with a fresh set.`, {
-          duration: 3000,
-        })
+    async function loadQuestions() {
+      try {
+        const questions = await getQuestions(categoryParam)
+        setSessionQuestions(questions)
+        setIsQuestionsReady(true)
+        setFetchError(null)
+      } catch (err) {
+        console.error("[v0] Failed to load questions:", err)
+        setFetchError("couldn't load questions — check your connection and try again")
       }
     }
     
-    const selected = shuffleArray(availableQuestions).slice(0, TOTAL_QUESTIONS)
-    markQuestionsUsed(categoryKey, selected.map(q => q.id))
-    setSessionQuestions(selected)
-    setIsQuestionsReady(true)
-  }, [categoryParam, categoryKey, categoryName, getUsedIds, markQuestionsUsed, resetCategory])
+    loadQuestions()
+  }, [isMounted, isQuestionsReady, categoryParam])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
@@ -375,8 +360,23 @@ function PlayPageContent() {
   const hasAnswered = selectedAnswer !== null
   const isTimeout = selectedAnswer === -1
 
-  // Loading state - questions not ready yet
-  if (!isQuestionsReady) {
+  // Error state - failed to fetch questions
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6">
+        <p className="text-red-400 text-center font-medium mb-4">{fetchError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  // Loading state - not mounted yet or questions not ready
+  if (!isMounted || !isQuestionsReady) {
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
         <Spinner className="w-8 h-8 text-[#378ADD]" />
