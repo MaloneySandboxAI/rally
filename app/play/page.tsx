@@ -233,16 +233,7 @@ function PlayPageContent() {
   const questionStartTimeRef = useRef(Date.now())
   const [currentQuestionSpeedBonus, setCurrentQuestionSpeedBonus] = useState(false)
 
-  // Show loading state until questions are ready (prevents hydration mismatch)
-  if (!isQuestionsReady) {
-    return (
-      <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
-        <Spinner className="w-8 h-8 text-[#378ADD]" />
-        <p className="text-[#85B7EB] mt-4 font-medium">Loading questions...</p>
-      </div>
-    )
-  }
-
+  // Compute derived values (safe even when questions not ready - will use defaults)
   const question = sessionQuestions[currentQuestion]
   const correctAnswerIndex = letterToIndex(question?.correct || "A")
   const baseGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
@@ -250,14 +241,13 @@ function PlayPageContent() {
 
   // Timer effect
   useEffect(() => {
-    if (!isTimerActive || selectedAnswer !== null) return
+    if (!isQuestionsReady || !isTimerActive || selectedAnswer !== null) return
     
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
           // Time's up! Auto-mark as wrong and advance
           clearInterval(timerRef.current!)
-          handleTimeUp()
           return 0
         }
         return prev - 1
@@ -267,18 +257,11 @@ function PlayPageContent() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isTimerActive, selectedAnswer, currentQuestion])
+  }, [isQuestionsReady, isTimerActive, selectedAnswer, currentQuestion])
   
-  // Reset timer when moving to next question
+  // Handle time up in a separate effect to avoid stale closure
   useEffect(() => {
-    setTimeRemaining(totalTime)
-    setIsTimerActive(true)
-    questionStartTimeRef.current = Date.now()
-    setCurrentQuestionSpeedBonus(false)
-  }, [currentQuestion, totalTime])
-
-  const handleTimeUp = useCallback(() => {
-    if (selectedAnswer !== null) return
+    if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
     
     // Record wrong answer due to timeout
     setAnswerResults(prev => [...prev, {
@@ -300,7 +283,16 @@ function PlayPageContent() {
         setShowResults(true)
       }
     }, 2000)
-  }, [currentQuestion, selectedAnswer, question])
+  }, [isQuestionsReady, timeRemaining, selectedAnswer, currentQuestion, question])
+  
+  // Reset timer when moving to next question
+  useEffect(() => {
+    if (!isQuestionsReady) return
+    setTimeRemaining(totalTime)
+    setIsTimerActive(true)
+    questionStartTimeRef.current = Date.now()
+    setCurrentQuestionSpeedBonus(false)
+  }, [isQuestionsReady, currentQuestion, totalTime])
 
   const handleAnswerSelect = useCallback((answerIndex: number) => {
     if (selectedAnswer !== null) return
@@ -349,18 +341,18 @@ function PlayPageContent() {
     }
   }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, speedThreshold, baseGemPerCorrect, speedGemPerCorrect])
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = useCallback(() => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
       setCurrentQuestion(prev => prev + 1)
       setSelectedAnswer(null)
     } else {
       setShowResults(true)
     }
-  }
+  }, [currentQuestion])
 
-  const handlePlayAgain = () => {
+  const handlePlayAgain = useCallback(() => {
     window.location.href = `/play?category=${encodeURIComponent(categoryParam)}&t=${Date.now()}`
-  }
+  }, [categoryParam])
 
   // Award gems and mark round completed when showing results
   useEffect(() => {
@@ -368,7 +360,7 @@ function PlayPageContent() {
       // Calculate total gems including speed bonuses
       const speedBonusGems = answerResults
         .filter(r => r.wasSpeedBonus)
-        .reduce((sum, r) => sum + (speedGemPerCorrect - baseGemPerCorrect), 0)
+        .reduce((sum) => sum + (speedGemPerCorrect - baseGemPerCorrect), 0)
       
       const { total: baseTotal } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
       const totalWithSpeed = baseTotal + speedBonusGems
@@ -379,6 +371,21 @@ function PlayPageContent() {
     }
   }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, speedGemPerCorrect, baseGemPerCorrect])
 
+  // Derived values for rendering (always computed, never early return)
+  const hasAnswered = selectedAnswer !== null
+  const isTimeout = selectedAnswer === -1
+
+  // Loading state - questions not ready yet
+  if (!isQuestionsReady) {
+    return (
+      <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
+        <Spinner className="w-8 h-8 text-[#378ADD]" />
+        <p className="text-[#85B7EB] mt-4 font-medium">Loading questions...</p>
+      </div>
+    )
+  }
+
+  // Results screen
   if (showResults) {
     return (
       <ResultsScreen 
@@ -392,9 +399,7 @@ function PlayPageContent() {
     )
   }
 
-  const hasAnswered = selectedAnswer !== null
-  const isTimeout = selectedAnswer === -1
-
+  // Main game screen
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col">
       {/* Speed Bonus Animation */}
