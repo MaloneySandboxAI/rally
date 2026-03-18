@@ -2,38 +2,33 @@
 
 import { useState, useEffect } from "react"
 
-function calculateStreak(): number {
-  if (typeof window === "undefined") return 0
-  
-  const lastPlayed = localStorage.getItem("rally_last_played")
-  const storedStreak = parseInt(localStorage.getItem("rally_streak") || "0", 10)
-  
-  if (!lastPlayed) return 0
-  
-  const today = new Date().toISOString().split("T")[0]
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split("T")[0]
-  
-  if (lastPlayed === today) {
-    // Played today, return current streak
-    return storedStreak
-  } else if (lastPlayed === yesterdayStr) {
-    // Played yesterday but not today, streak is still valid but not yet incremented
-    return storedStreak
-  } else {
-    // More than 1 day since last play, streak is broken
-    localStorage.setItem("rally_streak", "0")
-    return 0
-  }
-}
-
 export function StreakBanner() {
   const [streak, setStreak] = useState(0)
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    setStreak(calculateStreak())
+    // Only read localStorage inside useEffect to avoid hydration mismatch
+    const lastPlayed = localStorage.getItem("rally_last_played")
+    const storedStreak = parseInt(localStorage.getItem("rally_streak") || "0", 10)
+    
+    if (!lastPlayed) {
+      setStreak(0)
+    } else {
+      const today = new Date().toISOString().split("T")[0]
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split("T")[0]
+      
+      if (lastPlayed === today || lastPlayed === yesterdayStr) {
+        // Played today or yesterday, streak is valid
+        setStreak(storedStreak)
+      } else {
+        // More than 1 day since last play, streak is broken
+        localStorage.setItem("rally_streak", "0")
+        setStreak(0)
+      }
+    }
+    
     setIsHydrated(true)
   }, [])
 

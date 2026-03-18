@@ -32,6 +32,7 @@ const GemContext = createContext<GemContextType | undefined>(undefined)
 export function GemProvider({ children }: { children: ReactNode }) {
   const [totalGems, setTotalGemsState] = useState(0)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
   // Load gems from localStorage on mount
   useEffect(() => {
@@ -43,14 +44,16 @@ export function GemProvider({ children }: { children: ReactNode }) {
       }
     }
     setIsHydrated(true)
+    // Mark initial load as complete after a tick to ensure state is set
+    setTimeout(() => setInitialLoadComplete(true), 0)
   }, [])
 
-  // Persist to localStorage whenever gems change (after hydration)
+  // Persist to localStorage whenever gems change (only after initial load is complete)
   useEffect(() => {
-    if (isHydrated) {
+    if (initialLoadComplete) {
       localStorage.setItem(STORAGE_KEY, totalGems.toString())
     }
-  }, [totalGems, isHydrated])
+  }, [totalGems, initialLoadComplete])
 
   const addGems = useCallback((amount: number) => {
     setTotalGemsState((prev) => prev + amount)

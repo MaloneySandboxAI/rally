@@ -179,10 +179,16 @@ function PlayPageContent() {
   // Track if we've shown the reset message this round
   const hasShownResetMessage = useRef(false)
   
-  // Select questions once per round
-  const questionsRef = useRef<typeof ALL_QUESTIONS | null>(null)
+  // Questions state - initialized client-side only to avoid hydration mismatch
+  const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
+  const [isQuestionsReady, setIsQuestionsReady] = useState(false)
+  const questionsInitialized = useRef(false)
   
-  if (questionsRef.current === null || questionsRef.current[0]?.category !== categoryParam) {
+  // Select questions once on mount (client-side only)
+  useEffect(() => {
+    if (questionsInitialized.current) return
+    questionsInitialized.current = true
+    
     const allCategoryQuestions = ALL_QUESTIONS.filter(q => q.category === categoryParam)
     const usedIds = getUsedIds(categoryKey)
     
@@ -191,24 +197,20 @@ function PlayPageContent() {
     if (availableQuestions.length < TOTAL_QUESTIONS && usedIds.size >= allCategoryQuestions.length - TOTAL_QUESTIONS) {
       resetCategory(categoryKey)
       availableQuestions = allCategoryQuestions
-      hasShownResetMessage.current = false
       
       if (!hasShownResetMessage.current) {
         hasShownResetMessage.current = true
-        setTimeout(() => {
-          toast.success(`You've completed all ${categoryName} questions! Starting over with a fresh set.`, {
-            duration: 3000,
-          })
-        }, 100)
+        toast.success(`You've completed all ${categoryName} questions! Starting over with a fresh set.`, {
+          duration: 3000,
+        })
       }
     }
     
     const selected = shuffleArray(availableQuestions).slice(0, TOTAL_QUESTIONS)
     markQuestionsUsed(categoryKey, selected.map(q => q.id))
-    questionsRef.current = selected
-  }
-  
-  const sessionQuestions = questionsRef.current || []
+    setSessionQuestions(selected)
+    setIsQuestionsReady(true)
+  }, [categoryParam, categoryKey, categoryName, getUsedIds, markQuestionsUsed, resetCategory])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
@@ -230,6 +232,16 @@ function PlayPageContent() {
   // Speed bonus tracking for current question
   const questionStartTimeRef = useRef(Date.now())
   const [currentQuestionSpeedBonus, setCurrentQuestionSpeedBonus] = useState(false)
+
+  // Show loading state until questions are ready (prevents hydration mismatch)
+  if (!isQuestionsReady) {
+    return (
+      <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
+        <Spinner className="w-8 h-8 text-[#378ADD]" />
+        <p className="text-[#85B7EB] mt-4 font-medium">Loading questions...</p>
+      </div>
+    )
+  }
 
   const question = sessionQuestions[currentQuestion]
   const correctAnswerIndex = letterToIndex(question?.correct || "A")
