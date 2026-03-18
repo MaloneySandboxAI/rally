@@ -1,16 +1,20 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react"
+
+const STORAGE_KEY = "rally_gems"
 
 // Gem earning values
 export const GEM_VALUES = {
   solo: {
     correctAnswer: 25,
+    correctAnswerSpeed: 38, // 1.5x multiplier rounded (25 * 1.5 = 37.5)
     roundCompletion: 50,
     perfectRound: 100, // instead of roundCompletion
   },
   challenge: {
     correctAnswer: 100,
+    correctAnswerSpeed: 150, // 1.5x multiplier
     roundWin: 200,
     perfectRound: 400,
     participationBonus: 50, // win or lose
@@ -26,11 +30,34 @@ interface GemContextType {
 const GemContext = createContext<GemContextType | undefined>(undefined)
 
 export function GemProvider({ children }: { children: ReactNode }) {
-  // In a real app, this would be loaded from a database/localStorage
-  const [totalGems, setTotalGems] = useState(1250)
+  const [totalGems, setTotalGemsState] = useState(0)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load gems from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = parseInt(stored, 10)
+      if (!isNaN(parsed)) {
+        setTotalGemsState(parsed)
+      }
+    }
+    setIsHydrated(true)
+  }, [])
+
+  // Persist to localStorage whenever gems change (after hydration)
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem(STORAGE_KEY, totalGems.toString())
+    }
+  }, [totalGems, isHydrated])
 
   const addGems = useCallback((amount: number) => {
-    setTotalGems((prev) => prev + amount)
+    setTotalGemsState((prev) => prev + amount)
+  }, [])
+
+  const setTotalGems = useCallback((amount: number) => {
+    setTotalGemsState(amount)
   }, [])
 
   return (
@@ -38,6 +65,36 @@ export function GemProvider({ children }: { children: ReactNode }) {
       {children}
     </GemContext.Provider>
   )
+}
+
+// Mark that a round was completed (for streak tracking)
+export function markRoundCompleted() {
+  if (typeof window === "undefined") return
+  
+  const today = new Date().toISOString().split("T")[0]
+  const lastPlayed = localStorage.getItem("rally_last_played")
+  const currentStreak = parseInt(localStorage.getItem("rally_streak") || "0", 10)
+  
+  if (lastPlayed === today) {
+    // Already played today, no change
+    return
+  }
+  
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split("T")[0]
+  
+  let newStreak: number
+  if (lastPlayed === yesterdayStr) {
+    // Played yesterday, increment streak
+    newStreak = currentStreak + 1
+  } else {
+    // More than 1 day gap, reset to 1 (today counts as day 1)
+    newStreak = 1
+  }
+  
+  localStorage.setItem("rally_last_played", today)
+  localStorage.setItem("rally_streak", newStreak.toString())
 }
 
 export function useGems() {

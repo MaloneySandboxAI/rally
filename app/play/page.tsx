@@ -1,21 +1,34 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Sparkles } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Sparkles, Zap } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useGems, calculateRoundGems, GEM_VALUES } from "@/lib/gem-context"
+import { useGems, calculateRoundGems, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
 import { useQuestionTracker, type CategoryKey } from "@/lib/question-tracker-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
+import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { ALL_QUESTIONS, type Question } from "@/lib/questions"
 
 const CATEGORIES = [
-  { id: "Algebra", name: "Algebra", color: "#378ADD" },
-  { id: "Reading Comprehension", name: "Reading", color: "#14B8A6" },
-  { id: "Grammar", name: "Grammar", color: "#A855F7" },
-  { id: "Data & Statistics", name: "Data & Stats", color: "#F97316" },
+  { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
+  { id: "Reading Comprehension", name: "Reading", color: "#14B8A6", isMath: false },
+  { id: "Grammar", name: "Grammar", color: "#A855F7", isMath: false },
+  { id: "Data & Statistics", name: "Data & Stats", color: "#F97316", isMath: true },
 ]
+
+// Timer settings per category type (in seconds)
+const TIMER_SETTINGS = {
+  math: 95,    // Algebra, Data & Stats
+  reading: 71, // Reading, Grammar
+}
+
+// Speed bonus threshold (half the allocated time)
+const SPEED_THRESHOLDS = {
+  math: 47,    // 95/2 rounded down
+  reading: 35, // 71/2 rounded down
+}
 
 // Fisher-Yates shuffle
 function shuffleArray<T>(array: T[]): T[] {
@@ -40,23 +53,116 @@ function stripOptionPrefix(option: string): string {
 const TOTAL_QUESTIONS = 5
 const LETTER_LABELS = ["A", "B", "C", "D"]
 
+// Difficulty badge colors
+const DIFFICULTY_COLORS = {
+  easy: { bg: "bg-green-500/20", text: "text-green-400", border: "border-green-500/40" },
+  medium: { bg: "bg-amber-500/20", text: "text-amber-400", border: "border-amber-500/40" },
+  hard: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/40" },
+}
+
+// Timer ring colors
+const TIMER_COLORS = {
+  normal: "#378ADD",
+  warning: "#F59E0B", // 30 seconds or less
+  danger: "#EF4444",  // 10 seconds or less
+}
+
 // Floating gem animation component
-function FloatingGemIndicator({ amount, isChallenge }: { amount: number; isChallenge: boolean }) {
+function FloatingGemIndicator({ amount, isSpeedBonus }: { amount: number; isSpeedBonus: boolean }) {
   return (
     <div className="absolute -top-2 right-4 animate-gem-float pointer-events-none">
-      <div className="flex items-center gap-1 bg-[#F59E0B] text-white px-2 py-1 rounded-full shadow-lg">
+      <div className={`flex items-center gap-1 ${isSpeedBonus ? 'bg-gradient-to-r from-[#F59E0B] to-[#EF4444]' : 'bg-[#F59E0B]'} text-white px-2 py-1 rounded-full shadow-lg`}>
         <Diamond className="w-3 h-3 fill-white" />
         <span className="text-xs font-bold">+{amount}</span>
+        {isSpeedBonus && <Zap className="w-3 h-3 fill-white" />}
       </div>
     </div>
   )
+}
+
+// Countdown Timer Ring Component
+function CountdownTimer({ 
+  timeRemaining, 
+  totalTime 
+}: { 
+  timeRemaining: number
+  totalTime: number 
+}) {
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const progress = timeRemaining / totalTime
+  const strokeDashoffset = circumference * (1 - progress)
+  
+  let color = TIMER_COLORS.normal
+  if (timeRemaining <= 10) {
+    color = TIMER_COLORS.danger
+  } else if (timeRemaining <= 30) {
+    color = TIMER_COLORS.warning
+  }
+
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center">
+      <svg className="w-12 h-12 transform -rotate-90">
+        {/* Background circle */}
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          stroke="#0a2d4a"
+          strokeWidth="3"
+        />
+        {/* Progress circle */}
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-linear"
+        />
+      </svg>
+      <span 
+        className="absolute text-sm font-bold"
+        style={{ color }}
+      >
+        {timeRemaining}
+      </span>
+    </div>
+  )
+}
+
+// Speed Bonus Animation Component
+function SpeedBonusAnimation() {
+  return (
+    <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50 animate-in fade-in zoom-in duration-300">
+      <div className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
+        <Zap className="w-6 h-6 fill-white" />
+        <span className="text-lg font-extrabold">+150 gems</span>
+        <span className="text-sm font-bold opacity-80">speed bonus!</span>
+      </div>
+    </div>
+  )
+}
+
+// Answer result type for tracking
+interface AnswerResult {
+  questionIndex: number
+  isCorrect: boolean
+  difficulty: string
+  wasSpeedBonus: boolean
+  gemsEarned: number
 }
 
 function PlayPageContent() {
   const searchParams = useSearchParams()
   const isChallenge = searchParams.get("challenge") === "true"
   const categoryParam = searchParams.get("category") || "Algebra"
-  const roundId = searchParams.get("t") || "initial" // Used to force new question selection
+  const roundId = searchParams.get("t") || "initial"
   const { addGems } = useGems()
   const { getUsedIds, markQuestionsUsed, resetCategory, getUsedCount } = useQuestionTracker()
   
@@ -64,32 +170,29 @@ function PlayPageContent() {
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
   const categoryName = categoryInfo.name
   const categoryKey = categoryParam as CategoryKey
+  const isMathCategory = categoryInfo.isMath
+  
+  // Timer settings based on category
+  const totalTime = isMathCategory ? TIMER_SETTINGS.math : TIMER_SETTINGS.reading
+  const speedThreshold = isMathCategory ? SPEED_THRESHOLDS.math : SPEED_THRESHOLDS.reading
   
   // Track if we've shown the reset message this round
   const hasShownResetMessage = useRef(false)
   
-  // Select questions once per round - using ref to store them
+  // Select questions once per round
   const questionsRef = useRef<typeof ALL_QUESTIONS | null>(null)
   
-  // Initialize questions on first render or when roundId/category changes
   if (questionsRef.current === null || questionsRef.current[0]?.category !== categoryParam) {
     const allCategoryQuestions = ALL_QUESTIONS.filter(q => q.category === categoryParam)
     const usedIds = getUsedIds(categoryKey)
     
-    // Debug: log the state
-    console.log(`[v0] Category: ${categoryParam}, Total questions: ${allCategoryQuestions.length}, Used: ${usedIds.size}, Available: ${allCategoryQuestions.length - usedIds.size}`)
-    
-    // Filter out used questions
     let availableQuestions = allCategoryQuestions.filter(q => !usedIds.has(q.id))
     
-    // Only reset if we truly don't have enough questions (all exhausted)
     if (availableQuestions.length < TOTAL_QUESTIONS && usedIds.size >= allCategoryQuestions.length - TOTAL_QUESTIONS) {
-      console.log(`[v0] Resetting category ${categoryParam} - all questions exhausted`)
       resetCategory(categoryKey)
       availableQuestions = allCategoryQuestions
       hasShownResetMessage.current = false
       
-      // Show toast only once
       if (!hasShownResetMessage.current) {
         hasShownResetMessage.current = true
         setTimeout(() => {
@@ -100,12 +203,8 @@ function PlayPageContent() {
       }
     }
     
-    // Fisher-Yates shuffle and take first 5
     const selected = shuffleArray(availableQuestions).slice(0, TOTAL_QUESTIONS)
-    
-    // Mark these questions as used immediately
     markQuestionsUsed(categoryKey, selected.map(q => q.id))
-    
     questionsRef.current = selected
   }
   
@@ -116,28 +215,131 @@ function PlayPageContent() {
   const [score, setScore] = useState(0)
   const [showResults, setShowResults] = useState(false)
   const [showGemAnimation, setShowGemAnimation] = useState(false)
+  const [showSpeedBonus, setShowSpeedBonus] = useState(false)
   const [gemsAwarded, setGemsAwarded] = useState(false)
+  const [showCalculator, setShowCalculator] = useState(false)
+  
+  // Timer state
+  const [timeRemaining, setTimeRemaining] = useState(totalTime)
+  const [isTimerActive, setIsTimerActive] = useState(true)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Track answer results for each question
+  const [answerResults, setAnswerResults] = useState<AnswerResult[]>([])
+  
+  // Speed bonus tracking for current question
+  const questionStartTimeRef = useRef(Date.now())
+  const [currentQuestionSpeedBonus, setCurrentQuestionSpeedBonus] = useState(false)
 
   const question = sessionQuestions[currentQuestion]
-  const correctAnswerIndex = letterToIndex(question.correct)
-  const gemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
+  const correctAnswerIndex = letterToIndex(question?.correct || "A")
+  const baseGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
+  const speedGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
+
+  // Timer effect
+  useEffect(() => {
+    if (!isTimerActive || selectedAnswer !== null) return
+    
+    timerRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up! Auto-mark as wrong and advance
+          clearInterval(timerRef.current!)
+          handleTimeUp()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isTimerActive, selectedAnswer, currentQuestion])
+  
+  // Reset timer when moving to next question
+  useEffect(() => {
+    setTimeRemaining(totalTime)
+    setIsTimerActive(true)
+    questionStartTimeRef.current = Date.now()
+    setCurrentQuestionSpeedBonus(false)
+  }, [currentQuestion, totalTime])
+
+  const handleTimeUp = useCallback(() => {
+    if (selectedAnswer !== null) return
+    
+    // Record wrong answer due to timeout
+    setAnswerResults(prev => [...prev, {
+      questionIndex: currentQuestion,
+      isCorrect: false,
+      difficulty: question?.difficulty || "medium",
+      wasSpeedBonus: false,
+      gemsEarned: 0,
+    }])
+    
+    // Show the correct answer briefly then auto-advance
+    setSelectedAnswer(-1) // -1 indicates timeout
+    
+    setTimeout(() => {
+      if (currentQuestion < TOTAL_QUESTIONS - 1) {
+        setCurrentQuestion(prev => prev + 1)
+        setSelectedAnswer(null)
+      } else {
+        setShowResults(true)
+      }
+    }, 2000)
+  }, [currentQuestion, selectedAnswer, question])
 
   const handleAnswerSelect = useCallback((answerIndex: number) => {
     if (selectedAnswer !== null) return
     
+    // Stop timer
+    setIsTimerActive(false)
+    if (timerRef.current) clearInterval(timerRef.current)
+    
     setSelectedAnswer(answerIndex)
     
+    // Calculate time taken
+    const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
+    const isSpeedBonus = timeTaken <= speedThreshold
+    
     if (answerIndex === correctAnswerIndex) {
-      setScore((prev) => prev + 1)
-      // Show gem animation for correct answer
+      setScore(prev => prev + 1)
+      
+      const gemsForThis = isSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect
+      
+      // Record correct answer
+      setAnswerResults(prev => [...prev, {
+        questionIndex: currentQuestion,
+        isCorrect: true,
+        difficulty: question?.difficulty || "medium",
+        wasSpeedBonus: isSpeedBonus,
+        gemsEarned: gemsForThis,
+      }])
+      
+      if (isSpeedBonus) {
+        setCurrentQuestionSpeedBonus(true)
+        setShowSpeedBonus(true)
+        setTimeout(() => setShowSpeedBonus(false), 1500)
+      }
+      
       setShowGemAnimation(true)
       setTimeout(() => setShowGemAnimation(false), 1000)
+    } else {
+      // Record wrong answer
+      setAnswerResults(prev => [...prev, {
+        questionIndex: currentQuestion,
+        isCorrect: false,
+        difficulty: question?.difficulty || "medium",
+        wasSpeedBonus: false,
+        gemsEarned: 0,
+      }])
     }
-  }, [selectedAnswer, correctAnswerIndex])
+  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, speedThreshold, baseGemPerCorrect, speedGemPerCorrect])
 
   const handleNextQuestion = () => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
-      setCurrentQuestion((prev) => prev + 1)
+      setCurrentQuestion(prev => prev + 1)
       setSelectedAnswer(null)
     } else {
       setShowResults(true)
@@ -145,18 +347,25 @@ function PlayPageContent() {
   }
 
   const handlePlayAgain = () => {
-    // Add timestamp to force fresh question selection while keeping the same category
     window.location.href = `/play?category=${encodeURIComponent(categoryParam)}&t=${Date.now()}`
   }
 
-  // Award gems when showing results
+  // Award gems and mark round completed when showing results
   useEffect(() => {
     if (showResults && !gemsAwarded) {
-      const { total } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
-      addGems(total)
+      // Calculate total gems including speed bonuses
+      const speedBonusGems = answerResults
+        .filter(r => r.wasSpeedBonus)
+        .reduce((sum, r) => sum + (speedGemPerCorrect - baseGemPerCorrect), 0)
+      
+      const { total: baseTotal } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
+      const totalWithSpeed = baseTotal + speedBonusGems
+      
+      addGems(totalWithSpeed)
+      markRoundCompleted() // Track streak
       setGemsAwarded(true)
     }
-  }, [showResults, gemsAwarded, score, isChallenge, addGems])
+  }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, speedGemPerCorrect, baseGemPerCorrect])
 
   if (showResults) {
     return (
@@ -164,29 +373,35 @@ function PlayPageContent() {
         score={score} 
         isChallenge={isChallenge}
         categoryName={categoryName}
-        onPlayAgain={handlePlayAgain} 
+        onPlayAgain={handlePlayAgain}
+        answerResults={answerResults}
+        sessionQuestions={sessionQuestions}
       />
     )
   }
 
   const hasAnswered = selectedAnswer !== null
+  const isTimeout = selectedAnswer === -1
 
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col">
+      {/* Speed Bonus Animation */}
+      {showSpeedBonus && <SpeedBonusAnimation />}
+      
       {/* Header */}
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
-          <div className="flex items-center gap-3">
-            {/* Gem indicator */}
-            <div className="flex items-center gap-1 text-[#F59E0B]">
-              <Diamond className="w-4 h-4 fill-[#F59E0B]" />
-              <span className="text-xs font-bold">+{gemPerCorrect}</span>
-            </div>
-            <span className="text-sm font-semibold text-[#85B7EB]">
-              Q{currentQuestion + 1} of {TOTAL_QUESTIONS}
-            </span>
+          {/* Calculator Button (Math categories only) */}
+          <div className="w-10">
+            {isMathCategory && (
+              <CalculatorButton onClick={() => setShowCalculator(true)} />
+            )}
           </div>
+          
+          <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
+          
+          {/* Timer */}
+          <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
         </div>
         
         {/* Progress Pips */}
@@ -209,13 +424,13 @@ function PlayPageContent() {
         {/* Question Text */}
         <div className="flex-1 flex items-center justify-center mb-8">
           <h2 className="text-2xl font-extrabold text-white text-center leading-relaxed px-2 max-w-xl">
-            {question.question}
+            {question?.question}
           </h2>
         </div>
 
         {/* Answer Options */}
         <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
-          {question.options.map((option, index) => (
+          {question?.options.map((option, index) => (
             <AnswerOption
               key={index}
               option={stripOptionPrefix(option)}
@@ -226,14 +441,15 @@ function PlayPageContent() {
               explanation={question.explanation}
               onSelect={handleAnswerSelect}
               showGemAnimation={showGemAnimation && index === correctAnswerIndex}
-              gemAmount={gemPerCorrect}
-              isChallenge={isChallenge}
+              gemAmount={currentQuestionSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect}
+              isSpeedBonus={currentQuestionSpeedBonus}
+              isTimeout={isTimeout}
             />
           ))}
         </div>
 
         {/* Next Question Button */}
-        {hasAnswered && (
+        {hasAnswered && !isTimeout && (
           <div className="w-full max-w-[480px] mx-auto pt-4 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <button
               onClick={handleNextQuestion}
@@ -245,6 +461,9 @@ function PlayPageContent() {
           </div>
         )}
       </main>
+
+      {/* Calculator Modal */}
+      <Calculator isOpen={showCalculator} onClose={() => setShowCalculator(false)} />
 
       {/* CSS for gem animation */}
       <style jsx global>{`
@@ -276,7 +495,8 @@ interface AnswerOptionProps {
   onSelect: (index: number) => void
   showGemAnimation: boolean
   gemAmount: number
-  isChallenge: boolean
+  isSpeedBonus: boolean
+  isTimeout: boolean
 }
 
 function AnswerOption({
@@ -289,7 +509,8 @@ function AnswerOption({
   onSelect,
   showGemAnimation,
   gemAmount,
-  isChallenge,
+  isSpeedBonus,
+  isTimeout,
 }: AnswerOptionProps) {
   const isSelected = selectedAnswer === index
   const isCorrect = index === correctAnswer
@@ -348,7 +569,7 @@ function AnswerOption({
       
       {/* Floating Gem Animation */}
       {showGemAnimation && (
-        <FloatingGemIndicator amount={gemAmount} isChallenge={isChallenge} />
+        <FloatingGemIndicator amount={gemAmount} isSpeedBonus={isSpeedBonus} />
       )}
       
       {/* Explanation */}
@@ -366,6 +587,8 @@ interface ResultsScreenProps {
   isChallenge: boolean
   categoryName: string
   onPlayAgain: () => void
+  answerResults: AnswerResult[]
+  sessionQuestions: Question[]
 }
 
 function getEncouragementMessage(score: number): string {
@@ -375,34 +598,74 @@ function getEncouragementMessage(score: number): string {
   return "Tough round. Challenge a friend and see how they do"
 }
 
-function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: ResultsScreenProps) {
+function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   
-  // Calculate gems earned
-  const { total: gemsEarned, breakdown } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
+  // Calculate gems earned including speed bonuses
+  const speedBonusCount = answerResults.filter(r => r.wasSpeedBonus).length
+  const baseGem = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
+  const speedGem = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
+  const speedBonusExtra = speedBonusCount * (speedGem - baseGem)
+  
+  const { total: baseTotal, breakdown: baseBreakdown } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
+  const gemsEarned = baseTotal + speedBonusExtra
+  
+  // Build breakdown with speed bonus
+  const breakdown = [...baseBreakdown]
+  if (speedBonusCount > 0) {
+    breakdown.push({
+      label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? 'es' : ''}`,
+      amount: speedBonusExtra,
+    })
+  }
+  
+  // Difficulty breakdown
+  const difficultyStats = {
+    easy: answerResults.filter(r => r.difficulty === "easy" && r.isCorrect).length,
+    medium: answerResults.filter(r => r.difficulty === "medium" && r.isCorrect).length,
+    hard: answerResults.filter(r => r.difficulty === "hard" && r.isCorrect).length,
+  }
 
   const handleCategorySelect = (categoryId: string) => {
-    // Force full page reload to reset all state (score, progress, questions)
     window.location.href = `/play?category=${encodeURIComponent(categoryId)}`
   }
 
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-5 py-8">
       <div className="text-center mb-6">
-        {/* Score Circles */}
-        <div className="flex items-center justify-center gap-3 mb-6">
-          {Array.from({ length: TOTAL_QUESTIONS }).map((_, index) => (
+        {/* Answer Circles with Check/X */}
+        <div className="flex items-center justify-center gap-3 mb-3">
+          {answerResults.map((result, index) => (
             <div
               key={index}
-              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${
-                index < score
-                  ? "bg-[#378ADD] border-[#378ADD]"
-                  : "bg-transparent border-[#378ADD]/40"
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                result.isCorrect
+                  ? "bg-green-500"
+                  : "bg-red-500"
               }`}
             >
-              {index < score && <Check className="w-5 h-5 text-white" strokeWidth={3} />}
+              {result.isCorrect ? (
+                <Check className="w-5 h-5 text-white" strokeWidth={3} />
+              ) : (
+                <X className="w-5 h-5 text-white" strokeWidth={3} />
+              )}
             </div>
           ))}
+        </div>
+        
+        {/* Difficulty Badges */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          {answerResults.map((result, index) => {
+            const colors = DIFFICULTY_COLORS[result.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+            return (
+              <span
+                key={index}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}
+              >
+                {result.difficulty}
+              </span>
+            )
+          })}
         </div>
 
         <h1 className="text-5xl font-extrabold text-white mb-2">
@@ -415,7 +678,7 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
       </div>
 
       {/* Gems Earned Card */}
-      <div className="w-full max-w-sm mb-6 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">
+      <div className="w-full max-w-sm mb-4 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Diamond className="w-6 h-6 text-[#F59E0B] fill-[#F59E0B]" />
           <span className="text-2xl font-extrabold text-white">+{gemsEarned} gems</span>
@@ -431,6 +694,25 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
           ))}
         </div>
       </div>
+      
+      {/* Difficulty Breakdown Stats */}
+      <div className="w-full max-w-sm mb-6 bg-[#0a2d4a] rounded-2xl p-4">
+        <p className="text-xs font-bold text-[#85B7EB]/60 mb-2 uppercase tracking-wide">By Difficulty</p>
+        <div className="flex justify-between gap-2">
+          <div className="flex-1 text-center">
+            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.easy.text}`}>{difficultyStats.easy}</span>
+            <p className="text-xs text-[#85B7EB]/60">easy</p>
+          </div>
+          <div className="flex-1 text-center border-x border-[#85B7EB]/20">
+            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.medium.text}`}>{difficultyStats.medium}</span>
+            <p className="text-xs text-[#85B7EB]/60">medium</p>
+          </div>
+          <div className="flex-1 text-center">
+            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.hard.text}`}>{difficultyStats.hard}</span>
+            <p className="text-xs text-[#85B7EB]/60">hard</p>
+          </div>
+        </div>
+      </div>
 
       {/* Play Again Button */}
       <button
@@ -441,7 +723,7 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
         play again
       </button>
 
-      {/* Category Picker - Always Visible */}
+      {/* Category Picker */}
       <div className="w-full max-w-sm mb-6">
         <p className="text-[#85B7EB]/60 text-sm font-medium mb-3 text-center">try a different category</p>
         <div className="grid grid-cols-2 gap-2">
@@ -467,7 +749,7 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
       </div>
 
       <div className="w-full max-w-sm space-y-3">
-        {/* Challenge a Friend Button - Coming Soon */}
+        {/* Challenge a Friend Button */}
         <div className="relative">
           <button
             onClick={() => setShowWaitlistSheet(true)}
@@ -476,14 +758,12 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
             <span className="text-lg">challenge a friend</span>
             <span className="text-xs font-semibold text-white/70">4x gems when it launches</span>
           </button>
-          {/* Coming Soon Badge */}
           <div className="absolute -top-2 -right-2 bg-[#F59E0B] text-[#0a1628] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
             soon
           </div>
         </div>
 
-        {/* Challenge CTA Line */}
         <button
           onClick={() => setShowWaitlistSheet(true)}
           className="w-full flex items-center justify-center gap-1 text-[#378ADD] text-sm font-semibold py-1 transition-all hover:brightness-125"
@@ -492,7 +772,6 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain }: Result
         </button>
       </div>
 
-      {/* Waitlist Sheet */}
       <ChallengeWaitlistSheet 
         isOpen={showWaitlistSheet}
         onClose={() => setShowWaitlistSheet(false)}
