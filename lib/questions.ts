@@ -1,3 +1,5 @@
+"use client"
+
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl = "https://ykxlushgytgfbdigroit.supabase.co"
@@ -26,18 +28,32 @@ export interface Question {
   explanation: string
 }
 
-export async function getQuestions(category: string): Promise<Question[]> {
+// Total questions per category — used to know when to reset the used-IDs set
+const CATEGORY_TOTAL = 100
+
+export async function getQuestions(
+  category: string,
+  excludeIds: number[] = []
+): Promise<Question[]> {
   // Guard: never run on the server to prevent hydration mismatches
   if (typeof window === "undefined") {
     return []
   }
 
   const supabase = getSupabase()
-  const { data, error } = await supabase
+
+  let query = supabase
     .from("sat_questions")
     .select("*")
     .eq("category", category)
-    .limit(20)
+
+  // Exclude already-seen question IDs if any
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  }
+
+  // Fetch more than needed so we have room to shuffle and pick 5
+  const { data, error } = await query.limit(20)
 
   if (error) {
     console.error("[v0] Supabase fetch error:", error)
@@ -45,7 +61,8 @@ export async function getQuestions(category: string): Promise<Question[]> {
   }
 
   if (!data || data.length === 0) {
-    throw new Error("couldn't load questions — check your connection and try again")
+    // All questions exhausted for this category — caller should reset and retry
+    throw new Error("RESET_NEEDED")
   }
 
   // Shuffle client-side and take 5

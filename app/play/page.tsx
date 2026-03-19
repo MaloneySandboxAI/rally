@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Sparkles, Zap } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { useGems, calculateRoundGems, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
 import { Calculator, CalculatorButton } from "@/components/rally/calculator"
@@ -159,6 +159,23 @@ function PlayPageContent() {
   
   // Track if we've shown the reset message this round
   const hasShownResetMessage = useRef(false)
+
+  // Track used question IDs per category to prevent repeats
+  // useRef so it survives re-renders without triggering them
+  const usedIds = useRef<Record<string, Set<number>>>({})
+
+  function getUsedIdsForCategory(cat: string): number[] {
+    return Array.from(usedIds.current[cat] ?? new Set<number>())
+  }
+
+  function markIdsUsed(cat: string, ids: number[]) {
+    if (!usedIds.current[cat]) usedIds.current[cat] = new Set()
+    ids.forEach(id => usedIds.current[cat].add(id))
+  }
+
+  function resetUsedIds(cat: string) {
+    usedIds.current[cat] = new Set()
+  }
   
   // Questions state - fetched from Supabase (client-side only)
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
@@ -175,25 +192,46 @@ function PlayPageContent() {
   useEffect(() => {
     if (!isMounted) return
     if (isQuestionsReady) return
-    
+
     async function loadQuestions() {
       try {
-        const questions = await getQuestions(categoryParam)
+        const excluded = getUsedIdsForCategory(categoryParam)
+        let questions = await getQuestions(categoryParam, excluded)
+        // If all questions exhausted, reset and fetch fresh
         if (!questions || questions.length === 0) {
-          setFetchError("couldn't load questions — check your connection and try again")
-          return
+          resetUsedIds(categoryParam)
+          questions = await getQuestions(categoryParam, [])
+          toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
         }
+        markIdsUsed(categoryParam, questions.map(q => q.id))
         setSessionQuestions(questions)
         setIsQuestionsReady(true)
         setFetchError(null)
-      } catch (err) {
-        console.error("[v0] Failed to load questions:", err)
-        setFetchError("couldn't load questions — check your connection and try again")
-        setSessionQuestions([])
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : ""
+        if (msg === "RESET_NEEDED") {
+          // All questions exhausted — reset and retry once
+          resetUsedIds(categoryParam)
+          try {
+            const fresh = await getQuestions(categoryParam, [])
+            markIdsUsed(categoryParam, fresh.map(q => q.id))
+            setSessionQuestions(fresh)
+            setIsQuestionsReady(true)
+            setFetchError(null)
+            toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
+          } catch {
+            setFetchError("couldn't load questions — check your connection and try again")
+            setSessionQuestions([])
+          }
+        } else {
+          setFetchError("couldn't load questions — check your connection and try again")
+          setSessionQuestions([])
+        }
       }
     }
-    
+
     loadQuestions()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, isQuestionsReady, categoryParam])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -344,8 +382,20 @@ function PlayPageContent() {
   }, [currentQuestion])
 
   const handlePlayAgain = useCallback(() => {
-    window.location.href = `/play?category=${encodeURIComponent(categoryParam)}&t=${Date.now()}`
-  }, [categoryParam])
+    // Reset all game state in-place so usedIds ref is preserved across rounds
+    setCurrentQuestion(0)
+    setSelectedAnswer(null)
+    setScore(0)
+    setShowResults(false)
+    setShowGemAnimation(false)
+    setShowSpeedBonus(false)
+    setGemsAwarded(false)
+    setAnswerResults([])
+    setCurrentQuestionSpeedBonus(false)
+    setSessionQuestions([])
+    setIsQuestionsReady(false)
+    setFetchError(null)
+  }, [])
 
   // Award gems and mark round completed when showing results
   useEffect(() => {
