@@ -185,12 +185,17 @@ function PlayPageContent() {
     async function loadQuestions() {
       try {
         const questions = await getQuestions(categoryParam)
+        if (!questions || questions.length === 0) {
+          setFetchError("couldn't load questions — check your connection and try again")
+          return
+        }
         setSessionQuestions(questions)
         setIsQuestionsReady(true)
         setFetchError(null)
       } catch (err) {
         console.error("[v0] Failed to load questions:", err)
         setFetchError("couldn't load questions — check your connection and try again")
+        setSessionQuestions([])
       }
     }
     
@@ -366,7 +371,10 @@ function PlayPageContent() {
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6">
         <p className="text-red-400 text-center font-medium mb-4">{fetchError}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            setFetchError(null)
+            setIsQuestionsReady(false)
+          }}
           className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold"
         >
           Try Again
@@ -375,8 +383,8 @@ function PlayPageContent() {
     )
   }
 
-  // Loading state - not mounted yet or questions not ready
-  if (!isMounted || !isQuestionsReady) {
+  // Loading state - not mounted yet, questions not ready, or current question missing
+  if (!isMounted || !isQuestionsReady || !sessionQuestions[currentQuestion]) {
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
         <Spinner className="w-8 h-8 text-[#378ADD]" />
@@ -447,7 +455,7 @@ function PlayPageContent() {
 
         {/* Answer Options */}
         <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
-          {question?.options.map((option, index) => (
+          {question && Array.isArray(question.options) && question.options.map((option, index) => (
             <AnswerOption
               key={index}
               option={stripOptionPrefix(option)}

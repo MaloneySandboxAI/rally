@@ -16,12 +16,16 @@ export interface Question {
 }
 
 export async function getQuestions(category: string): Promise<Question[]> {
+  // Guard: never run on the server to prevent hydration mismatches
+  if (typeof window === "undefined") {
+    return []
+  }
+
   const { data, error } = await supabase
     .from("sat_questions")
     .select("*")
     .eq("category", category)
-    .order("id", { ascending: false }) // Use a column that exists, randomness comes from LIMIT on varying data
-    .limit(5)
+    .limit(20)
 
   if (error) {
     console.error("[v0] Supabase fetch error:", error)
@@ -32,8 +36,8 @@ export async function getQuestions(category: string): Promise<Question[]> {
     throw new Error("couldn't load questions — check your connection and try again")
   }
 
-  // Shuffle the results client-side for randomness
-  const shuffled = [...data].sort(() => Math.random() - 0.5)
+  // Shuffle client-side and take 5
+  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 5)
 
   return shuffled as Question[]
 }
