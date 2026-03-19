@@ -1,16 +1,27 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl = "https://ykxlushgytgfbdigroit.supabase.co"
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreGx1c2hneXRnZmJkaWdyb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzA0NDQsImV4cCI6MjA4OTM0NjQ0NH0.75TiKhtFEIsfrm1WS5eVAn9nIodgqbLng5lOS4nT8CI"
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+// Singleton to prevent multiple GoTrueClient instances during HMR
+let supabaseInstance: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseKey)
+  }
+  return supabaseInstance
+}
 
 export interface Question {
   id: number
   category: string
   difficulty: string
   question: string
-  options: string[]
+  option_a: string
+  option_b: string
+  option_c: string
+  option_d: string
   correct: string
   explanation: string
 }
@@ -21,6 +32,7 @@ export async function getQuestions(category: string): Promise<Question[]> {
     return []
   }
 
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from("sat_questions")
     .select("*")

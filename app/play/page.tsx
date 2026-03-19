@@ -34,13 +34,7 @@ function letterToIndex(letter: string): number {
   return letter.charCodeAt(0) - 'A'.charCodeAt(0)
 }
 
-// Helper to strip "A) ", "B) " etc prefixes from options
-function stripOptionPrefix(option: string): string {
-  return option.replace(/^[A-D]\)\s*/, '')
-}
-
 const TOTAL_QUESTIONS = 5
-const LETTER_LABELS = ["A", "B", "C", "D"]
 
 // Difficulty badge colors
 const DIFFICULTY_COLORS = {
@@ -225,9 +219,18 @@ function PlayPageContent() {
 
   // Compute derived values (safe even when questions not ready - will use defaults)
   const question = sessionQuestions[currentQuestion]
-  const correctAnswerIndex = letterToIndex(question?.correct || "A")
+  const correctLetter = question?.correct || "A"
+  const correctAnswerIndex = letterToIndex(correctLetter)
   const baseGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
   const speedGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
+
+  // Build the 4 answer options from individual columns
+  const answerOptions = question ? [
+    { letter: "A", text: question.option_a },
+    { letter: "B", text: question.option_b },
+    { letter: "C", text: question.option_c },
+    { letter: "D", text: question.option_d },
+  ] : []
 
   // Timer effect
   useEffect(() => {
@@ -455,12 +458,12 @@ function PlayPageContent() {
 
         {/* Answer Options */}
         <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
-          {question && Array.isArray(question.options) && question.options.map((option, index) => (
+          {answerOptions.map((opt, index) => (
             <AnswerOption
-              key={index}
-              option={stripOptionPrefix(option)}
+              key={opt.letter}
+              option={opt.text}
               index={index}
-              letter={LETTER_LABELS[index]}
+              letter={opt.letter}
               selectedAnswer={selectedAnswer}
               correctAnswer={correctAnswerIndex}
               explanation={question.explanation}
