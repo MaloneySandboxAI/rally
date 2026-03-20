@@ -108,69 +108,23 @@ export function useGems() {
   return context
 }
 
-// Calculate gems earned for a round
+// Calculate gems earned for a round — only correct answers, no completion/perfect bonuses
 export function calculateRoundGems(
   correctAnswers: number,
   totalQuestions: number,
   isChallenge: boolean,
-  didWin?: boolean
+  _didWin?: boolean
 ): { total: number; breakdown: { label: string; amount: number }[] } {
-  const values = isChallenge ? GEM_VALUES.challenge : GEM_VALUES.solo
   const breakdown: { label: string; amount: number }[] = []
   let total = 0
 
-  // Correct answers
-  const answerGems = correctAnswers * (isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer)
+  const perCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
+  const answerGems = correctAnswers * perCorrect
   breakdown.push({
     label: `${correctAnswers} correct answer${correctAnswers !== 1 ? "s" : ""}`,
     amount: answerGems,
   })
   total += answerGems
-
-  if (isChallenge) {
-    // Participation bonus
-    breakdown.push({
-      label: "completion bonus",
-      amount: GEM_VALUES.challenge.participationBonus,
-    })
-    total += GEM_VALUES.challenge.participationBonus
-
-    // Win bonus
-    if (didWin) {
-      if (correctAnswers === totalQuestions) {
-        // Perfect round win
-        breakdown.push({
-          label: "perfect round bonus",
-          amount: GEM_VALUES.challenge.perfectRound,
-        })
-        total += GEM_VALUES.challenge.perfectRound
-      } else {
-        // Regular win
-        breakdown.push({
-          label: "round win bonus",
-          amount: GEM_VALUES.challenge.roundWin,
-        })
-        total += GEM_VALUES.challenge.roundWin
-      }
-    }
-  } else {
-    // Solo completion bonus
-    if (correctAnswers === totalQuestions) {
-      // Perfect round
-      breakdown.push({
-        label: "perfect round bonus",
-        amount: GEM_VALUES.solo.perfectRound,
-      })
-      total += GEM_VALUES.solo.perfectRound
-    } else {
-      // Regular completion
-      breakdown.push({
-        label: "completion bonus",
-        amount: GEM_VALUES.solo.roundCompletion,
-      })
-      total += GEM_VALUES.solo.roundCompletion
-    }
-  }
 
   return { total, breakdown }
 }

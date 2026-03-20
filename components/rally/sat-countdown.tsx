@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button"
 
 const STORAGE_KEY = "rally_sat_date"
 const SETUP_SHOWN_KEY = "rally_sat_setup_shown"
+const TARGET_SCORE_KEY = "rally_target_score"
+
+const TARGET_SCORE_OPTIONS = [400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600]
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -38,18 +41,22 @@ export function SatCountdown() {
   const [showSetupPrompt, setShowSetupPrompt] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
+  const [targetScore, setTargetScore] = useState(1000)
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
     const setupShown = localStorage.getItem(SETUP_SHOWN_KEY)
+    const storedTarget = localStorage.getItem(TARGET_SCORE_KEY)
     
     if (stored) {
       setSatDate(stored)
     } else if (!setupShown) {
-      // First launch - show setup prompt
       setShowSetupPrompt(true)
       localStorage.setItem(SETUP_SHOWN_KEY, "true")
+    }
+    if (storedTarget) {
+      setTargetScore(parseInt(storedTarget, 10) || 1000)
     }
     setIsHydrated(true)
   }, [])
@@ -57,6 +64,7 @@ export function SatCountdown() {
   const handleSaveDate = () => {
     if (selectedDate) {
       localStorage.setItem(STORAGE_KEY, selectedDate)
+      localStorage.setItem(TARGET_SCORE_KEY, targetScore.toString())
       setSatDate(selectedDate)
       setShowDatePicker(false)
       setShowSetupPrompt(false)
@@ -143,7 +151,6 @@ export function SatCountdown() {
         </DialogContent>
       </Dialog>
 
-      {/* Date Picker Dialog */}
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent className="bg-[#0a2d4a] border-[#378ADD]/30 text-white max-w-sm">
           <DialogHeader>
@@ -162,12 +169,35 @@ export function SatCountdown() {
               min={new Date().toISOString().split("T")[0]}
               className="w-full bg-[#021f3d] border border-[#378ADD]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#378ADD] [color-scheme:dark]"
             />
+
+            {/* Target Score */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#85B7EB]">target SAT score</label>
+                <span className="text-lg font-extrabold text-white">{targetScore}</span>
+              </div>
+              <input
+                type="range"
+                min={400}
+                max={1600}
+                step={50}
+                value={targetScore}
+                onChange={(e) => setTargetScore(parseInt(e.target.value, 10))}
+                className="w-full accent-[#378ADD]"
+              />
+              <div className="flex justify-between text-xs text-[#85B7EB]/50">
+                <span>400</span>
+                <span>1000</span>
+                <span>1600</span>
+              </div>
+            </div>
+
             <Button 
               onClick={handleSaveDate}
               disabled={!selectedDate}
               className="w-full bg-[#378ADD] hover:bg-[#378ADD]/90 text-white font-bold disabled:opacity-50"
             >
-              Save Date
+              Save
             </Button>
             {satDate && (
               <Button 

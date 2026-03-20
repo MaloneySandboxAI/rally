@@ -33,12 +33,10 @@ const CATEGORY_TOTAL = 100
 
 export async function getQuestions(
   category: string,
-  excludeIds: number[] = []
+  excludeIds: number[] = [],
+  difficulty?: string | null
 ): Promise<Question[]> {
-  // Guard: never run on the server to prevent hydration mismatches
-  if (typeof window === "undefined") {
-    return []
-  }
+  if (typeof window === "undefined") return []
 
   const supabase = getSupabase()
 
@@ -47,12 +45,15 @@ export async function getQuestions(
     .select("*")
     .eq("category", category)
 
-  // Exclude already-seen question IDs if any
+  // Only apply difficulty filter when explicitly provided
+  if (difficulty) {
+    query = query.eq("difficulty", difficulty)
+  }
+
   if (excludeIds.length > 0) {
     query = query.not("id", "in", `(${excludeIds.join(",")})`)
   }
 
-  // Fetch more than needed so we have room to shuffle and pick 5
   const { data, error } = await query.limit(20)
 
   if (error) {
@@ -61,12 +62,9 @@ export async function getQuestions(
   }
 
   if (!data || data.length === 0) {
-    // All questions exhausted for this category — caller should reset and retry
     throw new Error("RESET_NEEDED")
   }
 
-  // Shuffle client-side and take 5
   const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 5)
-
   return shuffled as Question[]
 }

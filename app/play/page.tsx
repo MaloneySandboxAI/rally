@@ -9,7 +9,7 @@ import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getQuestions, type Question } from "@/lib/questions"
-import { saveRoundStats } from "@/lib/stats"
+import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
@@ -18,17 +18,21 @@ const CATEGORIES = [
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316", isMath: true },
 ]
 
-// Timer settings per category type (in seconds)
-const TIMER_SETTINGS = {
-  math: 95,    // Algebra, Data & Stats
-  reading: 71, // Reading, Grammar
+// Timer by difficulty (seconds)
+const TIMER_BY_DIFFICULTY: Record<string, number> = {
+  easy: 30,
+  medium: 60,
+  hard: 90,
 }
 
-// Speed bonus threshold (half the allocated time)
-const SPEED_THRESHOLDS = {
-  math: 47,    // 95/2 rounded down
-  reading: 35, // 71/2 rounded down
+// Speed bonus threshold = half the question's time
+function getSpeedThreshold(difficulty: string): number {
+  return Math.floor((TIMER_BY_DIFFICULTY[difficulty] ?? 60) / 2)
 }
+
+// Module-level ref so usedIds NEVER resets on component remount
+// Using an object outside React so it persists for the entire browser session
+const sessionUsedIds: Record<string, Set<number>> = {}
 
 // Helper to convert letter answer (A, B, C, D) to index (0, 1, 2, 3)
 function letterToIndex(letter: string): number {
@@ -146,36 +150,23 @@ function PlayPageContent() {
   const searchParams = useSearchParams()
   const isChallenge = searchParams.get("challenge") === "true"
   const categoryParam = searchParams.get("category") || "Algebra"
-  const roundId = searchParams.get("t") || "initial"
   const { addGems } = useGems()
   
   // Find category info
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
   const categoryName = categoryInfo.name
   const isMathCategory = categoryInfo.isMath
-  
-  // Timer settings based on category
-  const totalTime = isMathCategory ? TIMER_SETTINGS.math : TIMER_SETTINGS.reading
-  const speedThreshold = isMathCategory ? SPEED_THRESHOLDS.math : SPEED_THRESHOLDS.reading
-  
-  // Track if we've shown the reset message this round
-  const hasShownResetMessage = useRef(false)
 
-  // Track used question IDs per category to prevent repeats
-  // useRef so it survives re-renders without triggering them
-  const usedIds = useRef<Record<string, Set<number>>>({})
-
+  // usedIds lives at module level (sessionUsedIds) — never reset on remount
   function getUsedIdsForCategory(cat: string): number[] {
-    return Array.from(usedIds.current[cat] ?? new Set<number>())
+    return Array.from(sessionUsedIds[cat] ?? new Set<number>())
   }
-
   function markIdsUsed(cat: string, ids: number[]) {
-    if (!usedIds.current[cat]) usedIds.current[cat] = new Set()
-    ids.forEach(id => usedIds.current[cat].add(id))
+    if (!sessionUsedIds[cat]) sessionUsedIds[cat] = new Set()
+    ids.forEach(id => sessionUsedIds[cat].add(id))
   }
-
   function resetUsedIds(cat: string) {
-    usedIds.current[cat] = new Set()
+    sessionUsedIds[cat] = new Set()
   }
   
   // Questions state - fetched from Supabase (client-side only)
@@ -197,25 +188,27 @@ function PlayPageContent() {
     async function loadQuestions() {
       try {
         const excluded = getUsedIdsForCategory(categoryParam)
-        let questions = await getQuestions(categoryParam, excluded)
-        // If all questions exhausted, reset and fetch fresh
+        const difficultyLevel = getAdaptiveDifficulty(categoryParam)
+        let questions = await getQuestions(categoryParam, excluded, difficultyLevel)
         if (!questions || questions.length === 0) {
           resetUsedIds(categoryParam)
-          questions = await getQuestions(categoryParam, [])
+          questions = await getQuestions(categoryParam, [], difficultyLevel)
           toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
         }
         markIdsUsed(categoryParam, questions.map(q => q.id))
+        console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
         setSessionQuestions(questions)
         setIsQuestionsReady(true)
         setFetchError(null)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : ""
         if (msg === "RESET_NEEDED") {
-          // All questions exhausted — reset and retry once
           resetUsedIds(categoryParam)
           try {
-            const fresh = await getQuestions(categoryParam, [])
+            const difficultyLevel = getAdaptiveDifficulty(categoryParam)
+            const fresh = await getQuestions(categoryParam, [], difficultyLevel)
             markIdsUsed(categoryParam, fresh.map(q => q.id))
+            console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
             setSessionQuestions(fresh)
             setIsQuestionsReady(true)
             setFetchError(null)
@@ -244,8 +237,9 @@ function PlayPageContent() {
   const [gemsAwarded, setGemsAwarded] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
   
-  // Timer state
-  const [timeRemaining, setTimeRemaining] = useState(totalTime)
+  // Timer state — totalTime is per-question based on difficulty
+  const [totalTime, setTotalTime] = useState(60) // default medium until question loads
+  const [timeRemaining, setTimeRemaining] = useState(60)
   const [isTimerActive, setIsTimerActive] = useState(true)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -317,14 +311,17 @@ function PlayPageContent() {
     }, 2000)
   }, [isQuestionsReady, timeRemaining, selectedAnswer, currentQuestion, question])
   
-  // Reset timer when moving to next question
+  // Reset timer when moving to next question — use difficulty-based time
   useEffect(() => {
     if (!isQuestionsReady) return
-    setTimeRemaining(totalTime)
+    const diff = sessionQuestions[currentQuestion]?.difficulty || "medium"
+    const t = TIMER_BY_DIFFICULTY[diff] ?? 60
+    setTotalTime(t)
+    setTimeRemaining(t)
     setIsTimerActive(true)
     questionStartTimeRef.current = Date.now()
     setCurrentQuestionSpeedBonus(false)
-  }, [isQuestionsReady, currentQuestion, totalTime])
+  }, [isQuestionsReady, currentQuestion, sessionQuestions])
 
   const handleAnswerSelect = useCallback((answerIndex: number) => {
     if (selectedAnswer !== null) return
@@ -335,8 +332,9 @@ function PlayPageContent() {
     
     setSelectedAnswer(answerIndex)
     
-    // Calculate time taken
+    // Calculate time taken — speed threshold is half of this question's difficulty time
     const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
+    const speedThreshold = getSpeedThreshold(question?.difficulty || "medium")
     const isSpeedBonus = timeTaken <= speedThreshold
     
     if (answerIndex === correctAnswerIndex) {
@@ -371,7 +369,7 @@ function PlayPageContent() {
         gemsEarned: 0,
       }])
     }
-  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, speedThreshold, baseGemPerCorrect, speedGemPerCorrect])
+  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, baseGemPerCorrect, speedGemPerCorrect])
 
   const handleNextQuestion = useCallback(() => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
@@ -398,29 +396,28 @@ function PlayPageContent() {
     setFetchError(null)
   }, [])
 
-  // Award gems and mark round completed when showing results
+  // Award gems when showing results — only correct answers + speed bonuses
   useEffect(() => {
     if (showResults && !gemsAwarded) {
-      // Calculate total gems including speed bonuses
-      const speedBonusGems = answerResults
-        .filter(r => r.wasSpeedBonus)
-        .reduce((sum) => sum + (speedGemPerCorrect - baseGemPerCorrect), 0)
-      
-      const { total: baseTotal } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
-      const totalWithSpeed = baseTotal + speedBonusGems
-      
-      addGems(totalWithSpeed)
-      markRoundCompleted() // Track streak
-      saveRoundStats({
+      const correctGems = answerResults
+        .filter(r => r.isCorrect)
+        .reduce((sum, r) => sum + r.gemsEarned, 0)
+
+      addGems(correctGems)
+      markRoundCompleted()
+      const unlockMessage = saveRoundStats({
         categoryId: categoryParam,
         correct: score,
         total: TOTAL_QUESTIONS,
-        gemsEarned: totalWithSpeed,
+        gemsEarned: correctGems,
         answerResults,
       })
+      if (unlockMessage) {
+        toast.success(`🎯 ${unlockMessage}`, { duration: 5000 })
+      }
       setGemsAwarded(true)
     }
-  }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, speedGemPerCorrect, baseGemPerCorrect])
+  }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, categoryParam])
 
   // Derived values for rendering (always computed, never early return)
   const hasAnswered = selectedAnswer !== null
@@ -694,22 +691,31 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
     setTotalGems(isNaN(stored) ? 0 : stored)
   }, [])
   
-  // Calculate gems earned including speed bonuses
+  // Calculate gems — only correct answers + speed bonuses, no completion/perfect bonus
   const speedBonusCount = answerResults.filter(r => r.wasSpeedBonus).length
   const baseGem = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
   const speedGem = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
   const speedBonusExtra = speedBonusCount * (speedGem - baseGem)
-  
-  const { total: baseTotal, breakdown: baseBreakdown } = calculateRoundGems(score, TOTAL_QUESTIONS, isChallenge, true)
-  const gemsEarned = baseTotal + speedBonusExtra
-  
-  // Build breakdown with speed bonus
-  const breakdown = [...baseBreakdown]
+  const correctAnswerGems = answerResults.filter(r => r.isCorrect && !r.wasSpeedBonus).length * baseGem
+  const speedAnswerGems = speedBonusCount * speedGem
+  const gemsEarned = correctAnswerGems + speedAnswerGems
+
+  const breakdown: { label: string; amount: number }[] = []
+  const nonSpeedCorrect = answerResults.filter(r => r.isCorrect && !r.wasSpeedBonus).length
+  if (nonSpeedCorrect > 0) {
+    breakdown.push({
+      label: `${nonSpeedCorrect} correct answer${nonSpeedCorrect !== 1 ? "s" : ""}`,
+      amount: nonSpeedCorrect * baseGem,
+    })
+  }
   if (speedBonusCount > 0) {
     breakdown.push({
-      label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? 'es' : ''}`,
-      amount: speedBonusExtra,
+      label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? "es" : ""}`,
+      amount: speedAnswerGems,
     })
+  }
+  if (nonSpeedCorrect === 0 && speedBonusCount === 0) {
+    breakdown.push({ label: "no correct answers", amount: 0 })
   }
   
   // Difficulty breakdown

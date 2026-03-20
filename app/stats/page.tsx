@@ -83,6 +83,9 @@ export default function StatsPage() {
     <div className="min-h-screen bg-[#021f3d] pb-24">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
+        <Link href="/" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors block mb-3">
+          ← home
+        </Link>
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 text-[#378ADD]" />
           <h1 className="text-2xl font-extrabold text-white">your stats</h1>
