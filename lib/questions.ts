@@ -1,29 +1,68 @@
-import algebraQuestions from './questions-algebra.json'
-import readingQuestions from './questions-reading.json'
-import grammarQuestions from './questions-grammar.json'
-import dataStatsQuestions from './questions-data-stats.json'
+"use client"
+
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
+
+const supabaseUrl = "https://ykxlushgytgfbdigroit.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreGx1c2hneXRnZmJkaWdyb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzA0NDQsImV4cCI6MjA4OTM0NjQ0NH0.75TiKhtFEIsfrm1WS5eVAn9nIodgqbLng5lOS4nT8CI"
+
+// Singleton to prevent multiple GoTrueClient instances during HMR
+let supabaseInstance: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseKey)
+  }
+  return supabaseInstance
+}
 
 export interface Question {
   id: number
   category: string
   difficulty: string
   question: string
-  options: string[]
+  option_a: string
+  option_b: string
+  option_c: string
+  option_d: string
   correct: string
   explanation: string
 }
 
-// Combine all 400 questions (100 per category)
-export const ALL_QUESTIONS: Question[] = [
-  ...algebraQuestions,
-  ...readingQuestions,
-  ...grammarQuestions,
-  ...dataStatsQuestions,
-] as Question[]
+// Total questions per category — used to know when to reset the used-IDs set
+const CATEGORY_TOTAL = 100
 
-// Log the question bank size for verification
-console.log("[v0] Question bank size:", ALL_QUESTIONS.length)
-console.log("[v0] Algebra count:", ALL_QUESTIONS.filter(q => q.category === "Algebra").length)
-console.log("[v0] Reading count:", ALL_QUESTIONS.filter(q => q.category === "Reading Comprehension").length)
-console.log("[v0] Grammar count:", ALL_QUESTIONS.filter(q => q.category === "Grammar").length)
-console.log("[v0] Data & Stats count:", ALL_QUESTIONS.filter(q => q.category === "Data & Statistics").length)
+export async function getQuestions(
+  category: string,
+  excludeIds: number[] = [],
+  // difficulty param kept for API compatibility but intentionally NOT used in query
+  _difficulty?: string | null
+): Promise<Question[]> {
+  if (typeof window === "undefined") return []
+
+  const supabase = getSupabase()
+
+  // Query: SELECT * FROM sat_questions WHERE category = ? AND id NOT IN (...) LIMIT 20
+  // NO difficulty filter — all difficulties are fetched together
+  let query = supabase
+    .from("sat_questions")
+    .select("*")
+    .eq("category", category)
+
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  }
+
+  const { data, error } = await query.limit(20)
+
+  if (error) {
+    console.error("[v0] Supabase fetch error:", error)
+    throw new Error("couldn't load questions — check your connection and try again")
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error("RESET_NEEDED")
+  }
+
+  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 5)
+  return shuffled as Question[]
+}

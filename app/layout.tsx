@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { FeedbackButton } from '@/components/rally/feedback-button'
 import { GemProvider } from '@/lib/gem-context'
 import { QuestionTrackerProvider } from '@/lib/question-tracker-context'
+import { AuthGate } from '@/components/rally/auth-gate'
 import { Toaster } from 'sonner'
 import './globals.css'
 
@@ -54,9 +55,11 @@ export default function RootLayout({
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
         <GemProvider>
           <QuestionTrackerProvider>
-            {children}
-            <FeedbackButton />
-            <Toaster position="top-center" />
+            <AuthGate>
+              {children}
+              <FeedbackButton />
+              <Toaster position="top-center" />
+            </AuthGate>
           </QuestionTrackerProvider>
         </GemProvider>
         <Analytics />

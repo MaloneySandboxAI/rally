@@ -1,5 +1,6 @@
 import { Header } from "@/components/rally/header"
 import { StreakBanner } from "@/components/rally/streak-banner"
+import { SatCountdown } from "@/components/rally/sat-countdown"
 import { GamesList } from "@/components/rally/games-list"
 import { ChallengeButton } from "@/components/rally/challenge-button"
 import { BottomNav } from "@/components/rally/bottom-nav"
@@ -12,7 +13,12 @@ export default function RallyHome() {
       <Header />
       
       <main className="flex-1 px-4 pb-32 pt-4 overflow-y-auto">
-        <StreakBanner days={7} />
+        <StreakBanner />
+
+        {/* SAT Date Countdown */}
+        <div className="mt-4">
+          <SatCountdown />
+        </div>
 
         {/* Referral Banner */}
         <div className="mt-4">
