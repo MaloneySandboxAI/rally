@@ -1,7 +1,20 @@
+"use client"
+
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Store } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function StorePage() {
+  const router = useRouter()
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    localStorage.removeItem("rally_is_guest")
+    router.replace("/login")
+  }
+
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
@@ -27,7 +40,14 @@ export default function StorePage() {
         >
           keep earning gems
         </Link>
+        <button
+          onClick={handleSignOut}
+          className="mt-6 text-[#85B7EB]/40 text-sm hover:text-[#85B7EB]/70 transition-colors"
+        >
+          sign out
+        </button>
       </main>
     </div>
   )
 }
+

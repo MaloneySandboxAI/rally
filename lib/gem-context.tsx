@@ -30,30 +30,18 @@ interface GemContextType {
 const GemContext = createContext<GemContextType | undefined>(undefined)
 
 export function GemProvider({ children }: { children: ReactNode }) {
-  const [totalGems, setTotalGemsState] = useState(0)
-  const [isHydrated, setIsHydrated] = useState(false)
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
-
-  // Load gems from localStorage on mount
-  useEffect(() => {
+  // Lazy initializer reads localStorage only once on first render (client-side only)
+  const [totalGems, setTotalGemsState] = useState<number>(() => {
+    if (typeof window === "undefined") return 0
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = parseInt(stored, 10)
-      if (!isNaN(parsed)) {
-        setTotalGemsState(parsed)
-      }
-    }
-    setIsHydrated(true)
-    // Mark initial load as complete after a tick to ensure state is set
-    setTimeout(() => setInitialLoadComplete(true), 0)
-  }, [])
+    const parsed = parseInt(stored ?? "0", 10)
+    return isNaN(parsed) ? 0 : parsed
+  })
 
-  // Persist to localStorage whenever gems change (only after initial load is complete)
+  // Persist every gem change to localStorage
   useEffect(() => {
-    if (initialLoadComplete) {
-      localStorage.setItem(STORAGE_KEY, totalGems.toString())
-    }
-  }, [totalGems, initialLoadComplete])
+    localStorage.setItem(STORAGE_KEY, totalGems.toString())
+  }, [totalGems])
 
   const addGems = useCallback((amount: number) => {
     setTotalGemsState((prev) => prev + amount)

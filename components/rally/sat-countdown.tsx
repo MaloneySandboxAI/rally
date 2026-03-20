@@ -52,6 +52,10 @@ export function SatCountdown() {
     if (stored) {
       setSatDate(stored)
     } else if (!setupShown) {
+      // Default date to 3 months from now so the field is pre-filled
+      const defaultDate = new Date()
+      defaultDate.setMonth(defaultDate.getMonth() + 3)
+      setSelectedDate(defaultDate.toISOString().split("T")[0])
       setShowSetupPrompt(true)
       localStorage.setItem(SETUP_SHOWN_KEY, "true")
     }
@@ -122,7 +126,7 @@ export function SatCountdown() {
         </button>
       )}
 
-      {/* First Launch Setup Prompt */}
+      {/* First Launch Setup Prompt — includes date + target score inline */}
       <Dialog open={showSetupPrompt} onOpenChange={setShowSetupPrompt}>
         <DialogContent className="bg-[#0a2d4a] border-[#378ADD]/30 text-white max-w-sm">
           <DialogHeader>
@@ -130,18 +134,60 @@ export function SatCountdown() {
               When is your SAT?
             </DialogTitle>
             <DialogDescription className="text-center text-[#85B7EB] text-sm">
-              Enter your target test date to see a countdown on your home screen.
+              Set your test date and target score to personalise your training.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <Button 
-              onClick={handleOpenDatePicker}
+          <div className="flex flex-col gap-4">
+            {/* Date input */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-bold text-[#85B7EB]">test date</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                className="w-full bg-[#021f3d] border border-[#378ADD]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#378ADD] [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Target score slider */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-[#85B7EB]">target SAT score</label>
+                <span className="text-lg font-extrabold text-white">{targetScore}</span>
+              </div>
+              <input
+                type="range"
+                min={400}
+                max={1600}
+                step={50}
+                value={targetScore}
+                onChange={(e) => setTargetScore(parseInt(e.target.value, 10))}
+                className="w-full accent-[#378ADD]"
+              />
+              <div className="flex justify-between text-xs text-[#85B7EB]/50">
+                <span>400</span>
+                <span>1000</span>
+                <span>1600</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => {
+                if (selectedDate) {
+                  handleSaveDate()
+                } else {
+                  // Save score only, skip date
+                  localStorage.setItem(TARGET_SCORE_KEY, targetScore.toString())
+                  setShowSetupPrompt(false)
+                }
+              }}
               className="w-full bg-[#378ADD] hover:bg-[#378ADD]/90 text-white font-bold"
             >
-              Set My SAT Date
+              {selectedDate ? "Save" : "Set Score & Skip Date"}
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={handleDismissSetup}
               className="w-full text-[#85B7EB] hover:text-white hover:bg-[#021f3d]"
             >

@@ -684,28 +684,29 @@ function getEncouragementMessage(score: number): string {
 function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const [totalGems, setTotalGems] = useState(0)
+  const [isGuest, setIsGuest] = useState(false)
 
-  // Read cumulative gem total from localStorage after gems have been added
   useEffect(() => {
     const stored = parseInt(localStorage.getItem("rally_gems") || "0", 10)
     setTotalGems(isNaN(stored) ? 0 : stored)
+    setIsGuest(localStorage.getItem("rally_is_guest") === "true")
   }, [])
   
-  // Calculate gems — only correct answers + speed bonuses, no completion/perfect bonus
-  const speedBonusCount = answerResults.filter(r => r.wasSpeedBonus).length
+  // Calculate gems — use `score` as source of truth for correct count
+  // answerResults tracks speed bonuses per-answer
+  const speedBonusCount = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
   const baseGem = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
   const speedGem = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
-  const speedBonusExtra = speedBonusCount * (speedGem - baseGem)
-  const correctAnswerGems = answerResults.filter(r => r.isCorrect && !r.wasSpeedBonus).length * baseGem
+  const nonSpeedCorrect = score - speedBonusCount
+  const correctAnswerGems = nonSpeedCorrect * baseGem
   const speedAnswerGems = speedBonusCount * speedGem
   const gemsEarned = correctAnswerGems + speedAnswerGems
 
   const breakdown: { label: string; amount: number }[] = []
-  const nonSpeedCorrect = answerResults.filter(r => r.isCorrect && !r.wasSpeedBonus).length
   if (nonSpeedCorrect > 0) {
     breakdown.push({
       label: `${nonSpeedCorrect} correct answer${nonSpeedCorrect !== 1 ? "s" : ""}`,
-      amount: nonSpeedCorrect * baseGem,
+      amount: correctAnswerGems,
     })
   }
   if (speedBonusCount > 0) {
@@ -714,7 +715,7 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
       amount: speedAnswerGems,
     })
   }
-  if (nonSpeedCorrect === 0 && speedBonusCount === 0) {
+  if (score === 0) {
     breakdown.push({ label: "no correct answers", amount: 0 })
   }
   
@@ -781,6 +782,21 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         <Diamond className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
         <span className="text-sm text-[#85B7EB]/70">your total: {totalGems} gems</span>
       </div>
+
+      {/* Guest save-progress banner */}
+      {isGuest && (
+        <div className="w-full max-w-sm mb-4 bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl px-5 py-4 flex items-center justify-between gap-3">
+          <p className="text-[#85B7EB] text-sm font-medium leading-snug flex-1">
+            save your progress — create a free account
+          </p>
+          <a
+            href="/login"
+            className="bg-[#378ADD] text-white text-sm font-bold rounded-xl px-4 py-2 whitespace-nowrap hover:brightness-110 transition-all"
+          >
+            sign up free
+          </a>
+        </div>
+      )}
 
       {/* Gems Earned Card */}
       <div className="w-full max-w-sm mb-4 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">

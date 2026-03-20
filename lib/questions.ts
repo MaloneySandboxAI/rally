@@ -34,21 +34,19 @@ const CATEGORY_TOTAL = 100
 export async function getQuestions(
   category: string,
   excludeIds: number[] = [],
-  difficulty?: string | null
+  // difficulty param kept for API compatibility but intentionally NOT used in query
+  _difficulty?: string | null
 ): Promise<Question[]> {
   if (typeof window === "undefined") return []
 
   const supabase = getSupabase()
 
+  // Query: SELECT * FROM sat_questions WHERE category = ? AND id NOT IN (...) LIMIT 20
+  // NO difficulty filter — all difficulties are fetched together
   let query = supabase
     .from("sat_questions")
     .select("*")
     .eq("category", category)
-
-  // Only apply difficulty filter when explicitly provided
-  if (difficulty) {
-    query = query.eq("difficulty", difficulty)
-  }
 
   if (excludeIds.length > 0) {
     query = query.not("id", "in", `(${excludeIds.join(",")})`)
