@@ -9,6 +9,7 @@ import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getQuestions, type Question } from "@/lib/questions"
+import { saveRoundStats } from "@/lib/stats"
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
@@ -410,6 +411,13 @@ function PlayPageContent() {
       
       addGems(totalWithSpeed)
       markRoundCompleted() // Track streak
+      saveRoundStats({
+        categoryId: categoryParam,
+        correct: score,
+        total: TOTAL_QUESTIONS,
+        gemsEarned: totalWithSpeed,
+        answerResults,
+      })
       setGemsAwarded(true)
     }
   }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, speedGemPerCorrect, baseGemPerCorrect])
@@ -678,6 +686,13 @@ function getEncouragementMessage(score: number): string {
 
 function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
+  const [totalGems, setTotalGems] = useState(0)
+
+  // Read cumulative gem total from localStorage after gems have been added
+  useEffect(() => {
+    const stored = parseInt(localStorage.getItem("rally_gems") || "0", 10)
+    setTotalGems(isNaN(stored) ? 0 : stored)
+  }, [])
   
   // Calculate gems earned including speed bonuses
   const speedBonusCount = answerResults.filter(r => r.wasSpeedBonus).length
@@ -755,6 +770,12 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         </p>
       </div>
 
+      {/* Running gem total */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <Diamond className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
+        <span className="text-sm text-[#85B7EB]/70">your total: {totalGems} gems</span>
+      </div>
+
       {/* Gems Earned Card */}
       <div className="w-full max-w-sm mb-4 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">
         <div className="flex items-center justify-center gap-2 mb-3">
@@ -825,6 +846,14 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
           ))}
         </div>
       </div>
+
+      {/* Home link */}
+      <a
+        href="/"
+        className="text-[#85B7EB]/50 text-sm font-medium mb-4 hover:text-[#85B7EB] transition-colors"
+      >
+        ← back to home
+      </a>
 
       <div className="w-full max-w-sm space-y-3">
         {/* Challenge a Friend Button */}
