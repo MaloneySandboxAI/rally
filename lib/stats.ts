@@ -164,7 +164,7 @@ export interface RoundResult {
 }
 
 export function saveRoundStats(round: RoundResult): string | null {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return null
 
   const stats = loadStats()
 

@@ -38,7 +38,7 @@ export default function RallyHome() {
         {/* Practice Solo Section - Always visible */}
         <section className="mt-8">
           <h2 className="text-lg font-extrabold text-foreground mb-2">practice solo</h2>
-          <p className="text-sm text-[#85B7EB]/60 mb-4">25 gems per correct answer · 4x more when you challenge a friend</p>
+          <p className="text-sm text-[#85B7EB]/60 mb-4">10–40 gems per correct answer · 4x more when you challenge a friend</p>
           <CategoryCards variant="grid" />
         </section>
       </main>

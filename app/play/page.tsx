@@ -1,438 +1,399 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { useGems, calculateRoundGems, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
+import { useGems, gemsForAnswer, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
 import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getQuestions, type Question } from "@/lib/questions"
-import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
+import { getOneQuestion, type Question } from "@/lib/questions"
+import { saveRoundStats } from "@/lib/stats"
+import Link from "next/link"
 
+// ─── Constants ────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
-  { id: "Reading Comprehension", name: "Reading", color: "#14B8A6", isMath: false },
-  { id: "Grammar", name: "Grammar", color: "#A855F7", isMath: false },
-  { id: "Data & Statistics", name: "Data & Stats", color: "#F97316", isMath: true },
+  { id: "Algebra",              name: "Algebra",    color: "#378ADD", isMath: true  },
+  { id: "Reading Comprehension",name: "Reading",    color: "#14B8A6", isMath: false },
+  { id: "Grammar",              name: "Grammar",    color: "#A855F7", isMath: false },
+  { id: "Data & Statistics",    name: "Data & Stats",color: "#F97316", isMath: true  },
 ]
 
-// Timer by difficulty (seconds)
+const TOTAL_QUESTIONS = 5
+
+// Timer per difficulty (seconds)
 const TIMER_BY_DIFFICULTY: Record<string, number> = {
-  easy: 30,
+  easy:   30,
   medium: 60,
-  hard: 90,
+  hard:   90,
 }
 
-// Speed bonus threshold = half the question's time
 function getSpeedThreshold(difficulty: string): number {
   return Math.floor((TIMER_BY_DIFFICULTY[difficulty] ?? 60) / 2)
 }
 
-// Module-level ref so usedIds NEVER resets on component remount
-// Using an object outside React so it persists for the entire browser session
-const sessionUsedIds: Record<string, Set<number>> = {}
-
-// Helper to convert letter answer (A, B, C, D) to index (0, 1, 2, 3)
-function letterToIndex(letter: string): number {
-  return letter.charCodeAt(0) - 'A'.charCodeAt(0)
+// Adaptive difficulty progression within a round
+//   correct  → bump up  (easy→medium→hard, cap at hard)
+//   wrong    → bump down (hard→medium→medium→easy, cap at easy)
+function bumpDifficulty(current: string, wasCorrect: boolean): string {
+  if (wasCorrect) {
+    if (current === "easy")   return "medium"
+    if (current === "medium") return "hard"
+    return "hard"
+  } else {
+    if (current === "hard")   return "medium"
+    if (current === "medium") return "easy"
+    return "easy"
+  }
 }
 
-const TOTAL_QUESTIONS = 5
+// Module-level session used-IDs so they persist across rounds
+const sessionUsedIds: Record<string, Set<number>> = {}
+
+function getUsedIds(cat: string): number[] {
+  return Array.from(sessionUsedIds[cat] ?? new Set<number>())
+}
+function markIdUsed(cat: string, id: number) {
+  if (!sessionUsedIds[cat]) sessionUsedIds[cat] = new Set()
+  sessionUsedIds[cat].add(id)
+}
+function clearUsedIds(cat: string) {
+  sessionUsedIds[cat] = new Set()
+}
 
 // Difficulty badge colors
 const DIFFICULTY_COLORS = {
-  easy: { bg: "bg-green-500/20", text: "text-green-400", border: "border-green-500/40" },
-  medium: { bg: "bg-amber-500/20", text: "text-amber-400", border: "border-amber-500/40" },
-  hard: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/40" },
+  easy:   { bg: "bg-green-500/20", text: "text-green-400" },
+  medium: { bg: "bg-amber-500/20",  text: "text-amber-400" },
+  hard:   { bg: "bg-red-500/20",    text: "text-red-400"   },
 }
 
 // Timer ring colors
-const TIMER_COLORS = {
-  normal: "#378ADD",
-  warning: "#F59E0B", // 30 seconds or less
-  danger: "#EF4444",  // 10 seconds or less
-}
+const TIMER_COLORS = { normal: "#378ADD", warning: "#F59E0B", danger: "#EF4444" }
 
-// Floating gem animation component
-function FloatingGemIndicator({ amount, isSpeedBonus }: { amount: number; isSpeedBonus: boolean }) {
+// ─── Small UI Components ──────────────────────────────────────────────────
+
+function FloatingGemIndicator({ amount, isSpeed }: { amount: number; isSpeed: boolean }) {
   return (
     <div className="absolute -top-2 right-4 animate-gem-float pointer-events-none">
-      <div className={`flex items-center gap-1 ${isSpeedBonus ? 'bg-gradient-to-r from-[#F59E0B] to-[#EF4444]' : 'bg-[#F59E0B]'} text-white px-2 py-1 rounded-full shadow-lg`}>
+      <div className={`flex items-center gap-1 ${isSpeed ? "bg-gradient-to-r from-[#F59E0B] to-[#EF4444]" : "bg-[#F59E0B]"} text-white px-2 py-1 rounded-full shadow-lg`}>
         <Diamond className="w-3 h-3 fill-white" />
         <span className="text-xs font-bold">+{amount}</span>
-        {isSpeedBonus && <Zap className="w-3 h-3 fill-white" />}
+        {isSpeed && <Zap className="w-3 h-3 fill-white" />}
       </div>
     </div>
   )
 }
 
-// Countdown Timer Ring Component
-function CountdownTimer({ 
-  timeRemaining, 
-  totalTime 
-}: { 
-  timeRemaining: number
-  totalTime: number 
-}) {
+function CountdownTimer({ timeRemaining, totalTime }: { timeRemaining: number; totalTime: number }) {
   const radius = 18
   const circumference = 2 * Math.PI * radius
-  const progress = timeRemaining / totalTime
-  const strokeDashoffset = circumference * (1 - progress)
-  
-  let color = TIMER_COLORS.normal
-  if (timeRemaining <= 10) {
-    color = TIMER_COLORS.danger
-  } else if (timeRemaining <= 30) {
-    color = TIMER_COLORS.warning
-  }
+  const strokeDashoffset = circumference * (1 - timeRemaining / totalTime)
+  const color = timeRemaining <= 10 ? TIMER_COLORS.danger : timeRemaining <= 30 ? TIMER_COLORS.warning : TIMER_COLORS.normal
 
   return (
     <div className="relative w-12 h-12 flex items-center justify-center">
       <svg className="w-12 h-12 transform -rotate-90">
-        {/* Background circle */}
-        <circle
-          cx="24"
-          cy="24"
-          r={radius}
-          fill="none"
-          stroke="#0a2d4a"
-          strokeWidth="3"
-        />
-        {/* Progress circle */}
-        <circle
-          cx="24"
-          cy="24"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-1000 ease-linear"
-        />
+        <circle cx="24" cy="24" r={radius} fill="none" stroke="#0a2d4a" strokeWidth="3" />
+        <circle cx="24" cy="24" r={radius} fill="none" stroke={color} strokeWidth="3"
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-linear" />
       </svg>
-      <span 
-        className="absolute text-sm font-bold"
-        style={{ color }}
-      >
-        {timeRemaining}
-      </span>
+      <span className="absolute text-sm font-bold" style={{ color }}>{timeRemaining}</span>
     </div>
   )
 }
 
-// Speed Bonus Animation Component
-function SpeedBonusAnimation() {
+function HeartsDisplay({ hearts, isPro }: { hearts: number; isPro: boolean }) {
+  if (isPro) return null
   return (
-    <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50 animate-in fade-in zoom-in duration-300">
-      <div className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
-        <Zap className="w-6 h-6 fill-white" />
-        <span className="text-lg font-extrabold">+150 gems</span>
-        <span className="text-sm font-bold opacity-80">speed bonus!</span>
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Heart
+          key={i}
+          className={`w-4 h-4 ${i < hearts ? "text-red-500 fill-red-500" : "text-[#0a2d4a] fill-[#0a2d4a]"}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ─── Answer result type ───────────────────────────────────────────────────
+interface AnswerResult {
+  questionIndex: number
+  isCorrect:     boolean
+  difficulty:    string
+  wasSpeedBonus: boolean
+  gemsEarned:    number
+}
+
+// ─── No Hearts screen ─────────────────────────────────────────────────────
+function NoHeartsScreen({ totalGems, onRefill }: { totalGems: number; onRefill: () => void }) {
+  const canRefill = totalGems >= 200
+  return (
+    <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 gap-6">
+      <div className="flex gap-1 mb-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Heart key={i} className="w-8 h-8 text-[#0a2d4a] fill-[#0a2d4a]" />
+        ))}
+      </div>
+      <h2 className="text-2xl font-extrabold text-white text-center">no hearts left</h2>
+      <p className="text-[#85B7EB] text-center text-sm max-w-xs">
+        come back tomorrow or go Pro for unlimited play
+      </p>
+      <div className="flex flex-col gap-3 w-full max-w-sm">
+        {canRefill && (
+          <button
+            onClick={onRefill}
+            className="w-full bg-[#F59E0B] text-[#0a1628] rounded-2xl py-4 font-extrabold flex items-center justify-center gap-2"
+          >
+            <Diamond className="w-5 h-5 fill-current" />
+            refill hearts · 200 gems
+          </button>
+        )}
+        <button
+          onClick={() => { /* remind tomorrow — just close */ window.location.href = "/" }}
+          className="w-full bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-4 font-bold"
+        >
+          remind me tomorrow
+        </button>
+        <Link
+          href="/store"
+          className="w-full bg-[#378ADD] text-white rounded-2xl py-4 font-extrabold flex items-center justify-center"
+        >
+          upgrade to Pro
+        </Link>
       </div>
     </div>
   )
 }
 
-// Answer result type for tracking
-interface AnswerResult {
-  questionIndex: number
-  isCorrect: boolean
-  difficulty: string
-  wasSpeedBonus: boolean
-  gemsEarned: number
+// ─── Daily limit screen ───────────────────────────────────────────────────
+function DailyLimitScreen() {
+  return (
+    <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 gap-6">
+      <h2 className="text-2xl font-extrabold text-white text-center">daily limit reached</h2>
+      <p className="text-[#85B7EB] text-center text-sm max-w-xs">
+        Free accounts get 3 solo rounds per day. Go Pro for unlimited rounds.
+      </p>
+      <div className="flex flex-col gap-3 w-full max-w-sm">
+        <Link href="/store" className="w-full bg-[#378ADD] text-white rounded-2xl py-4 font-extrabold flex items-center justify-center">
+          upgrade to Pro
+        </Link>
+        <Link href="/" className="w-full bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-4 font-bold flex items-center justify-center">
+          back to home
+        </Link>
+      </div>
+    </div>
+  )
 }
 
+// ─── Main game component ──────────────────────────────────────────────────
 function PlayPageContent() {
   const searchParams = useSearchParams()
   const isChallenge = searchParams.get("challenge") === "true"
   const categoryParam = searchParams.get("category") || "Algebra"
-  const { addGems } = useGems()
-  
-  // Find category info
+  const { addGems, loseHeart, refillHearts, canPlaySolo, incrementRoundsToday, hearts, isPro, totalGems } = useGems()
+
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
   const categoryName = categoryInfo.name
   const isMathCategory = categoryInfo.isMath
 
-  // usedIds lives at module level (sessionUsedIds) — never reset on remount
-  function getUsedIdsForCategory(cat: string): number[] {
-    return Array.from(sessionUsedIds[cat] ?? new Set<number>())
-  }
-  function markIdsUsed(cat: string, ids: number[]) {
-    if (!sessionUsedIds[cat]) sessionUsedIds[cat] = new Set()
-    ids.forEach(id => sessionUsedIds[cat].add(id))
-  }
-  function resetUsedIds(cat: string) {
-    sessionUsedIds[cat] = new Set()
-  }
-  
-  // Questions state - fetched from Supabase (client-side only)
-  const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
-  const [isQuestionsReady, setIsQuestionsReady] = useState(false)
+  // ── Game state ───────────────────────────────────────────────────────────
+  const [currentQuestionNum, setCurrentQuestionNum] = useState(0)   // 0-indexed, 0..4
+  const [question, setQuestion] = useState<Question | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [isMounted, setIsMounted] = useState(false)
-  
-  // Mark component as mounted (client-side only)
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-  
-  // Fetch questions from Supabase ONLY on client after mount
-  useEffect(() => {
-    if (!isMounted) return
-    if (isQuestionsReady) return
 
-    async function loadQuestions() {
-      try {
-        const excluded = getUsedIdsForCategory(categoryParam)
-        const difficultyLevel = getAdaptiveDifficulty(categoryParam)
-        let questions = await getQuestions(categoryParam, excluded, difficultyLevel)
-        if (!questions || questions.length === 0) {
-          resetUsedIds(categoryParam)
-          questions = await getQuestions(categoryParam, [], difficultyLevel)
-          toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
-        }
-        markIdsUsed(categoryParam, questions.map(q => q.id))
-        console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
-        setSessionQuestions(questions)
-        setIsQuestionsReady(true)
-        setFetchError(null)
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : ""
-        if (msg === "RESET_NEEDED") {
-          resetUsedIds(categoryParam)
-          try {
-            const difficultyLevel = getAdaptiveDifficulty(categoryParam)
-            const fresh = await getQuestions(categoryParam, [], difficultyLevel)
-            markIdsUsed(categoryParam, fresh.map(q => q.id))
-            console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
-            setSessionQuestions(fresh)
-            setIsQuestionsReady(true)
-            setFetchError(null)
-            toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
-          } catch {
-            setFetchError("couldn't load questions — check your connection and try again")
-            setSessionQuestions([])
-          }
-        } else {
-          setFetchError("couldn't load questions — check your connection and try again")
-          setSessionQuestions([])
-        }
-      }
-    }
+  // Adaptive difficulty — starts at easy, bumps up/down each answer
+  const [roundDifficulty, setRoundDifficulty] = useState("easy")
 
-    loadQuestions()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, isQuestionsReady, categoryParam])
-
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
+  // Plain integer score — incremented only on correct tap
   const [score, setScore] = useState(0)
+
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showResults, setShowResults] = useState(false)
   const [showGemAnimation, setShowGemAnimation] = useState(false)
-  const [showSpeedBonus, setShowSpeedBonus] = useState(false)
-  const [gemsAwarded, setGemsAwarded] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
-  
-  // Timer state — totalTime is per-question based on difficulty
-  const [totalTime, setTotalTime] = useState(60) // default medium until question loads
-  const [timeRemaining, setTimeRemaining] = useState(60)
-  const [isTimerActive, setIsTimerActive] = useState(true)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // Track answer results for each question
+  const [gemsAwarded, setGemsAwarded] = useState(false)
   const [answerResults, setAnswerResults] = useState<AnswerResult[]>([])
-  
-  // Speed bonus tracking for current question
-  const questionStartTimeRef = useRef(Date.now())
-  const [currentQuestionSpeedBonus, setCurrentQuestionSpeedBonus] = useState(false)
+  const [currentQuestionIsSpeed, setCurrentQuestionIsSpeed] = useState(false)
+  const [showNoHearts, setShowNoHearts] = useState(false)
 
-  // Compute derived values (safe even when questions not ready - will use defaults)
-  const question = sessionQuestions[currentQuestion]
-  const correctLetter = question?.correct || "A"
-  const correctAnswerIndex = letterToIndex(correctLetter)
-  const baseGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
-  const speedGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
+  // Timer
+  const [totalTime, setTotalTime] = useState(30)
+  const [timeRemaining, setTimeRemaining] = useState(30)
+  const [isTimerActive, setIsTimerActive] = useState(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const questionStartRef = useRef(Date.now())
 
-  // Build the 4 answer options from individual columns
-  const answerOptions = question ? [
-    { letter: "A", text: question.option_a },
-    { letter: "B", text: question.option_b },
-    { letter: "C", text: question.option_c },
-    { letter: "D", text: question.option_d },
-  ] : []
+  // ── Fetch one question ───────────────────────────────────────────────────
+  const fetchQuestion = useCallback(async (difficulty: string) => {
+    setIsLoading(true)
+    setFetchError(null)
+    try {
+      const excluded = getUsedIds(categoryParam)
+      const q = await getOneQuestion(categoryParam, difficulty, excluded)
+      markIdUsed(categoryParam, q.id)
+      setQuestion(q)
+      // Set timer based on actual question difficulty (may differ from requested)
+      const t = TIMER_BY_DIFFICULTY[q.difficulty] ?? 60
+      setTotalTime(t)
+      setTimeRemaining(t)
+      setIsTimerActive(true)
+      questionStartRef.current = Date.now()
+      setCurrentQuestionIsSpeed(false)
+    } catch {
+      setFetchError("couldn't load question — check your connection and try again")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [categoryParam])
 
-  // Timer effect
+  // Initial load + load next question
   useEffect(() => {
-    if (!isQuestionsReady || !isTimerActive || selectedAnswer !== null) return
-    
+    if (!isChallenge && !canPlaySolo()) {
+      // Will be handled by render logic
+      return
+    }
+    fetchQuestion(roundDifficulty)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])  // only on mount
+
+  // ── Timer tick ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isTimerActive || selectedAnswer !== null || isLoading) return
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          // Time's up! Auto-mark as wrong and advance
           clearInterval(timerRef.current!)
           return 0
         }
         return prev - 1
       })
     }, 1000)
-    
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [isQuestionsReady, isTimerActive, selectedAnswer, currentQuestion])
-  
-  // Handle time up in a separate effect to avoid stale closure
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [isTimerActive, selectedAnswer, isLoading, currentQuestionNum])
+
+  // ── Handle time-up ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
-    
-    // Record wrong answer due to timeout
+    if (timeRemaining !== 0 || selectedAnswer !== null || isLoading) return
+    // Timeout = wrong answer
+    if (!isChallenge) loseHeart()
+    const newDiff = bumpDifficulty(question?.difficulty || roundDifficulty, false)
+    setRoundDifficulty(newDiff)
     setAnswerResults(prev => [...prev, {
-      questionIndex: currentQuestion,
+      questionIndex: currentQuestionNum,
       isCorrect: false,
-      difficulty: question?.difficulty || "medium",
+      difficulty: question?.difficulty || roundDifficulty,
       wasSpeedBonus: false,
       gemsEarned: 0,
     }])
-    
-    // Show the correct answer briefly then auto-advance
-    setSelectedAnswer(-1) // -1 indicates timeout
-    
-    setTimeout(() => {
-      if (currentQuestion < TOTAL_QUESTIONS - 1) {
-        setCurrentQuestion(prev => prev + 1)
-        setSelectedAnswer(null)
-      } else {
-        setShowResults(true)
-      }
-    }, 2000)
-  }, [isQuestionsReady, timeRemaining, selectedAnswer, currentQuestion, question])
-  
-  // Reset timer when moving to next question — use difficulty-based time
-  useEffect(() => {
-    if (!isQuestionsReady) return
-    const diff = sessionQuestions[currentQuestion]?.difficulty || "medium"
-    const t = TIMER_BY_DIFFICULTY[diff] ?? 60
-    setTotalTime(t)
-    setTimeRemaining(t)
-    setIsTimerActive(true)
-    questionStartTimeRef.current = Date.now()
-    setCurrentQuestionSpeedBonus(false)
-  }, [isQuestionsReady, currentQuestion, sessionQuestions])
+    setSelectedAnswer(-1)
+    setTimeout(() => advanceOrFinish(newDiff), 2000)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, selectedAnswer, isLoading])
 
-  const handleAnswerSelect = useCallback((answerIndex: number) => {
-    if (selectedAnswer !== null) return
-    
-    // Stop timer
-    setIsTimerActive(false)
-    if (timerRef.current) clearInterval(timerRef.current)
-    
-    setSelectedAnswer(answerIndex)
-    
-    // Calculate time taken — speed threshold is half of this question's difficulty time
-    const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
-    const speedThreshold = getSpeedThreshold(question?.difficulty || "medium")
-    const isSpeedBonus = timeTaken <= speedThreshold
-    
-    if (answerIndex === correctAnswerIndex) {
-      setScore(prev => prev + 1)
-      
-      const gemsForThis = isSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect
-      
-      // Record correct answer
-      setAnswerResults(prev => [...prev, {
-        questionIndex: currentQuestion,
-        isCorrect: true,
-        difficulty: question?.difficulty || "medium",
-        wasSpeedBonus: isSpeedBonus,
-        gemsEarned: gemsForThis,
-      }])
-      
-      if (isSpeedBonus) {
-        setCurrentQuestionSpeedBonus(true)
-        setShowSpeedBonus(true)
-        setTimeout(() => setShowSpeedBonus(false), 1500)
-      }
-      
-      setShowGemAnimation(true)
-      setTimeout(() => setShowGemAnimation(false), 1000)
-    } else {
-      // Record wrong answer
-      setAnswerResults(prev => [...prev, {
-        questionIndex: currentQuestion,
-        isCorrect: false,
-        difficulty: question?.difficulty || "medium",
-        wasSpeedBonus: false,
-        gemsEarned: 0,
-      }])
-    }
-  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, baseGemPerCorrect, speedGemPerCorrect])
-
-  const handleNextQuestion = useCallback(() => {
-    if (currentQuestion < TOTAL_QUESTIONS - 1) {
-      setCurrentQuestion(prev => prev + 1)
+  function advanceOrFinish(nextDifficulty: string) {
+    if (currentQuestionNum < TOTAL_QUESTIONS - 1) {
+      setCurrentQuestionNum(prev => prev + 1)
       setSelectedAnswer(null)
+      fetchQuestion(nextDifficulty)
     } else {
       setShowResults(true)
     }
-  }, [currentQuestion])
+  }
+
+  // ── Answer selection ──────────────────────────────────────────────────────
+  const handleAnswerSelect = useCallback((answerIndex: number) => {
+    if (selectedAnswer !== null || !question) return
+    setIsTimerActive(false)
+    if (timerRef.current) clearInterval(timerRef.current)
+    setSelectedAnswer(answerIndex)
+
+    const correctIndex = question.correct.charCodeAt(0) - "A".charCodeAt(0)
+    const isCorrect = answerIndex === correctIndex
+    const timeTaken = (Date.now() - questionStartRef.current) / 1000
+    const isSpeed = timeTaken <= getSpeedThreshold(question.difficulty)
+    const gems = isCorrect ? gemsForAnswer(question.difficulty, isChallenge, isSpeed) : 0
+
+    if (isCorrect) {
+      setScore(prev => prev + 1)
+      setCurrentQuestionIsSpeed(isSpeed)
+      setShowGemAnimation(true)
+      setTimeout(() => setShowGemAnimation(false), 1000)
+    } else {
+      if (!isChallenge) loseHeart()
+    }
+
+    const newDiff = bumpDifficulty(question.difficulty, isCorrect)
+    setRoundDifficulty(newDiff)
+
+    setAnswerResults(prev => [...prev, {
+      questionIndex: currentQuestionNum,
+      isCorrect,
+      difficulty: question.difficulty,
+      wasSpeedBonus: isSpeed && isCorrect,
+      gemsEarned: gems,
+    }])
+  }, [selectedAnswer, question, isChallenge, currentQuestionNum, loseHeart])
+
+  const handleNextQuestion = useCallback(() => {
+    advanceOrFinish(roundDifficulty)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestionNum, roundDifficulty])
 
   const handlePlayAgain = useCallback(() => {
-    // Reset all game state in-place so usedIds ref is preserved across rounds
-    setCurrentQuestion(0)
-    setSelectedAnswer(null)
+    setCurrentQuestionNum(0)
     setScore(0)
+    setSelectedAnswer(null)
     setShowResults(false)
     setShowGemAnimation(false)
-    setShowSpeedBonus(false)
     setGemsAwarded(false)
     setAnswerResults([])
-    setCurrentQuestionSpeedBonus(false)
-    setSessionQuestions([])
-    setIsQuestionsReady(false)
-    setFetchError(null)
-  }, [])
+    setRoundDifficulty("easy")
+    setShowNoHearts(false)
+    fetchQuestion("easy")
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchQuestion])
 
-  // Award gems when showing results — only correct answers + speed bonuses
+  // ── Award gems at round end ───────────────────────────────────────────────
   useEffect(() => {
-    if (showResults && !gemsAwarded) {
-      const correctGems = answerResults
-        .filter(r => r.isCorrect)
-        .reduce((sum, r) => sum + r.gemsEarned, 0)
+    if (!showResults || gemsAwarded) return
+    const totalEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
+    addGems(totalEarned)
+    markRoundCompleted()
+    if (!isChallenge) incrementRoundsToday()
+    saveRoundStats({
+      categoryId: categoryParam,
+      correct: score,
+      total: TOTAL_QUESTIONS,
+      gemsEarned: totalEarned,
+      answerResults,
+    })
+    setGemsAwarded(true)
+  }, [showResults, gemsAwarded, addGems, answerResults, categoryParam, score, isChallenge, incrementRoundsToday])
 
-      addGems(correctGems)
-      markRoundCompleted()
-      const unlockMessage = saveRoundStats({
-        categoryId: categoryParam,
-        correct: score,
-        total: TOTAL_QUESTIONS,
-        gemsEarned: correctGems,
-        answerResults,
-      })
-      if (unlockMessage) {
-        toast.success(`🎯 ${unlockMessage}`, { duration: 5000 })
-      }
-      setGemsAwarded(true)
+  // ── Gate checks (solo only) ───────────────────────────────────────────────
+  if (!isChallenge && !isPro) {
+    if (hearts <= 0 && !showResults) {
+      return (
+        <NoHeartsScreen
+          totalGems={totalGems}
+          onRefill={() => { if (refillHearts()) setShowNoHearts(false) }}
+        />
+      )
     }
-  }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, categoryParam])
+  }
 
-  // Derived values for rendering (always computed, never early return)
-  const hasAnswered = selectedAnswer !== null
-  const isTimeout = selectedAnswer === -1
-
-  // Error state - failed to fetch questions
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (fetchError) {
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6">
         <p className="text-red-400 text-center font-medium mb-4">{fetchError}</p>
         <button
-          onClick={() => {
-            setFetchError(null)
-            setIsQuestionsReady(false)
-          }}
+          onClick={() => fetchQuestion(roundDifficulty)}
           className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold"
         >
           Try Again
@@ -441,222 +402,158 @@ function PlayPageContent() {
     )
   }
 
-  // Loading state - not mounted yet, questions not ready, or current question missing
-  if (!isMounted || !isQuestionsReady || !sessionQuestions[currentQuestion]) {
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (isLoading || !question) {
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
         <Spinner className="w-8 h-8 text-[#378ADD]" />
-        <p className="text-[#85B7EB] mt-4 font-medium">Loading questions...</p>
+        <p className="text-[#85B7EB] mt-4 font-medium">Loading...</p>
       </div>
     )
   }
 
-  // Results screen
+  // ── Results ───────────────────────────────────────────────────────────────
   if (showResults) {
     return (
-      <ResultsScreen 
-        score={score} 
+      <ResultsScreen
+        score={score}
         isChallenge={isChallenge}
         categoryName={categoryName}
         onPlayAgain={handlePlayAgain}
         answerResults={answerResults}
-        sessionQuestions={sessionQuestions}
       />
     )
   }
 
-  // Main game screen
+  // ── Game screen ───────────────────────────────────────────────────────────
+  const correctIndex = question.correct.charCodeAt(0) - "A".charCodeAt(0)
+  const hasAnswered = selectedAnswer !== null
+  const isTimeout = selectedAnswer === -1
+  const gemsThisQuestion = gemsForAnswer(question.difficulty, isChallenge, currentQuestionIsSpeed)
+  const diffColors = DIFFICULTY_COLORS[question.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col">
-      {/* Speed Bonus Animation */}
-      {showSpeedBonus && <SpeedBonusAnimation />}
-      
       {/* Header */}
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
-          {/* Calculator Button (Math categories only) */}
-          <div className="w-10">
-            {isMathCategory && (
-              <CalculatorButton onClick={() => setShowCalculator(true)} />
-            )}
+          <div className="flex items-center gap-3">
+            {isMathCategory && <CalculatorButton onClick={() => setShowCalculator(true)} />}
+            {!isChallenge && <HeartsDisplay hearts={hearts} isPro={isPro} />}
           </div>
-          
           <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
-          
-          {/* Timer */}
           <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
         </div>
-        
-        {/* Progress Pips */}
+        {/* Progress pips */}
         <div className="flex gap-2">
-          {Array.from({ length: TOTAL_QUESTIONS }).map((_, index) => (
-            <div
-              key={index}
-              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                index <= currentQuestion
-                  ? "bg-[#378ADD]"
-                  : "bg-[#0a2d4a]"
-              }`}
-            />
+          {Array.from({ length: TOTAL_QUESTIONS }).map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= currentQuestionNum ? "bg-[#378ADD]" : "bg-[#0a2d4a]"}`} />
           ))}
         </div>
       </header>
 
-      {/* Question Content */}
+      {/* Question */}
       <main className="flex-1 flex flex-col px-5 py-6">
-        {/* Question Text */}
+        {/* Difficulty badge */}
+        <div className="flex justify-center mb-4">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${diffColors.bg} ${diffColors.text}`}>
+            {question.difficulty}
+          </span>
+        </div>
+
         <div className="flex-1 flex items-center justify-center mb-8">
           <h2 className="text-2xl font-extrabold text-white text-center leading-relaxed px-2 max-w-xl">
-            {question?.question}
+            {question.question}
           </h2>
         </div>
 
-        {/* Answer Options */}
+        {/* Answer options */}
         <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
-          {answerOptions.map((opt, index) => (
-            <AnswerOption
-              key={opt.letter}
-              option={opt.text}
-              index={index}
-              letter={opt.letter}
-              selectedAnswer={selectedAnswer}
-              correctAnswer={correctAnswerIndex}
-              explanation={question.explanation}
-              onSelect={handleAnswerSelect}
-              showGemAnimation={showGemAnimation && index === correctAnswerIndex}
-              gemAmount={currentQuestionSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect}
-              isSpeedBonus={currentQuestionSpeedBonus}
-              isTimeout={isTimeout}
-            />
-          ))}
+          {(["A","B","C","D"] as const).map((letter, index) => {
+            const optKey = `option_${letter.toLowerCase()}` as keyof Question
+            return (
+              <AnswerOption
+                key={letter}
+                option={question[optKey] as string}
+                index={index}
+                letter={letter}
+                selectedAnswer={selectedAnswer}
+                correctAnswer={correctIndex}
+                explanation={question.explanation}
+                onSelect={handleAnswerSelect}
+                showGemAnimation={showGemAnimation && index === correctIndex}
+                gemAmount={gemsThisQuestion}
+                isSpeedBonus={currentQuestionIsSpeed}
+                isTimeout={isTimeout}
+              />
+            )
+          })}
         </div>
 
-        {/* Next Question Button */}
+        {/* Next button */}
         {hasAnswered && !isTimeout && (
           <div className="w-full max-w-[480px] mx-auto pt-4 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <button
               onClick={handleNextQuestion}
               className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
             >
-              {currentQuestion < TOTAL_QUESTIONS - 1 ? "next question" : "see results"}
+              {currentQuestionNum < TOTAL_QUESTIONS - 1 ? "next question" : "see results"}
               <ChevronRight className="w-5 h-5" strokeWidth={3} />
             </button>
           </div>
         )}
       </main>
 
-      {/* Calculator Modal */}
       <Calculator isOpen={showCalculator} onClose={() => setShowCalculator(false)} />
 
-      {/* CSS for gem animation */}
       <style jsx global>{`
         @keyframes gem-float {
-          0% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-30px);
-          }
+          0%   { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-30px); }
         }
-        .animate-gem-float {
-          animation: gem-float 1s ease-out forwards;
-        }
+        .animate-gem-float { animation: gem-float 1s ease-out forwards; }
       `}</style>
     </div>
   )
 }
 
+// ─── AnswerOption ─────────────────────────────────────────────────────────
 interface AnswerOptionProps {
-  option: string
-  index: number
-  letter: string
-  selectedAnswer: number | null
-  correctAnswer: number
-  explanation: string
-  onSelect: (index: number) => void
-  showGemAnimation: boolean
-  gemAmount: number
-  isSpeedBonus: boolean
-  isTimeout: boolean
+  option: string; index: number; letter: string
+  selectedAnswer: number | null; correctAnswer: number
+  explanation: string; onSelect: (i: number) => void
+  showGemAnimation: boolean; gemAmount: number
+  isSpeedBonus: boolean; isTimeout: boolean
 }
 
-function AnswerOption({
-  option,
-  index,
-  letter,
-  selectedAnswer,
-  correctAnswer,
-  explanation,
-  onSelect,
-  showGemAnimation,
-  gemAmount,
-  isSpeedBonus,
-  isTimeout,
-}: AnswerOptionProps) {
-  const isSelected = selectedAnswer === index
-  const isCorrect = index === correctAnswer
-  const hasAnswered = selectedAnswer !== null
-  const showAsCorrect = hasAnswered && isCorrect
-  const showAsWrong = isSelected && !isCorrect
+function AnswerOption({ option, index, letter, selectedAnswer, correctAnswer, explanation, onSelect, showGemAnimation, gemAmount, isSpeedBonus, isTimeout }: AnswerOptionProps) {
+  const isSelected   = selectedAnswer === index
+  const isCorrect    = index === correctAnswer
+  const hasAnswered  = selectedAnswer !== null
+  const showCorrect  = hasAnswered && isCorrect
+  const showWrong    = isSelected && !isCorrect
 
-  const getBackgroundColor = () => {
-    if (showAsCorrect) return "#16a34a"
-    if (showAsWrong) return "#dc2626"
-    return "#ffffff"
-  }
-
-  const getTextColor = () => {
-    if (showAsCorrect || showAsWrong) return "#ffffff"
-    return "#0a1628"
-  }
-
-  const getLetterBgColor = () => {
-    if (showAsCorrect) return "rgba(255,255,255,0.2)"
-    if (showAsWrong) return "rgba(255,255,255,0.2)"
-    return "#378ADD"
-  }
+  const bg     = showCorrect ? "#16a34a" : showWrong ? "#dc2626" : "#ffffff"
+  const fg     = showCorrect || showWrong ? "#ffffff" : "#0a1628"
+  const letterBg = showCorrect || showWrong ? "rgba(255,255,255,0.2)" : "#378ADD"
 
   return (
     <div className="relative">
       <button
         onClick={() => onSelect(index)}
         disabled={hasAnswered}
-        className={`w-full rounded-2xl py-3 px-5 flex items-center gap-4 transition-all duration-300 ${
-          hasAnswered ? "cursor-default" : "active:scale-[0.98] hover:shadow-lg cursor-pointer"
-        }`}
-        style={{
-          backgroundColor: getBackgroundColor(),
-          color: getTextColor(),
-        }}
+        className={`w-full rounded-2xl py-3 px-5 flex items-center gap-4 transition-all duration-300 ${hasAnswered ? "cursor-default" : "active:scale-[0.98] hover:shadow-lg cursor-pointer"}`}
+        style={{ backgroundColor: bg, color: fg }}
       >
-        {/* Letter Circle */}
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
-          style={{
-            backgroundColor: getLetterBgColor(),
-            color: "#ffffff",
-          }}
-        >
+        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm" style={{ backgroundColor: letterBg, color: "#ffffff" }}>
           {letter}
         </div>
-        
-        {/* Answer Text */}
         <span className="text-lg font-bold flex-1 text-left">{option}</span>
-        
-        {/* Check/X Icon */}
-        {showAsCorrect && <Check className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
-        {showAsWrong && <X className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
+        {showCorrect && <Check className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
+        {showWrong   && <X    className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
       </button>
-      
-      {/* Floating Gem Animation */}
-      {showGemAnimation && (
-        <FloatingGemIndicator amount={gemAmount} isSpeedBonus={isSpeedBonus} />
-      )}
-      
-      {/* Explanation */}
-      {showAsCorrect && (
+      {showGemAnimation && <FloatingGemIndicator amount={gemAmount} isSpeed={isSpeedBonus} />}
+      {showCorrect && (
         <p className="mt-2 px-4 text-sm text-[#85B7EB] italic leading-relaxed animate-in fade-in slide-in-from-top-2 duration-300">
           {explanation}
         </p>
@@ -665,13 +562,10 @@ function AnswerOption({
   )
 }
 
+// ─── ResultsScreen ────────────────────────────────────────────────────────
 interface ResultsScreenProps {
-  score: number
-  isChallenge: boolean
-  categoryName: string
-  onPlayAgain: () => void
-  answerResults: AnswerResult[]
-  sessionQuestions: Question[]
+  score: number; isChallenge: boolean; categoryName: string
+  onPlayAgain: () => void; answerResults: AnswerResult[]
 }
 
 function getEncouragementMessage(score: number): string {
@@ -681,187 +575,123 @@ function getEncouragementMessage(score: number): string {
   return "Tough round. Challenge a friend and see how they do"
 }
 
-function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
+function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const [totalGems, setTotalGems] = useState(0)
   const [isGuest, setIsGuest] = useState(false)
 
   useEffect(() => {
-    const stored = parseInt(localStorage.getItem("rally_gems") || "0", 10)
-    setTotalGems(isNaN(stored) ? 0 : stored)
+    setTotalGems(parseInt(localStorage.getItem("rally_gems") || "0", 10) || 0)
     setIsGuest(localStorage.getItem("rally_is_guest") === "true")
   }, [])
-  
-  // Calculate gems — use `score` as source of truth for correct count
-  // answerResults tracks speed bonuses per-answer
-  const speedBonusCount = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
-  const baseGem = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
-  const speedGem = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
-  const nonSpeedCorrect = score - speedBonusCount
-  const correctAnswerGems = nonSpeedCorrect * baseGem
-  const speedAnswerGems = speedBonusCount * speedGem
-  const gemsEarned = correctAnswerGems + speedAnswerGems
 
+  const totalEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
+  const speedCount  = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
+
+  // Build breakdown
   const breakdown: { label: string; amount: number }[] = []
-  if (nonSpeedCorrect > 0) {
-    breakdown.push({
-      label: `${nonSpeedCorrect} correct answer${nonSpeedCorrect !== 1 ? "s" : ""}`,
-      amount: correctAnswerGems,
-    })
+  const byDiff: Record<string, { count: number; gems: number }> = {}
+  for (const r of answerResults) {
+    if (!r.isCorrect) continue
+    if (!byDiff[r.difficulty]) byDiff[r.difficulty] = { count: 0, gems: 0 }
+    byDiff[r.difficulty].count++
+    byDiff[r.difficulty].gems += r.gemsEarned
   }
-  if (speedBonusCount > 0) {
-    breakdown.push({
-      label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? "es" : ""}`,
-      amount: speedAnswerGems,
-    })
+  for (const [diff, { count, gems }] of Object.entries(byDiff)) {
+    breakdown.push({ label: `${count} ${diff} correct`, amount: gems })
   }
-  if (score === 0) {
-    breakdown.push({ label: "no correct answers", amount: 0 })
+  if (speedCount > 0) {
+    breakdown.push({ label: `${speedCount} speed bonus${speedCount > 1 ? "es" : ""}`, amount: 0 })
   }
-  
-  // Difficulty breakdown
-  const difficultyStats = {
-    easy: answerResults.filter(r => r.difficulty === "easy" && r.isCorrect).length,
-    medium: answerResults.filter(r => r.difficulty === "medium" && r.isCorrect).length,
-    hard: answerResults.filter(r => r.difficulty === "hard" && r.isCorrect).length,
-  }
+  if (score === 0) breakdown.push({ label: "no correct answers", amount: 0 })
 
-  const handleCategorySelect = (categoryId: string) => {
-    window.location.href = `/play?category=${encodeURIComponent(categoryId)}`
+  const diffStats = {
+    easy:   answerResults.filter(r => r.difficulty === "easy"   && r.isCorrect).length,
+    medium: answerResults.filter(r => r.difficulty === "medium" && r.isCorrect).length,
+    hard:   answerResults.filter(r => r.difficulty === "hard"   && r.isCorrect).length,
   }
 
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-5 py-8">
       <div className="text-center mb-6">
-        {/* Answer Circles with Check/X */}
+        {/* Answer circles */}
         <div className="flex items-center justify-center gap-3 mb-3">
-          {answerResults.map((result, index) => (
-            <div
-              key={index}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                result.isCorrect
-                  ? "bg-green-500"
-                  : "bg-red-500"
-              }`}
-            >
-              {result.isCorrect ? (
-                <Check className="w-5 h-5 text-white" strokeWidth={3} />
-              ) : (
-                <X className="w-5 h-5 text-white" strokeWidth={3} />
-              )}
+          {answerResults.map((r, i) => (
+            <div key={i} className={`w-10 h-10 rounded-full flex items-center justify-center ${r.isCorrect ? "bg-green-500" : "bg-red-500"}`}>
+              {r.isCorrect ? <Check className="w-5 h-5 text-white" strokeWidth={3} /> : <X className="w-5 h-5 text-white" strokeWidth={3} />}
             </div>
           ))}
         </div>
-        
-        {/* Difficulty Badges */}
+        {/* Difficulty badges */}
         <div className="flex items-center justify-center gap-3 mb-6">
-          {answerResults.map((result, index) => {
-            const colors = DIFFICULTY_COLORS[result.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
-            return (
-              <span
-                key={index}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}
-              >
-                {result.difficulty}
-              </span>
-            )
+          {answerResults.map((r, i) => {
+            const c = DIFFICULTY_COLORS[r.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+            return <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{r.difficulty}</span>
           })}
         </div>
-
-        <h1 className="text-5xl font-extrabold text-white mb-2">
-          {score} out of {TOTAL_QUESTIONS}
-        </h1>
+        <h1 className="text-5xl font-extrabold text-white mb-2">{score} out of {TOTAL_QUESTIONS}</h1>
         <p className="text-[#85B7EB] text-xl font-semibold">{categoryName}</p>
-        <p className="text-[#85B7EB]/80 text-lg mt-4 max-w-xs mx-auto">
-          {getEncouragementMessage(score)}
-        </p>
+        <p className="text-[#85B7EB]/80 text-lg mt-4 max-w-xs mx-auto">{getEncouragementMessage(score)}</p>
       </div>
 
-      {/* Running gem total */}
+      {/* Gem total */}
       <div className="flex items-center gap-1.5 mb-2">
         <Diamond className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
         <span className="text-sm text-[#85B7EB]/70">your total: {totalGems} gems</span>
       </div>
 
-      {/* Guest save-progress banner */}
+      {/* Guest banner */}
       {isGuest && (
         <div className="w-full max-w-sm mb-4 bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl px-5 py-4 flex items-center justify-between gap-3">
-          <p className="text-[#85B7EB] text-sm font-medium leading-snug flex-1">
-            save your progress — create a free account
-          </p>
-          <a
-            href="/login"
-            className="bg-[#378ADD] text-white text-sm font-bold rounded-xl px-4 py-2 whitespace-nowrap hover:brightness-110 transition-all"
-          >
-            sign up free
-          </a>
+          <p className="text-[#85B7EB] text-sm font-medium leading-snug flex-1">save your progress — create a free account</p>
+          <a href="/login" className="bg-[#378ADD] text-white text-sm font-bold rounded-xl px-4 py-2 whitespace-nowrap hover:brightness-110 transition-all">sign up free</a>
         </div>
       )}
 
-      {/* Gems Earned Card */}
+      {/* Gems earned card */}
       <div className="w-full max-w-sm mb-4 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Diamond className="w-6 h-6 text-[#F59E0B] fill-[#F59E0B]" />
-          <span className="text-2xl font-extrabold text-white">+{gemsEarned} gems</span>
+          <span className="text-2xl font-extrabold text-white">+{totalEarned} gems</span>
         </div>
-        
-        {/* Breakdown */}
         <div className="space-y-1">
-          {breakdown.map((item, index) => (
-            <div key={index} className="flex justify-between text-sm">
+          {breakdown.map((item, i) => (
+            <div key={i} className="flex justify-between text-sm">
               <span className="text-[#85B7EB]/80">{item.label}</span>
-              <span className="text-[#F59E0B] font-semibold">+{item.amount}</span>
+              {item.amount > 0 && <span className="text-[#F59E0B] font-semibold">+{item.amount}</span>}
             </div>
           ))}
         </div>
       </div>
-      
-      {/* Difficulty Breakdown Stats */}
+
+      {/* Difficulty stats */}
       <div className="w-full max-w-sm mb-6 bg-[#0a2d4a] rounded-2xl p-4">
         <p className="text-xs font-bold text-[#85B7EB]/60 mb-2 uppercase tracking-wide">By Difficulty</p>
         <div className="flex justify-between gap-2">
-          <div className="flex-1 text-center">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.easy.text}`}>{difficultyStats.easy}</span>
-            <p className="text-xs text-[#85B7EB]/60">easy</p>
-          </div>
-          <div className="flex-1 text-center border-x border-[#85B7EB]/20">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.medium.text}`}>{difficultyStats.medium}</span>
-            <p className="text-xs text-[#85B7EB]/60">medium</p>
-          </div>
-          <div className="flex-1 text-center">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.hard.text}`}>{difficultyStats.hard}</span>
-            <p className="text-xs text-[#85B7EB]/60">hard</p>
-          </div>
+          {(["easy","medium","hard"] as const).map((d, i) => (
+            <div key={d} className={`flex-1 text-center ${i === 1 ? "border-x border-[#85B7EB]/20" : ""}`}>
+              <span className={`text-lg font-bold ${DIFFICULTY_COLORS[d].text}`}>{diffStats[d]}</span>
+              <p className="text-xs text-[#85B7EB]/60">{d}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Play Again Button */}
-      <button
-        onClick={onPlayAgain}
-        className="w-full max-w-sm mb-6 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg transition-all active:scale-[0.98] hover:bg-[#378ADD]/10"
-      >
+      <button onClick={onPlayAgain} className="w-full max-w-sm mb-6 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg transition-all active:scale-[0.98] hover:bg-[#378ADD]/10">
         <RotateCcw className="w-5 h-5" strokeWidth={2.5} />
         play again
       </button>
 
-      {/* Category Picker */}
+      {/* Category picker */}
       <div className="w-full max-w-sm mb-6">
         <p className="text-[#85B7EB]/60 text-sm font-medium mb-3 text-center">try a different category</p>
         <div className="grid grid-cols-2 gap-2">
-          {CATEGORIES.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategorySelect(category.id)}
+          {CATEGORIES.map((cat) => (
+            <button key={cat.id} onClick={() => { window.location.href = `/play?category=${encodeURIComponent(cat.id)}` }}
               className="bg-white rounded-xl p-3 flex flex-col items-start transition-all active:scale-[0.98] hover:shadow-lg"
-              style={{
-                borderLeft: `3px solid ${category.color}`,
-              }}
-            >
-              <span className="text-[#0a1628] font-bold text-sm">{category.name}</span>
-              <span 
-                className="text-xs font-semibold mt-0.5 flex items-center gap-0.5"
-                style={{ color: category.color }}
-              >
+              style={{ borderLeft: `3px solid ${cat.color}` }}>
+              <span className="text-[#0a1628] font-bold text-sm">{cat.name}</span>
+              <span className="text-xs font-semibold mt-0.5 flex items-center gap-0.5" style={{ color: cat.color }}>
                 play <ChevronRight className="w-3 h-3" strokeWidth={3} />
               </span>
             </button>
@@ -869,43 +699,28 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         </div>
       </div>
 
-      {/* Home link */}
-      <a
-        href="/"
-        className="text-[#85B7EB]/50 text-sm font-medium mb-4 hover:text-[#85B7EB] transition-colors"
-      >
+      <a href="/" className="text-[#85B7EB]/50 text-sm font-medium mb-4 hover:text-[#85B7EB] transition-colors">
         ← back to home
       </a>
 
       <div className="w-full max-w-sm space-y-3">
-        {/* Challenge a Friend Button */}
         <div className="relative">
-          <button
-            onClick={() => setShowWaitlistSheet(true)}
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
-          >
+          <button onClick={() => setShowWaitlistSheet(true)}
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110">
             <span className="text-lg">challenge a friend</span>
             <span className="text-xs font-semibold text-white/70">4x gems when it launches</span>
           </button>
           <div className="absolute -top-2 -right-2 bg-[#F59E0B] text-[#0a1628] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            soon
+            <Sparkles className="w-3 h-3" /> soon
           </div>
         </div>
-
-        <button
-          onClick={() => setShowWaitlistSheet(true)}
-          className="w-full flex items-center justify-center gap-1 text-[#378ADD] text-sm font-semibold py-1 transition-all hover:brightness-125"
-        >
+        <button onClick={() => setShowWaitlistSheet(true)}
+          className="w-full flex items-center justify-center gap-1 text-[#378ADD] text-sm font-semibold py-1 transition-all hover:brightness-125">
           get 500 bonus gems when challenges launch
         </button>
       </div>
 
-      <ChallengeWaitlistSheet 
-        isOpen={showWaitlistSheet}
-        onClose={() => setShowWaitlistSheet(false)}
-        variant="challenge"
-      />
+      <ChallengeWaitlistSheet isOpen={showWaitlistSheet} onClose={() => setShowWaitlistSheet(false)} variant="challenge" />
     </div>
   )
 }
