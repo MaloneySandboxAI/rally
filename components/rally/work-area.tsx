@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { X, Undo2, Trash2, Calculator as CalculatorIcon, PenLine, StickyNote } from "lucide-react"
+import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote } from "lucide-react"
 
 // ============================================================
 // WORK AREA — bottom sheet with 3 tabs: Notepad, Calculator, Draw
@@ -57,7 +57,7 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
           {([
             { id: "notepad" as TabId, label: "Notepad", icon: StickyNote },
             { id: "calc" as TabId, label: "Calculator", icon: CalculatorIcon },
-            { id: "draw" as TabId, label: "Draw", icon: PenLine },
+            { id: "draw" as TabId, label: "Draw", icon: Pencil },
           ]).map(tab => (
             <button
               key={tab.id}
@@ -452,7 +452,7 @@ export function WorkAreaButton({ onClick }: { onClick: () => void }) {
     >
       <div className="flex items-center gap-0.5">
         <CalculatorIcon className="w-3.5 h-3.5 text-[#378ADD]" />
-        <PenLine className="w-3.5 h-3.5 text-[#378ADD]" />
+        <Pencil className="w-3.5 h-3.5 text-[#378ADD]" />
       </div>
       <span className="text-xs font-bold text-[#378ADD]">tools</span>
     </button>
