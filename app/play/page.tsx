@@ -441,7 +441,8 @@ function PlayPageContent() {
   }, [categoryParam])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
+  const [pendingAnswer, setPendingAnswer] = useState<number | null>(null) // selected but not confirmed
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null) // confirmed answer
   const [score, setScore] = useState(0)
   const [showResults, setShowResults] = useState(false)
   const [showGemAnimation, setShowGemAnimation] = useState(false)
@@ -520,12 +521,14 @@ function PlayPageContent() {
     }])
 
     // Show the correct answer briefly then auto-advance
+    setPendingAnswer(null) // clear any pending selection
     setSelectedAnswer(-1) // -1 indicates timeout
 
     setTimeout(async () => {
       if (currentQuestion < TOTAL_QUESTIONS - 1) {
         await fetchNextQuestion()
         setCurrentQuestion(prev => prev + 1)
+        setPendingAnswer(null)
         setSelectedAnswer(null)
       } else {
         setShowResults(true)
@@ -546,21 +549,28 @@ function PlayPageContent() {
     setCurrentQuestionSpeedBonus(false)
   }, [isQuestionsReady, currentQuestion, sessionQuestions])
 
+  // Step 1: Select an answer (highlight it, but don't submit yet)
   const handleAnswerSelect = useCallback((answerIndex: number) => {
-    if (selectedAnswer !== null) return
-    
+    if (selectedAnswer !== null) return // already confirmed
+    setPendingAnswer(answerIndex)
+  }, [selectedAnswer])
+
+  // Step 2: Confirm the selected answer (submit it)
+  const handleConfirmAnswer = useCallback(() => {
+    if (pendingAnswer === null || selectedAnswer !== null) return
+
     // Stop timer
     setIsTimerActive(false)
     if (timerRef.current) clearInterval(timerRef.current)
-    
-    setSelectedAnswer(answerIndex)
-    
+
+    setSelectedAnswer(pendingAnswer)
+
     // Calculate time taken — speed threshold is half of this question's difficulty time
     const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
     const speedThreshold = getSpeedThreshold(question?.difficulty || "medium")
     const isSpeedBonus = timeTaken <= speedThreshold
-    
-    if (answerIndex === correctAnswerIndex) {
+
+    if (pendingAnswer === correctAnswerIndex) {
       setScore(prev => prev + 1)
 
       const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
@@ -571,7 +581,6 @@ function PlayPageContent() {
       } else if (difficultyRef.current === "medium") {
         difficultyRef.current = "hard"
       }
-      // Already hard — stay hard
 
       // Record correct answer
       setAnswerResults(prev => [...prev, {
@@ -581,13 +590,13 @@ function PlayPageContent() {
         wasSpeedBonus: isSpeedBonus,
         gemsEarned: gemsForThis,
       }])
-      
+
       if (isSpeedBonus) {
         setCurrentQuestionSpeedBonus(true)
         setShowSpeedBonus(true)
         setTimeout(() => setShowSpeedBonus(false), 1500)
       }
-      
+
       setShowGemAnimation(true)
       setTimeout(() => setShowGemAnimation(false), 1000)
     } else {
@@ -597,7 +606,6 @@ function PlayPageContent() {
       } else if (difficultyRef.current === "medium") {
         difficultyRef.current = "easy"
       }
-      // Already easy — stay easy
 
       // Record wrong answer (hearts deducted at end of round, not mid-game)
       setAnswerResults(prev => [...prev, {
@@ -608,13 +616,14 @@ function PlayPageContent() {
         gemsEarned: 0,
       }])
     }
-  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
+  }, [pendingAnswer, selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
 
   const handleNextQuestion = useCallback(async () => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
       // Fetch the next question at the current adaptive difficulty
       await fetchNextQuestion()
       setCurrentQuestion(prev => prev + 1)
+      setPendingAnswer(null)
       setSelectedAnswer(null)
     } else {
       setShowResults(true)
@@ -625,6 +634,7 @@ function PlayPageContent() {
     // Reset all game state in-place so usedIds ref is preserved across rounds
     difficultyRef.current = "easy" // Always restart at easy
     setCurrentQuestion(0)
+    setPendingAnswer(null)
     setSelectedAnswer(null)
     setScore(0)
     setShowResults(false)
@@ -798,23 +808,24 @@ function PlayPageContent() {
         </div>
       </header>
 
-      {/* Question Content */}
-      <main className="flex-1 flex flex-col px-5 py-6">
-        {/* Question Text */}
-        <div className="flex-1 flex items-center justify-center mb-8">
-          <h2 className="text-2xl font-extrabold text-white text-center leading-relaxed px-2 max-w-xl">
+      {/* Question Content — compact layout, no scroll on mobile */}
+      <main className="flex-1 flex flex-col px-4 pt-3 pb-4 overflow-hidden">
+        {/* Question Text — compact, no flex-1 */}
+        <div className="mb-3">
+          <h2 className="text-lg font-extrabold text-white text-center leading-snug px-1 max-w-xl mx-auto">
             {question?.question}
           </h2>
         </div>
 
         {/* Answer Options */}
-        <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
+        <div className="w-full max-w-[480px] mx-auto space-y-2 relative">
           {answerOptions.map((opt, index) => (
             <AnswerOption
               key={opt.letter}
               option={opt.text}
               index={index}
               letter={opt.letter}
+              pendingAnswer={pendingAnswer}
               selectedAnswer={selectedAnswer}
               correctAnswer={correctAnswerIndex}
               explanation={question.explanation}
@@ -827,18 +838,30 @@ function PlayPageContent() {
           ))}
         </div>
 
-        {/* Next Question Button */}
-        {hasAnswered && !isTimeout && (
-          <div className="w-full max-w-[480px] mx-auto pt-4 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        {/* Confirm / Next Button Area */}
+        <div className="w-full max-w-[480px] mx-auto mt-3">
+          {/* Confirm button — visible when answer is selected but not yet submitted */}
+          {pendingAnswer !== null && selectedAnswer === null && (
+            <button
+              onClick={handleConfirmAnswer}
+              className="w-full bg-[#378ADD] text-white rounded-2xl py-3.5 px-6 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 animate-in fade-in duration-200"
+            >
+              lock in answer
+              <Check className="w-5 h-5" strokeWidth={3} />
+            </button>
+          )}
+
+          {/* Next Question button — visible after confirming */}
+          {hasAnswered && !isTimeout && (
             <button
               onClick={handleNextQuestion}
-              className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+              className="w-full bg-[#378ADD] text-white rounded-2xl py-3.5 px-6 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 animate-in fade-in slide-in-from-bottom-4 duration-300"
             >
               {currentQuestion < TOTAL_QUESTIONS - 1 ? "next question" : "see results"}
               <ChevronRight className="w-5 h-5" strokeWidth={3} />
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {/* Calculator Modal */}
@@ -868,6 +891,7 @@ interface AnswerOptionProps {
   option: string
   index: number
   letter: string
+  pendingAnswer: number | null
   selectedAnswer: number | null
   correctAnswer: number
   explanation: string
@@ -882,6 +906,7 @@ function AnswerOption({
   option,
   index,
   letter,
+  pendingAnswer,
   selectedAnswer,
   correctAnswer,
   explanation,
@@ -891,26 +916,28 @@ function AnswerOption({
   isSpeedBonus,
   isTimeout,
 }: AnswerOptionProps) {
+  const isPending = pendingAnswer === index && selectedAnswer === null
   const isSelected = selectedAnswer === index
   const isCorrect = index === correctAnswer
-  const hasAnswered = selectedAnswer !== null
-  const showAsCorrect = hasAnswered && isCorrect
+  const hasConfirmed = selectedAnswer !== null
+  const showAsCorrect = hasConfirmed && isCorrect
   const showAsWrong = isSelected && !isCorrect
 
   const getBackgroundColor = () => {
     if (showAsCorrect) return "#16a34a"
     if (showAsWrong) return "#dc2626"
+    if (isPending) return "#378ADD"
     return "#ffffff"
   }
 
   const getTextColor = () => {
-    if (showAsCorrect || showAsWrong) return "#ffffff"
+    if (showAsCorrect || showAsWrong || isPending) return "#ffffff"
     return "#0a1628"
   }
 
   const getLetterBgColor = () => {
-    if (showAsCorrect) return "rgba(255,255,255,0.2)"
-    if (showAsWrong) return "rgba(255,255,255,0.2)"
+    if (showAsCorrect || showAsWrong) return "rgba(255,255,255,0.2)"
+    if (isPending) return "rgba(255,255,255,0.25)"
     return "#378ADD"
   }
 
@@ -918,10 +945,10 @@ function AnswerOption({
     <div className="relative">
       <button
         onClick={() => onSelect(index)}
-        disabled={hasAnswered}
-        className={`w-full rounded-2xl py-3 px-5 flex items-center gap-4 transition-all duration-300 ${
-          hasAnswered ? "cursor-default" : "active:scale-[0.98] hover:shadow-lg cursor-pointer"
-        }`}
+        disabled={hasConfirmed}
+        className={`w-full rounded-2xl py-2.5 px-4 flex items-center gap-3 transition-all duration-200 ${
+          hasConfirmed ? "cursor-default" : "active:scale-[0.98] hover:shadow-lg cursor-pointer"
+        } ${isPending ? "ring-2 ring-white/30 shadow-lg shadow-[#378ADD]/30" : ""}`}
         style={{
           backgroundColor: getBackgroundColor(),
           color: getTextColor(),
@@ -929,7 +956,7 @@ function AnswerOption({
       >
         {/* Letter Circle */}
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs"
           style={{
             backgroundColor: getLetterBgColor(),
             color: "#ffffff",
@@ -937,23 +964,23 @@ function AnswerOption({
         >
           {letter}
         </div>
-        
+
         {/* Answer Text */}
-        <span className="text-lg font-bold flex-1 text-left">{option}</span>
-        
+        <span className="text-base font-bold flex-1 text-left">{option}</span>
+
         {/* Check/X Icon */}
-        {showAsCorrect && <Check className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
-        {showAsWrong && <X className="w-6 h-6 flex-shrink-0" strokeWidth={3} />}
+        {showAsCorrect && <Check className="w-5 h-5 flex-shrink-0" strokeWidth={3} />}
+        {showAsWrong && <X className="w-5 h-5 flex-shrink-0" strokeWidth={3} />}
       </button>
-      
+
       {/* Floating Gem Animation */}
       {showGemAnimation && (
         <FloatingGemIndicator amount={gemAmount} isSpeedBonus={isSpeedBonus} />
       )}
-      
-      {/* Explanation */}
+
+      {/* Brief explanation inline — only for correct answer after confirm */}
       {showAsCorrect && (
-        <p className="mt-2 px-4 text-sm text-[#85B7EB] italic leading-relaxed animate-in fade-in slide-in-from-top-2 duration-300">
+        <p className="mt-1 px-4 text-xs text-[#85B7EB] italic leading-snug animate-in fade-in slide-in-from-top-2 duration-300 line-clamp-2">
           {explanation}
         </p>
       )}
