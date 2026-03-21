@@ -1,7 +1,8 @@
 // Rally stats stored in localStorage as 'rally_stats'
 
 const DIFFICULTY_LEVEL_KEY = "rally_difficulty_level"
-const TARGET_SCORE_KEY = "rally_target_score"
+// Default target score used for cross-session difficulty thresholds
+const DEFAULT_TARGET_SCORE = 1000
 
 // Per-round game history for adaptive difficulty (last N games per category)
 const ROUND_HISTORY_KEY = "rally_round_history"
@@ -81,8 +82,7 @@ export function checkAdaptiveDifficultyUnlock(categoryId: string, roundAccuracy:
   addRoundToHistory(categoryId, roundAccuracy)
   const history = getRoundHistory(categoryId)
 
-  const targetScore = parseInt(localStorage.getItem(TARGET_SCORE_KEY) || "1000", 10)
-  const thresholds = getThresholdsForTarget(targetScore)
+  const thresholds = getThresholdsForTarget(DEFAULT_TARGET_SCORE)
   const currentLevel = getAdaptiveDifficulty(categoryId) || "easy"
 
   if (currentLevel === "hard") return null // already at max
@@ -164,7 +164,7 @@ export interface RoundResult {
 }
 
 export function saveRoundStats(round: RoundResult): string | null {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return null
 
   const stats = loadStats()
 
