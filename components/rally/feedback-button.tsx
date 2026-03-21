@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Megaphone, X, Check } from "lucide-react"
+import { Send, X, Check } from "lucide-react"
 
 type Reaction = "loving" | "ok" | "broken" | null
 
@@ -43,7 +43,7 @@ export function FeedbackButton() {
         className="fixed bottom-[88px] right-4 z-40 flex flex-col items-center justify-center w-11 h-11 rounded-full bg-[#021f3d]/80 border-2 border-[#378ADD] backdrop-blur-sm shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label="Send feedback"
       >
-        <Megaphone className="w-5 h-5 text-[#378ADD]" />
+        <Send className="w-5 h-5 text-[#378ADD]" />
       </button>
 
       {/* Backdrop */}
