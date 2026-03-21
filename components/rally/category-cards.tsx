@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { getAdaptiveDifficulty } from "@/lib/stats"
 
 export const CATEGORIES = [
   {
@@ -31,7 +33,22 @@ interface CategoryCardsProps {
   onCategorySelect?: (categoryId: string) => void
 }
 
+const DIFFICULTY_BADGE: Record<string, { label: string; color: string }> = {
+  easy: { label: "easy", color: "#22c55e" },
+  medium: { label: "medium", color: "#f59e0b" },
+  hard: { label: "hard", color: "#ef4444" },
+}
+
 export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCardsProps) {
+  const [levels, setLevels] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const loaded: Record<string, string> = {}
+    for (const cat of CATEGORIES) {
+      loaded[cat.id] = getAdaptiveDifficulty(cat.id) || "easy"
+    }
+    setLevels(loaded)
+  }, [])
   if (variant === "compact") {
     return (
       <div className="grid grid-cols-2 gap-3">
@@ -68,8 +85,21 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
             borderLeft: `4px solid ${category.color}`,
           }}
         >
-          <span className="text-[#0a1628] font-extrabold text-base">{category.name}</span>
-          <span 
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[#0a1628] font-extrabold text-base">{category.name}</span>
+            {levels[category.id] && (
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: `${DIFFICULTY_BADGE[levels[category.id]]?.color ?? "#22c55e"}20`,
+                  color: DIFFICULTY_BADGE[levels[category.id]]?.color ?? "#22c55e",
+                }}
+              >
+                {DIFFICULTY_BADGE[levels[category.id]]?.label ?? "easy"}
+              </span>
+            )}
+          </div>
+          <span
             className="text-sm font-bold mt-2 flex items-center gap-1"
             style={{ color: category.color }}
           >

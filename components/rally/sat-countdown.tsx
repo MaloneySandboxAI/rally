@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 const STORAGE_KEY = "rally_sat_date"
-const SETUP_SHOWN_KEY = "rally_sat_setup_shown"
+const ONBOARDING_COMPLETE_KEY = "rally_onboarding_complete"
 const TARGET_SCORE_KEY = "rally_target_score"
 
 const TARGET_SCORE_OPTIONS = [400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600]
@@ -46,18 +46,18 @@ export function SatCountdown() {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
-    const setupShown = localStorage.getItem(SETUP_SHOWN_KEY)
+    const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY)
     const storedTarget = localStorage.getItem(TARGET_SCORE_KEY)
-    
+
     if (stored) {
       setSatDate(stored)
-    } else if (!setupShown) {
-      // Default date to 3 months from now so the field is pre-filled
+    }
+    // Show the setup prompt every time until the user completes onboarding
+    if (!onboardingComplete) {
       const defaultDate = new Date()
       defaultDate.setMonth(defaultDate.getMonth() + 3)
       setSelectedDate(defaultDate.toISOString().split("T")[0])
       setShowSetupPrompt(true)
-      localStorage.setItem(SETUP_SHOWN_KEY, "true")
     }
     if (storedTarget) {
       setTargetScore(parseInt(storedTarget, 10) || 1000)
@@ -69,6 +69,7 @@ export function SatCountdown() {
     if (selectedDate) {
       localStorage.setItem(STORAGE_KEY, selectedDate)
       localStorage.setItem(TARGET_SCORE_KEY, targetScore.toString())
+      localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true")
       setSatDate(selectedDate)
       setShowDatePicker(false)
       setShowSetupPrompt(false)
@@ -177,21 +178,15 @@ export function SatCountdown() {
                 if (selectedDate) {
                   handleSaveDate()
                 } else {
-                  // Save score only, skip date
+                  // Save score only, skip date — still marks onboarding complete
                   localStorage.setItem(TARGET_SCORE_KEY, targetScore.toString())
+                  localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true")
                   setShowSetupPrompt(false)
                 }
               }}
               className="w-full bg-[#378ADD] hover:bg-[#378ADD]/90 text-white font-bold"
             >
-              {selectedDate ? "Save" : "Set Score & Skip Date"}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleDismissSetup}
-              className="w-full text-[#85B7EB] hover:text-white hover:bg-[#021f3d]"
-            >
-              Skip for now
+              {selectedDate ? "let's go \u2192" : "set score & skip date \u2192"}
             </Button>
           </div>
         </DialogContent>

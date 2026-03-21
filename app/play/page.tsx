@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { useGems, calculateRoundGems, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
+import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
 import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getQuestions, type Question } from "@/lib/questions"
+import { getQuestions, getOneQuestion, type Question } from "@/lib/questions"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
+import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
@@ -150,7 +151,7 @@ function PlayPageContent() {
   const searchParams = useSearchParams()
   const isChallenge = searchParams.get("challenge") === "true"
   const categoryParam = searchParams.get("category") || "Algebra"
-  const { addGems } = useGems()
+  const { totalGems, addGems } = useGems()
   
   // Find category info
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
@@ -169,64 +170,91 @@ function PlayPageContent() {
     sessionUsedIds[cat] = new Set()
   }
   
-  // Questions state - fetched from Supabase (client-side only)
+  // Hearts state — solo only (challenges bypass all limits)
+  const [hearts, setHearts] = useState(HEARTS_CONFIG.maxHearts)
+  const [soloBlocked, setSoloBlocked] = useState<string | null>(null)
+
+  // Questions state - fetched from Supabase one at a time (adaptive difficulty)
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [isQuestionsReady, setIsQuestionsReady] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
-  
+  const [isLoadingNext, setIsLoadingNext] = useState(false)
+
+  // Within-round adaptive difficulty — uses useRef so it's never lost on re-render
+  // and NEVER depends on localStorage. Resets to 'easy' at the start of every round.
+  const difficultyRef = useRef<string>("easy")
+
   // Mark component as mounted (client-side only)
   useEffect(() => {
     setIsMounted(true)
+    // Check hearts/round limits for solo play (challenges are always allowed)
+    if (!isChallenge) {
+      setHearts(getHearts())
+      const check = canPlaySolo()
+      if (!check.allowed) {
+        setSoloBlocked(check.reason)
+      }
+    }
   }, [])
-  
-  // Fetch questions from Supabase ONLY on client after mount
+
+  // Fetch the FIRST question when the round starts
   useEffect(() => {
     if (!isMounted) return
     if (isQuestionsReady) return
 
-    async function loadQuestions() {
+    async function loadFirstQuestion() {
       try {
+        // Always start a new round at 'easy'
+        difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
-        const difficultyLevel = getAdaptiveDifficulty(categoryParam)
-        let questions = await getQuestions(categoryParam, excluded, difficultyLevel)
-        if (!questions || questions.length === 0) {
+        let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
+        if (!question) {
+          // All questions seen — reset and try again
           resetUsedIds(categoryParam)
-          questions = await getQuestions(categoryParam, [], difficultyLevel)
+          question = await getOneQuestion(categoryParam, difficultyRef.current, [])
           toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
         }
-        markIdsUsed(categoryParam, questions.map(q => q.id))
-        console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
-        setSessionQuestions(questions)
+        if (!question) {
+          throw new Error("couldn't load questions — check your connection and try again")
+        }
+        markIdsUsed(categoryParam, [question.id])
+        console.log(`[v0] Round start — difficulty: ${difficultyRef.current}, question id: ${question.id}`)
+        setSessionQuestions([question])
         setIsQuestionsReady(true)
         setFetchError(null)
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : ""
-        if (msg === "RESET_NEEDED") {
-          resetUsedIds(categoryParam)
-          try {
-            const difficultyLevel = getAdaptiveDifficulty(categoryParam)
-            const fresh = await getQuestions(categoryParam, [], difficultyLevel)
-            markIdsUsed(categoryParam, fresh.map(q => q.id))
-            console.log(`[v0] Used IDs for ${categoryParam}: ${(sessionUsedIds[categoryParam]?.size ?? 0)}`)
-            setSessionQuestions(fresh)
-            setIsQuestionsReady(true)
-            setFetchError(null)
-            toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
-          } catch {
-            setFetchError("couldn't load questions — check your connection and try again")
-            setSessionQuestions([])
-          }
-        } else {
-          setFetchError("couldn't load questions — check your connection and try again")
-          setSessionQuestions([])
-        }
+      } catch {
+        setFetchError("couldn't load questions — check your connection and try again")
+        setSessionQuestions([])
       }
     }
 
-    loadQuestions()
+    loadFirstQuestion()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, isQuestionsReady, categoryParam])
+
+  // Fetch the NEXT question adaptively after each answer
+  const fetchNextQuestion = useCallback(async () => {
+    setIsLoadingNext(true)
+    try {
+      const excluded = getUsedIdsForCategory(categoryParam)
+      let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
+      if (!question) {
+        // All questions at this difficulty seen — reset IDs and try again
+        resetUsedIds(categoryParam)
+        question = await getOneQuestion(categoryParam, difficultyRef.current, [])
+      }
+      if (question) {
+        markIdsUsed(categoryParam, [question.id])
+        setSessionQuestions(prev => [...prev, question!])
+        console.log(`[v0] Next question — difficulty: ${difficultyRef.current}, question id: ${question.id}`)
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching next question:", err)
+    } finally {
+      setIsLoadingNext(false)
+    }
+  }, [categoryParam])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
@@ -254,8 +282,10 @@ function PlayPageContent() {
   const question = sessionQuestions[currentQuestion]
   const correctLetter = question?.correct || "A"
   const correctAnswerIndex = letterToIndex(correctLetter)
-  const baseGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
-  const speedGemPerCorrect = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
+  // Per-question gem values based on current question's difficulty
+  const questionDifficulty = question?.difficulty || "easy"
+  const baseGemPerCorrect = gemsForAnswer(questionDifficulty, isChallenge, false)
+  const speedGemPerCorrect = gemsForAnswer(questionDifficulty, isChallenge, true)
 
   // Build the 4 answer options from individual columns
   const answerOptions = question ? [
@@ -288,7 +318,20 @@ function PlayPageContent() {
   // Handle time up in a separate effect to avoid stale closure
   useEffect(() => {
     if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
-    
+
+    // Timeout counts as wrong — drop difficulty
+    if (difficultyRef.current === "hard") {
+      difficultyRef.current = "medium"
+    } else if (difficultyRef.current === "medium") {
+      difficultyRef.current = "easy"
+    }
+
+    // Solo play: lose a heart on timeout
+    if (!isChallenge) {
+      const remaining = loseHeart()
+      setHearts(remaining)
+    }
+
     // Record wrong answer due to timeout
     setAnswerResults(prev => [...prev, {
       questionIndex: currentQuestion,
@@ -297,18 +340,20 @@ function PlayPageContent() {
       wasSpeedBonus: false,
       gemsEarned: 0,
     }])
-    
+
     // Show the correct answer briefly then auto-advance
     setSelectedAnswer(-1) // -1 indicates timeout
-    
-    setTimeout(() => {
+
+    setTimeout(async () => {
       if (currentQuestion < TOTAL_QUESTIONS - 1) {
+        await fetchNextQuestion()
         setCurrentQuestion(prev => prev + 1)
         setSelectedAnswer(null)
       } else {
         setShowResults(true)
       }
     }, 2000)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isQuestionsReady, timeRemaining, selectedAnswer, currentQuestion, question])
   
   // Reset timer when moving to next question — use difficulty-based time
@@ -339,9 +384,17 @@ function PlayPageContent() {
     
     if (answerIndex === correctAnswerIndex) {
       setScore(prev => prev + 1)
-      
-      const gemsForThis = isSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect
-      
+
+      const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
+
+      // Adaptive difficulty: bump UP on correct answer
+      if (difficultyRef.current === "easy") {
+        difficultyRef.current = "medium"
+      } else if (difficultyRef.current === "medium") {
+        difficultyRef.current = "hard"
+      }
+      // Already hard — stay hard
+
       // Record correct answer
       setAnswerResults(prev => [...prev, {
         questionIndex: currentQuestion,
@@ -360,6 +413,20 @@ function PlayPageContent() {
       setShowGemAnimation(true)
       setTimeout(() => setShowGemAnimation(false), 1000)
     } else {
+      // Adaptive difficulty: drop DOWN on wrong answer
+      if (difficultyRef.current === "hard") {
+        difficultyRef.current = "medium"
+      } else if (difficultyRef.current === "medium") {
+        difficultyRef.current = "easy"
+      }
+      // Already easy — stay easy
+
+      // Solo play: lose a heart on wrong answer
+      if (!isChallenge) {
+        const remaining = loseHeart()
+        setHearts(remaining)
+      }
+
       // Record wrong answer
       setAnswerResults(prev => [...prev, {
         questionIndex: currentQuestion,
@@ -369,19 +436,22 @@ function PlayPageContent() {
         gemsEarned: 0,
       }])
     }
-  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, baseGemPerCorrect, speedGemPerCorrect])
+  }, [selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
 
-  const handleNextQuestion = useCallback(() => {
+  const handleNextQuestion = useCallback(async () => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
+      // Fetch the next question at the current adaptive difficulty
+      await fetchNextQuestion()
       setCurrentQuestion(prev => prev + 1)
       setSelectedAnswer(null)
     } else {
       setShowResults(true)
     }
-  }, [currentQuestion])
+  }, [currentQuestion, fetchNextQuestion])
 
   const handlePlayAgain = useCallback(() => {
     // Reset all game state in-place so usedIds ref is preserved across rounds
+    difficultyRef.current = "easy" // Always restart at easy
     setCurrentQuestion(0)
     setSelectedAnswer(null)
     setScore(0)
@@ -393,6 +463,7 @@ function PlayPageContent() {
     setCurrentQuestionSpeedBonus(false)
     setSessionQuestions([])
     setIsQuestionsReady(false)
+    setIsLoadingNext(false)
     setFetchError(null)
   }, [])
 
@@ -402,26 +473,62 @@ function PlayPageContent() {
       const correctGems = answerResults
         .filter(r => r.isCorrect)
         .reduce((sum, r) => sum + r.gemsEarned, 0)
+      const correctCount = answerResults.filter(r => r.isCorrect).length
 
       addGems(correctGems)
       markRoundCompleted()
+      if (!isChallenge) incrementRoundsToday()
       const unlockMessage = saveRoundStats({
         categoryId: categoryParam,
-        correct: score,
+        correct: correctCount,
         total: TOTAL_QUESTIONS,
         gemsEarned: correctGems,
         answerResults,
       })
       if (unlockMessage) {
-        toast.success(`🎯 ${unlockMessage}`, { duration: 5000 })
+        toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
       }
       setGemsAwarded(true)
     }
-  }, [showResults, gemsAwarded, score, isChallenge, addGems, answerResults, categoryParam])
+  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam])
 
   // Derived values for rendering (always computed, never early return)
   const hasAnswered = selectedAnswer !== null
   const isTimeout = selectedAnswer === -1
+
+  // Solo play blocked (no hearts or daily limit reached)
+  if (soloBlocked && !isChallenge) {
+    return (
+      <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 text-center">
+        <Heart className="w-16 h-16 text-red-400 mb-4" />
+        <h1 className="text-2xl font-extrabold text-white mb-2">{soloBlocked}</h1>
+        <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
+          <button
+            onClick={() => {
+              const success = refillHearts(totalGems, addGems)
+              if (success) {
+                setHearts(HEARTS_CONFIG.maxHearts)
+                setSoloBlocked(null)
+                toast.success("hearts refilled!", { duration: 2000 })
+              } else {
+                toast.error("not enough gems", { duration: 2000 })
+              }
+            }}
+            className="bg-[#EF9F27] text-white rounded-2xl py-3 px-6 font-bold flex items-center justify-center gap-2"
+          >
+            <Diamond className="w-4 h-4 fill-white" />
+            refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
+          </button>
+          <a
+            href="/"
+            className="bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-3 px-6 font-bold text-center"
+          >
+            back to home
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   // Error state - failed to fetch questions
   if (fetchError) {
@@ -441,8 +548,8 @@ function PlayPageContent() {
     )
   }
 
-  // Loading state - not mounted yet, questions not ready, or current question missing
-  if (!isMounted || !isQuestionsReady || !sessionQuestions[currentQuestion]) {
+  // Loading state - not mounted yet, questions not ready, loading next, or current question missing
+  if (!isMounted || !isQuestionsReady || isLoadingNext || !sessionQuestions[currentQuestion]) {
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center">
         <Spinner className="w-8 h-8 text-[#378ADD]" />
@@ -480,11 +587,20 @@ function PlayPageContent() {
               <CalculatorButton onClick={() => setShowCalculator(true)} />
             )}
           </div>
-          
+
           <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
-          
-          {/* Timer */}
-          <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
+
+          <div className="flex items-center gap-3">
+            {/* Hearts (solo only) */}
+            {!isChallenge && (
+              <div className="flex items-center gap-1">
+                <Heart className="w-4 h-4 text-red-400 fill-red-400" />
+                <span className="text-sm font-bold text-red-400">{hearts}</span>
+              </div>
+            )}
+            {/* Timer */}
+            <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
+          </div>
         </div>
         
         {/* Progress Pips */}
@@ -687,35 +803,40 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
   const [isGuest, setIsGuest] = useState(false)
 
   useEffect(() => {
-    const stored = parseInt(localStorage.getItem("rally_gems") || "0", 10)
-    setTotalGems(isNaN(stored) ? 0 : stored)
+    const stored = parseInt(localStorage.getItem("rally_gems") || "300", 10)
+    setTotalGems(isNaN(stored) ? 300 : stored)
     setIsGuest(localStorage.getItem("rally_is_guest") === "true")
   }, [])
   
-  // Calculate gems — use `score` as source of truth for correct count
-  // answerResults tracks speed bonuses per-answer
+  // Single source of truth: count correct answers directly from answerResults
+  const correctCount = answerResults.filter(r => r.isCorrect).length
   const speedBonusCount = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
-  const baseGem = isChallenge ? GEM_VALUES.challenge.correctAnswer : GEM_VALUES.solo.correctAnswer
-  const speedGem = isChallenge ? GEM_VALUES.challenge.correctAnswerSpeed : GEM_VALUES.solo.correctAnswerSpeed
-  const nonSpeedCorrect = score - speedBonusCount
-  const correctAnswerGems = nonSpeedCorrect * baseGem
-  const speedAnswerGems = speedBonusCount * speedGem
-  const gemsEarned = correctAnswerGems + speedAnswerGems
+  const gemsEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
 
+  // Build breakdown by difficulty tier
   const breakdown: { label: string; amount: number }[] = []
-  if (nonSpeedCorrect > 0) {
-    breakdown.push({
-      label: `${nonSpeedCorrect} correct answer${nonSpeedCorrect !== 1 ? "s" : ""}`,
-      amount: correctAnswerGems,
-    })
+  const diffGroups = { easy: [] as AnswerResult[], medium: [] as AnswerResult[], hard: [] as AnswerResult[] }
+  for (const r of answerResults.filter(r => r.isCorrect)) {
+    const d = (r.difficulty || "easy") as keyof typeof diffGroups
+    if (diffGroups[d]) diffGroups[d].push(r)
+  }
+  for (const [diff, results] of Object.entries(diffGroups)) {
+    if (results.length > 0) {
+      const gems = results.reduce((sum, r) => sum + r.gemsEarned, 0)
+      breakdown.push({
+        label: `${results.length} ${diff} correct`,
+        amount: gems,
+      })
+    }
   }
   if (speedBonusCount > 0) {
+    // Speed bonus extra on top of base (already included in gemsEarned per answer)
     breakdown.push({
       label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? "es" : ""}`,
-      amount: speedAnswerGems,
+      amount: 0, // already counted in per-answer gems above
     })
   }
-  if (score === 0) {
+  if (correctCount === 0) {
     breakdown.push({ label: "no correct answers", amount: 0 })
   }
   
@@ -769,11 +890,11 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         </div>
 
         <h1 className="text-5xl font-extrabold text-white mb-2">
-          {score} out of {TOTAL_QUESTIONS}
+          {correctCount} out of {TOTAL_QUESTIONS}
         </h1>
         <p className="text-[#85B7EB] text-xl font-semibold">{categoryName}</p>
         <p className="text-[#85B7EB]/80 text-lg mt-4 max-w-xs mx-auto">
-          {getEncouragementMessage(score)}
+          {getEncouragementMessage(correctCount)}
         </p>
       </div>
 

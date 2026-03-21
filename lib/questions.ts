@@ -66,3 +66,59 @@ export async function getQuestions(
   const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 5)
   return shuffled as Question[]
 }
+
+/**
+ * Fetch a SINGLE question filtered by difficulty.
+ * Used for within-round adaptive difficulty: start easy, bump up on correct, drop on wrong.
+ * Falls back to any difficulty if no questions match the requested level.
+ */
+export async function getOneQuestion(
+  category: string,
+  difficulty: string,
+  excludeIds: number[] = []
+): Promise<Question | null> {
+  if (typeof window === "undefined") return null
+
+  const supabase = getSupabase()
+
+  let query = supabase
+    .from("sat_questions")
+    .select("*")
+    .eq("category", category)
+    .eq("difficulty", difficulty)
+
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  }
+
+  const { data, error } = await query.limit(10)
+
+  if (error) {
+    console.error("[v0] Supabase single-question fetch error:", error)
+    return null
+  }
+
+  if (!data || data.length === 0) {
+    // Fallback: try fetching ANY difficulty if requested one has no remaining questions
+    let fallbackQuery = supabase
+      .from("sat_questions")
+      .select("*")
+      .eq("category", category)
+
+    if (excludeIds.length > 0) {
+      fallbackQuery = fallbackQuery.not("id", "in", `(${excludeIds.join(",")})`)
+    }
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery.limit(10)
+
+    if (fallbackError || !fallbackData || fallbackData.length === 0) {
+      return null
+    }
+
+    const shuffled = [...fallbackData].sort(() => Math.random() - 0.5)
+    return shuffled[0] as Question
+  }
+
+  const shuffled = [...data].sort(() => Math.random() - 0.5)
+  return shuffled[0] as Question
+}
