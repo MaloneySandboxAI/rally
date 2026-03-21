@@ -5,7 +5,7 @@ import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookO
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
-import { Calculator, CalculatorButton } from "@/components/rally/calculator"
+import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getQuestions, getOneQuestion, type Question } from "@/lib/questions"
@@ -459,7 +459,7 @@ function PlayPageContent() {
   const [showGemAnimation, setShowGemAnimation] = useState(false)
   const [showSpeedBonus, setShowSpeedBonus] = useState(false)
   const [gemsAwarded, setGemsAwarded] = useState(false)
-  const [showCalculator, setShowCalculator] = useState(false)
+  const [showWorkArea, setShowWorkArea] = useState(false)
   
   // Timer state — totalTime is per-question based on difficulty
   const [totalTime, setTotalTime] = useState(60) // default medium until question loads
@@ -785,12 +785,8 @@ function PlayPageContent() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
-          {/* Calculator Button (Math categories only) */}
-          <div className="w-10">
-            {isMathCategory && (
-              <CalculatorButton onClick={() => setShowCalculator(true)} />
-            )}
-          </div>
+          {/* Scratch Work Button — all categories */}
+          <WorkAreaButton onClick={() => setShowWorkArea(true)} />
 
           <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
 
@@ -878,8 +874,8 @@ function PlayPageContent() {
         </div>
       </main>
 
-      {/* Calculator Modal */}
-      <Calculator isOpen={showCalculator} onClose={() => setShowCalculator(false)} />
+      {/* Work Area (Notepad / Calculator / Draw) */}
+      <WorkArea isOpen={showWorkArea} onClose={() => setShowWorkArea(false)} />
 
       {/* CSS for gem animation */}
       <style jsx global>{`
