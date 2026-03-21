@@ -16,6 +16,14 @@ type TabId = "notepad" | "calc" | "draw"
 
 export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
   const [activeTab, setActiveTab] = useState<TabId>("notepad")
+  const sheetRef = useRef<HTMLDivElement>(null)
+
+  // Scroll sheet to top whenever it opens
+  useEffect(() => {
+    if (isOpen && sheetRef.current) {
+      sheetRef.current.scrollTop = 0
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -25,7 +33,9 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Bottom sheet */}
-      <div className="relative bg-[#0a2d4a] rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300"
+      <div
+        ref={sheetRef}
+        className="relative bg-[#0a2d4a] rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300"
         style={{ height: "70vh", maxHeight: "70vh" }}
       >
         {/* Handle + close */}
@@ -83,9 +93,7 @@ function NotepadTab() {
   const [text, setText] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    textareaRef.current?.focus()
-  }, [])
+  // Don't auto-focus — it causes the browser to scroll down past the tabs
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -442,7 +450,7 @@ export function WorkAreaButton({ onClick }: { onClick: () => void }) {
       className="flex items-center gap-1.5 bg-[#0a2d4a] border border-[#378ADD]/30 rounded-full px-3 py-1.5 transition-all active:scale-95 hover:bg-[#0a2d4a]/80"
       aria-label="Open work area"
     >
-      <div className="flex items-center -space-x-1">
+      <div className="flex items-center gap-0.5">
         <CalculatorIcon className="w-3.5 h-3.5 text-[#378ADD]" />
         <PenLine className="w-3.5 h-3.5 text-[#378ADD]" />
       </div>
