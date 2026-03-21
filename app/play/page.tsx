@@ -345,13 +345,16 @@ function PlayPageContent() {
 
   // usedIds lives at module level (sessionUsedIds) — never reset on remount
   function getUsedIdsForCategory(cat: string): number[] {
-    return Array.from(sessionUsedIds[cat] ?? new Set<number>())
+    const ids = Array.from(sessionUsedIds[cat] ?? new Set<number>())
+    console.log(`[v0] Used IDs for ${cat}: [${ids.join(', ')}] (${ids.length} total)`)
+    return ids
   }
   function markIdsUsed(cat: string, ids: number[]) {
     if (!sessionUsedIds[cat]) sessionUsedIds[cat] = new Set()
     ids.forEach(id => sessionUsedIds[cat].add(id))
   }
   function resetUsedIds(cat: string) {
+    console.log(`[v0] Resetting used IDs for ${cat} — all questions exhausted`)
     sessionUsedIds[cat] = new Set()
   }
   
@@ -394,11 +397,13 @@ function PlayPageContent() {
         difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
         let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
-        if (!question) {
-          // All questions seen — reset and try again
+        if (!question && excluded.length > 0) {
+          // All questions in this category seen — reset and try again
           resetUsedIds(categoryParam)
           question = await getOneQuestion(categoryParam, difficultyRef.current, [])
-          toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
+          if (question) {
+            toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
+          }
         }
         if (!question) {
           throw new Error("couldn't load questions — check your connection and try again")
@@ -425,9 +430,14 @@ function PlayPageContent() {
       const excluded = getUsedIdsForCategory(categoryParam)
       let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
       if (!question) {
-        // All questions at this difficulty seen — reset IDs and try again
+        // No unseen questions at this difficulty — getOneQuestion already falls back
+        // to any difficulty internally. If still null, we've exhausted ALL questions
+        // in this category. Only then reset IDs.
         resetUsedIds(categoryParam)
         question = await getOneQuestion(categoryParam, difficultyRef.current, [])
+        if (question) {
+          toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
+        }
       }
       if (question) {
         markIdsUsed(categoryParam, [question.id])
