@@ -148,154 +148,187 @@ interface AnswerResult {
 }
 
 // Generate a genuinely helpful "learn more" breakdown for a wrong answer
-// Structured as: concept → approach → walkthrough → common mistake → takeaway
+// Teaches the concept, not the specific answer (that's already shown above)
 function getDetailedExplanation(q: Question): {
   concept: string
   approach: string
-  walkthrough: string[]
   commonMistake: string
   takeaway: string
 } {
-  const options = [q.option_a, q.option_b, q.option_c, q.option_d]
-  const correctIdx = letterToIndex(q.correct)
-  const correctAnswer = options[correctIdx]
   const questionLower = q.question.toLowerCase()
 
-  // --- Identify the concept being tested ---
-  let concept = "problem solving"
-  let approach = "Break the problem into smaller pieces and work through each one."
-  let commonMistake = "Rushing through without checking your work."
+  // Defaults
+  let concept = "Problem Solving"
+  let approach = "Break the problem into smaller pieces and work through each one. If you're stuck, try plugging in each answer choice to see which one satisfies the conditions."
+  let commonMistake = "Rushing through without double-checking. On the SAT, many wrong answers are designed to be the result of common calculation errors — they're traps."
   let takeaway = "Always verify your answer by plugging it back into the original problem."
 
-  // Algebra patterns
+  // ===== ALGEBRA =====
   if (q.category === "Algebra") {
     if (questionLower.includes("slope")) {
       concept = "Slope of a Line"
-      approach = "Slope measures steepness: rise over run. Use the formula (y\u2082 \u2013 y\u2081) / (x\u2082 \u2013 x\u2081). The key is keeping the order consistent \u2014 subtract the same point's coordinates on top and bottom."
-      commonMistake = "Mixing up the order of subtraction (putting x values on top instead of y values) or swapping which point is \u201Cpoint 1\u201D vs \u201Cpoint 2\u201D partway through."
-      takeaway = "Slope = rise/run = \u0394y/\u0394x. Pick one point as \u201Cfirst,\u201D stick with it for both subtractions."
+      approach = "Slope measures steepness — it's the ratio of vertical change to horizontal change between any two points. The formula is (y\u2082 \u2013 y\u2081) / (x\u2082 \u2013 x\u2081). The key is being consistent: always subtract the first point from the second in both numerator and denominator. A positive slope means the line goes up-right; negative means down-right; zero means flat; undefined means vertical."
+      commonMistake = "Mixing up the order of subtraction — putting x values on top instead of y values, or subtracting point 1 from point 2 on top but point 2 from point 1 on bottom. This flips the sign."
+      takeaway = "Slope = rise \u00F7 run = \u0394y \u00F7 \u0394x. Always do y on top, x on bottom, same subtraction order for both."
+    } else if (questionLower.includes("root") || questionLower.includes("vieta") || (questionLower.includes("r") && questionLower.includes("s") && questionLower.includes("x\u00B2"))) {
+      concept = "Vieta's Formulas (Roots & Coefficients)"
+      approach = "For any quadratic x\u00B2 \u2013 px + q = 0 with roots r and s, Vieta's formulas give you two powerful relationships: r + s = p (sum of roots equals the negative of the x-coefficient) and r \u00D7 s = q (product of roots equals the constant). You can use these to find expressions like r\u00B2 + s\u00B2 without ever solving for r and s individually. The trick: rewrite the expression using (r+s) and (rs). For example, r\u00B2 + s\u00B2 = (r+s)\u00B2 \u2013 2rs."
+      commonMistake = "Trying to solve for each root individually using the quadratic formula. That's unnecessary and error-prone. Vieta's lets you work with the sum and product directly, which is much faster."
+      takeaway = "When a question gives you a quadratic and asks about its roots, use Vieta's: sum = \u2013b/a, product = c/a. Rewrite the target expression in terms of sum and product."
     } else if (questionLower.includes("system") || (questionLower.includes("2x") && questionLower.includes("y ="))) {
       concept = "Systems of Equations"
-      approach = "You have two equations with two unknowns. Your goal is to eliminate one variable so you can solve for the other. You can either add/subtract the equations directly, or solve one equation for a variable and substitute into the other."
-      commonMistake = "Solving for x but forgetting the question asked for x + y (or some other expression). Always re-read what the question is actually asking for."
-      takeaway = "After finding one variable, substitute back to get the other. Then check: does your answer match what the question asked?"
+      approach = "A system of two equations with two unknowns can be solved two ways. Substitution: solve one equation for a variable, plug it into the other. Elimination: add or subtract the equations to cancel one variable. Pick whichever method makes the arithmetic simpler — if coefficients already match, use elimination."
+      commonMistake = "Solving for x but forgetting the question asked for x + y (or some other combination). Always re-read what's being asked after you find the individual values."
+      takeaway = "After finding your variables, re-read the question. It might want a sum, difference, or product — not just a single variable."
     } else if (questionLower.includes("percent") || questionLower.includes("%")) {
       concept = "Percent Change & Successive Percentages"
-      approach = "When applying multiple percentage changes, multiply the multipliers \u2014 don\u2019t just add the percentages. A 30% increase means \u00D71.30. A 10% decrease means \u00D70.90. Chain them: 1.30 \u00D7 0.90."
-      commonMistake = "Adding percentages directly (thinking 30% up and 10% down = 20% up). That only works for one change, not successive ones."
-      takeaway = "Convert each percent change to a multiplier (1 + rate for increase, 1 \u2013 rate for decrease), then multiply them together."
+      approach = "Each percent change is a multiplier. A 30% increase means \u00D71.30. A 10% decrease means \u00D70.90. When changes happen one after another, multiply the multipliers: 1.30 \u00D7 0.90 = 1.17, which is a 17% increase. Never add percentages directly — that only works for a single change."
+      commonMistake = "Thinking 30% up then 10% down = 20% up. It's actually 17% because the 10% discount applies to the already-marked-up price, not the original."
+      takeaway = "Successive % changes: convert each to a multiplier, multiply them all, subtract 1 to get net change."
     } else if (questionLower.includes("factor") || questionLower.includes("undefined") || questionLower.includes("denominator")) {
-      concept = "Rational Expressions & Factoring"
-      approach = "An expression is undefined when its denominator equals zero. Factor the denominator completely, then set each factor equal to zero to find the restricted values."
-      commonMistake = "Only finding one factor of the denominator, or confusing factors of the numerator with factors of the denominator. The numerator doesn\u2019t affect where the expression is undefined."
-      takeaway = "Undefined = denominator is zero. Factor the denominator, set each factor = 0, solve."
-    } else if (questionLower.includes("f(") || questionLower.includes("function")) {
+      concept = "Rational Expressions & Undefined Values"
+      approach = "A fraction is undefined when its denominator equals zero. To find those values: (1) factor the denominator completely, (2) set each factor equal to zero, (3) solve. The numerator doesn't matter — even if it also equals zero at that point, the expression is still undefined."
+      commonMistake = "Only finding one factor of the denominator, or canceling the numerator and denominator before checking for undefined values. A 'hole' (where both top and bottom are zero) is still undefined."
+      takeaway = "Undefined = denominator is zero. Always factor the denominator first, then set each factor = 0."
+    } else if (questionLower.includes("f(") || questionLower.includes("function") || questionLower.includes("g(")) {
       concept = "Function Notation & Recursive Patterns"
-      approach = "When a function rule says f(x+k) = f(x) + c, it tells you how the output changes as x increases by k. Build a table: start with the known value and apply the rule step by step until you reach the target input."
-      commonMistake = "Trying to jump straight to the answer instead of building up step by step. With recursive rules, you must go through each step in order."
-      takeaway = "For recursive functions, make a table and compute each value in sequence. Don\u2019t skip steps."
+      approach = "When given a rule like f(x+2) = f(x) + 4 and a starting value, build a chain: compute f at each step using the rule. Make a mini table — write the input values in one column and outputs in the other. This avoids mistakes from trying to jump ahead."
+      commonMistake = "Trying to skip steps or compute the final answer in one leap. With recursive definitions, each value depends on the previous one, so you must go in order."
+      takeaway = "Recursive functions: make a table, go step by step. The pattern often becomes obvious after 2-3 steps."
     } else if (questionLower.includes("quadratic") || questionLower.includes("x\u00B2") || questionLower.includes("x^2")) {
       concept = "Quadratic Equations"
-      approach = "Quadratics can be solved by factoring, completing the square, or using the quadratic formula. First check if it factors nicely. If not, use x = (\u2013b \u00B1 \u221A(b\u00B2\u20134ac)) / 2a."
-      commonMistake = "Forgetting the \u00B1 (there are usually two solutions) or making sign errors when applying the formula."
-      takeaway = "Always check: can I factor this? If not, quadratic formula. And remember \u00B1 means two answers."
+      approach = "Three ways to solve: (1) Factoring — works when the quadratic factors into nice integers. (2) Completing the square — useful for vertex form. (3) Quadratic formula x = (\u2013b \u00B1 \u221A(b\u00B2\u20134ac)) / 2a — always works. Check the discriminant (b\u00B2\u20134ac) first: positive = 2 real solutions, zero = 1, negative = none."
+      commonMistake = "Sign errors in the quadratic formula, especially with the \u2013b term. If b is already negative, \u2013b becomes positive — that trips people up constantly."
+      takeaway = "Try factoring first (fastest). If that fails, quadratic formula. Write each step carefully — sign errors are the #1 mistake."
+    } else if (questionLower.includes("inequalit")) {
+      concept = "Inequalities"
+      approach = "Solve inequalities the same way as equations with one critical exception: when you multiply or divide both sides by a negative number, you must flip the inequality sign. Graph your solution on a number line to visualize it."
+      commonMistake = "Forgetting to flip the inequality when dividing by a negative. For example, \u20132x > 6 becomes x < \u20133 (not x > \u20133)."
+      takeaway = "Multiply or divide by a negative? Flip the sign. Always."
+    } else if (questionLower.includes("exponent") || questionLower.includes("power")) {
+      concept = "Exponent Rules"
+      approach = "The key rules: x^a \u00D7 x^b = x^(a+b), x^a \u00F7 x^b = x^(a\u2013b), (x^a)^b = x^(ab), x^0 = 1, x^(\u2013n) = 1/x^n. When simplifying, convert everything to the same base first, then apply the rules."
+      commonMistake = "Multiplying exponents when you should add them (or vice versa). x\u00B2 \u00D7 x\u00B3 = x\u2075 (add), not x\u2076 (multiply)."
+      takeaway = "Same base, multiplying? Add exponents. Same base, power of a power? Multiply exponents."
+    } else if (questionLower.includes("absolute")) {
+      concept = "Absolute Value"
+      approach = "Absolute value |x| means 'distance from zero' — it's always non-negative. To solve |expression| = k, split into two cases: expression = k and expression = \u2013k. For inequalities, |x| < k means \u2013k < x < k, and |x| > k means x < \u2013k or x > k."
+      commonMistake = "Forgetting the negative case. |x \u2013 3| = 5 has TWO solutions: x = 8 and x = \u20132."
+      takeaway = "Absolute value = two cases. Always write both and solve each separately."
     } else {
       concept = "Algebraic Reasoning"
-      approach = "Identify what the question is asking, isolate the unknown variable step by step, and simplify. Work backwards from the answer choices if you\u2019re stuck."
-      commonMistake = "Doing too many steps in your head. Write each step down to avoid sign errors and arithmetic mistakes."
-      takeaway = "When stuck, try plugging each answer choice back into the original equation to see which one works."
+      approach = "Identify what the question is asking for, then work backwards. Isolate the unknown variable step by step, simplify at each stage, and check your arithmetic. If you're stuck, try plugging in each answer choice — one of them must work."
+      commonMistake = "Doing too many steps in your head. Write each step down — most algebra mistakes come from mental arithmetic, not from misunderstanding the concept."
+      takeaway = "When stuck, try backsolving: plug each answer choice into the original problem to see which one works."
     }
   }
 
-  // Reading Comprehension patterns
+  // ===== READING COMPREHENSION =====
   if (q.category === "Reading Comprehension") {
-    if (questionLower.includes("main idea") || questionLower.includes("primarily") || questionLower.includes("central")) {
-      concept = "Main Idea & Central Argument"
-      approach = "The main idea is what the entire passage is about \u2014 not just one paragraph. Look for the claim that everything else supports. Wrong answers often focus on a detail from one section rather than the overall message."
-      commonMistake = "Picking an answer that\u2019s true but only covers part of the passage. The main idea must account for the whole text."
-      takeaway = "Ask: \u201CCould I use this as a title for the entire passage?\u201D If it only fits one paragraph, it\u2019s a detail, not the main idea."
-    } else if (questionLower.includes("evidence") || questionLower.includes("support") || questionLower.includes("best describes")) {
+    if (questionLower.includes("main idea") || questionLower.includes("primarily") || questionLower.includes("central") || questionLower.includes("purpose")) {
+      concept = "Main Idea & Author's Purpose"
+      approach = "The main idea is what the entire passage is about — not just one paragraph or detail. To find it, ask: 'If I could summarize this whole passage in one sentence, what would it be?' The correct answer covers the full scope. Wrong answers often describe something that's true but only applies to one section."
+      commonMistake = "Picking a detail that appears in the passage but doesn't represent the overall argument. Just because something is mentioned doesn't make it the main idea."
+      takeaway = "Could this answer be the title of the whole passage? If it only fits one paragraph, it's a detail — not the main idea."
+    } else if (questionLower.includes("evidence") || questionLower.includes("support") || questionLower.includes("best describes") || questionLower.includes("according to")) {
       concept = "Evidence-Based Reasoning"
-      approach = "The SAT wants you to find the answer that is directly supported by specific words in the passage \u2014 not your interpretation or outside knowledge. Go back to the text and put your finger on the sentence that proves your answer."
-      commonMistake = "Choosing an answer that \u201Cfeels right\u201D but isn\u2019t directly stated in the passage. The SAT rewards literal reading."
-      takeaway = "Before selecting, ask: \u201CWhich exact sentence in the passage proves this?\u201D If you can\u2019t find one, it\u2019s probably wrong."
-    } else if (questionLower.includes("infer") || questionLower.includes("imply") || questionLower.includes("suggest")) {
+      approach = "The SAT tests whether you can find answers that are directly supported by the text — not your opinion or outside knowledge. Before choosing, go back to the passage and find the specific sentence or phrase that proves your answer. If you can't point to it, you're guessing."
+      commonMistake = "Choosing an answer that 'feels right' from general knowledge without verifying it against the passage. The SAT rewards careful reading, not intuition."
+      takeaway = "Point to the evidence. If you can't find the exact line in the passage that supports your answer, pick a different one."
+    } else if (questionLower.includes("infer") || questionLower.includes("imply") || questionLower.includes("suggest") || questionLower.includes("most likely")) {
       concept = "Inference & Implication"
-      approach = "An inference on the SAT is a very small logical step from what\u2019s stated \u2014 not a big leap. The correct answer will be strongly supported by the text, just not stated in those exact words."
-      commonMistake = "Making too big of a leap. SAT inferences are conservative \u2014 they\u2019re almost directly stated."
-      takeaway = "The best inference is barely an inference at all. If you have to make a big assumption, it\u2019s probably wrong."
+      approach = "SAT inferences are small, logical steps from what's stated — never big leaps. Think of it as 'what must be true based on what the passage says?' The correct answer is almost directly stated, just not in those exact words. If you have to make an assumption to justify the answer, it's probably wrong."
+      commonMistake = "Over-thinking it. SAT inferences are conservative — if the answer requires a big logical leap or outside knowledge, it's a trap."
+      takeaway = "The best SAT inference is barely an inference at all. It should feel almost too obvious."
+    } else if (questionLower.includes("tone") || questionLower.includes("attitude") || questionLower.includes("perspective")) {
+      concept = "Tone & Author's Attitude"
+      approach = "Look for word choice clues — adjectives, adverbs, and loaded words reveal the author's attitude. Is the language positive, negative, or neutral? Enthusiastic or skeptical? Also check: does the author use hedging words ('might,' 'perhaps') or definitive ones ('clearly,' 'undoubtedly')?"
+      commonMistake = "Confusing the subject matter's tone with the author's attitude. A passage about a tragedy can be written in an analytical, objective tone."
+      takeaway = "Focus on HOW the author writes about the topic (word choice), not WHAT the topic is."
     } else {
-      concept = "Reading Comprehension Strategy"
-      approach = "Read the question first, then go back to the relevant part of the passage. Don\u2019t rely on memory \u2014 always return to the text to verify."
-      commonMistake = "Choosing the first answer that seems reasonable without checking it against the passage."
-      takeaway = "The answer is always in the passage. Find it before you choose."
+      concept = "Active Reading Strategy"
+      approach = "Read the question first, then return to the relevant section of the passage. Don't rely on memory — always verify against the actual text. For paired passages, identify each author's position before comparing them."
+      commonMistake = "Choosing the first answer that seems reasonable without checking it against the passage. Wrong answers are designed to sound plausible."
+      takeaway = "The answer is always in the passage. Find it, underline it, then choose."
     }
   }
 
-  // Grammar patterns
+  // ===== GRAMMAR =====
   if (q.category === "Grammar") {
-    if (questionLower.includes("comma") || questionLower.includes("punctuat")) {
-      concept = "Comma Rules & Punctuation"
-      approach = "Commas separate items in a list, set off introductory phrases, and surround non-essential information. If removing the phrase between two commas still leaves a complete sentence, the commas are correct."
-      commonMistake = "Adding commas wherever you\u2019d naturally pause when speaking. Pauses don\u2019t always mean commas in writing."
-      takeaway = "Test it: remove the phrase between commas. If the sentence still works, the commas belong."
+    if (questionLower.includes("comma") || questionLower.includes("punctuat") || questionLower.includes("semicolon") || questionLower.includes("colon") || questionLower.includes("dash")) {
+      concept = "Punctuation Rules"
+      approach = "Each punctuation mark has specific rules. Commas separate items in lists, set off introductory phrases, and surround non-essential information. Semicolons connect two complete sentences about related ideas. Colons introduce lists or explanations after a complete sentence. Dashes set off extra information with more emphasis than commas."
+      commonMistake = "Adding commas wherever you'd naturally pause when speaking. Written grammar and spoken rhythm don't always match."
+      takeaway = "Test commas by removing the phrase between them — if the sentence still works, they belong. Test semicolons by checking that both sides are complete sentences."
     } else if (questionLower.includes("subject") || questionLower.includes("verb") || questionLower.includes("agree")) {
       concept = "Subject-Verb Agreement"
-      approach = "Find the true subject of the sentence (ignore phrases between the subject and verb). Then match: singular subjects take singular verbs, plural subjects take plural verbs."
-      commonMistake = "Being tricked by a prepositional phrase between the subject and verb. \u201CThe box of chocolates IS\u201D (not \u201Care\u201D) \u2014 the subject is \u201Cbox,\u201D not \u201Cchocolates.\u201D"
-      takeaway = "Cross out everything between the subject and verb. What\u2019s left tells you which verb form is correct."
-    } else if (questionLower.includes("tense") || questionLower.includes("was") || questionLower.includes("were") || questionLower.includes("had")) {
+      approach = "The verb must match its subject in number (singular/plural). The trick: find the real subject by ignoring everything between the subject and verb — prepositional phrases, relative clauses, and parenthetical expressions are all distractions. 'The box of chocolates IS' (not 'are') because the subject is 'box,' not 'chocolates.'"
+      commonMistake = "Matching the verb to the nearest noun instead of the actual subject. Phrases like 'of the students,' 'along with the team,' etc. don't change the subject."
+      takeaway = "Cross out everything between the subject and verb. Whatever's left tells you whether to use singular or plural."
+    } else if (questionLower.includes("tense") || questionLower.includes("was") || questionLower.includes("were") || questionLower.includes("had") || questionLower.includes("will")) {
       concept = "Verb Tense Consistency"
-      approach = "The verbs in a sentence or passage should stay in the same tense unless there\u2019s a clear reason to shift (like describing something that happened before something else). Look at the surrounding verbs for context clues."
-      commonMistake = "Mixing past and present tense in the same paragraph without realizing it."
-      takeaway = "Check the verbs around the blank. They tell you which tense to use."
+      approach = "Verbs in a sentence or paragraph should stay in the same tense unless there's a clear reason to shift (like describing something that happened before another past event — that's past perfect, 'had done'). Context clues like 'yesterday,' 'currently,' 'by the time' tell you which tense is needed."
+      commonMistake = "Mixing past and present tense in the same paragraph without noticing. Read the surrounding sentences to see what tense they use."
+      takeaway = "Look at the verbs around the blank — they tell you which tense the answer should be in."
+    } else if (questionLower.includes("pronoun") || questionLower.includes("which") || questionLower.includes("who") || questionLower.includes("whom")) {
+      concept = "Pronoun Usage"
+      approach = "Every pronoun must clearly refer to one specific noun (its antecedent). 'Who' is for subjects (who did it?), 'whom' is for objects (to whom?). 'Which' refers to things, 'who' refers to people. If a pronoun could refer to multiple nouns, the sentence is ambiguous and needs to be rewritten."
+      commonMistake = "Using 'they' or 'it' when it's unclear what the pronoun refers to. If two people are mentioned and you say 'he,' which one?"
+      takeaway = "For every pronoun, ask: 'What specific noun does this replace?' If the answer isn't obvious, there's a problem."
+    } else if (questionLower.includes("concise") || questionLower.includes("wordy") || questionLower.includes("redundan")) {
+      concept = "Concision & Eliminating Wordiness"
+      approach = "The SAT favors clear, direct writing. If two answer choices say the same thing but one uses fewer words without losing meaning, pick the shorter one. Watch for redundancies like 'each and every,' 'past history,' or 'in order to' (just use 'to')."
+      commonMistake = "Thinking longer answers sound smarter or more complete. On the SAT, brevity wins when meaning is preserved."
+      takeaway = "Can you say the same thing in fewer words? If yes, do it. The SAT rewards concision."
+    } else if (questionLower.includes("transition") || questionLower.includes("however") || questionLower.includes("therefore") || questionLower.includes("moreover")) {
+      concept = "Transition Words"
+      approach = "Transitions show the relationship between ideas. 'However/but/yet' = contrast. 'Therefore/thus/consequently' = cause-effect. 'Moreover/furthermore/additionally' = adding on. 'For example/for instance' = illustration. Read the sentences before and after the blank to understand the logical relationship, then pick the transition that matches."
+      commonMistake = "Picking a transition that sounds good without checking the logical relationship. 'However' after a sentence doesn't always mean contrast — check what comes next."
+      takeaway = "Identify the relationship first (contrast? addition? cause?), then pick the transition that fits."
     } else {
       concept = "Grammar & Standard English"
-      approach = "Read the sentence with each answer choice inserted. The correct answer will be clear, concise, and follow standard grammar rules. When two options seem similar, pick the shorter one that doesn\u2019t lose meaning."
-      commonMistake = "Picking the answer that sounds most \u201Cfancy\u201D or formal. The SAT prefers clear and concise over wordy and complex."
-      takeaway = "Shorter is usually better on the SAT, as long as the meaning is preserved."
+      approach = "Read the entire sentence with each answer choice plugged in. The correct answer will sound natural, be grammatically complete, and convey the meaning clearly. When two choices seem similar, pick the one that's shorter and simpler — the SAT prefers clear writing over complex writing."
+      commonMistake = "Picking the most formal or elaborate option. The SAT values clarity and correctness, not fancy phrasing."
+      takeaway = "Read the full sentence with your choice. Does it flow naturally and say what it means clearly? If yes, it's probably right."
     }
   }
 
-  // Data & Statistics patterns
+  // ===== DATA & STATISTICS =====
   if (q.category === "Data & Statistics") {
-    if (questionLower.includes("mean") || questionLower.includes("average") || questionLower.includes("median")) {
-      concept = "Mean, Median & Measures of Center"
-      approach = "Mean = sum of all values \u00F7 number of values. Median = the middle value when sorted. The mean is pulled toward outliers; the median isn\u2019t. Know which one the question is asking for."
-      commonMistake = "Calculating the mean when the question asks for the median (or vice versa). They can give very different answers when outliers are present."
-      takeaway = "Mean is sensitive to extreme values. Median is resistant. Always check which one the question wants."
-    } else if (questionLower.includes("probability") || questionLower.includes("likely") || questionLower.includes("chance")) {
+    if (questionLower.includes("mean") || questionLower.includes("average") || questionLower.includes("median") || questionLower.includes("mode")) {
+      concept = "Measures of Center"
+      approach = "Mean = add all values, divide by count. Median = sort the values, pick the middle one (or average the two middle ones if even count). The key difference: the mean gets pulled toward outliers (extreme values), but the median doesn't. If the data has outliers, the median is a better representation of 'typical.'"
+      commonMistake = "Calculating the mean when the question asks for the median, or vice versa. Also: with an even number of values, forgetting to average the two middle numbers for the median."
+      takeaway = "Outliers pull the mean but not the median. Check which measure the question asks for before you start calculating."
+    } else if (questionLower.includes("probability") || questionLower.includes("likely") || questionLower.includes("chance") || questionLower.includes("random")) {
       concept = "Probability"
-      approach = "Probability = favorable outcomes \u00F7 total possible outcomes. Make sure you\u2019re counting both correctly. For \u201Cor\u201D questions, add probabilities (but subtract overlap). For \u201Cand\u201D questions, multiply."
-      commonMistake = "Forgetting to account for all possible outcomes in the denominator, or double-counting outcomes that overlap."
-      takeaway = "P(event) = what you want \u00F7 everything possible. Write out both numbers before dividing."
-    } else if (questionLower.includes("scatter") || questionLower.includes("best fit") || questionLower.includes("correlation")) {
-      concept = "Scatterplots & Line of Best Fit"
-      approach = "A line of best fit shows the general trend in scattered data. Use it to estimate values and identify whether the correlation is positive, negative, or none. The slope tells you the rate of change."
-      commonMistake = "Confusing correlation with causation, or misreading the scale on the axes."
-      takeaway = "The line of best fit is for estimation, not exact values. Always check the axis labels and scale."
+      approach = "Probability = (outcomes you want) \u00F7 (total possible outcomes). For 'or' questions: add probabilities, but subtract the overlap if events can happen together. For 'and' questions: multiply probabilities. For 'given that' (conditional): narrow down the total to only the cases where the condition is met, then count."
+      commonMistake = "Using the wrong total. In conditional probability, the denominator isn't all outcomes — it's only the outcomes where the given condition is true."
+      takeaway = "Always identify: what's the numerator (what I want) and what's the denominator (what's possible)? Write both down before dividing."
+    } else if (questionLower.includes("scatter") || questionLower.includes("best fit") || questionLower.includes("correlation") || questionLower.includes("trend")) {
+      concept = "Scatterplots & Correlation"
+      approach = "A scatterplot shows the relationship between two variables. The line of best fit shows the general trend. Positive correlation: as x increases, y tends to increase. Negative: as x increases, y decreases. No correlation: no clear pattern. The slope of the best-fit line tells you the rate of change — for every 1 unit increase in x, y changes by [slope] units."
+      commonMistake = "Confusing correlation with causation. Just because two things move together doesn't mean one causes the other. Also: misreading the scale on the axes."
+      takeaway = "Read both axis labels first. The slope of the line = rate of change. Correlation \u2260 causation."
+    } else if (questionLower.includes("table") || questionLower.includes("two-way") || questionLower.includes("row") || questionLower.includes("column")) {
+      concept = "Two-Way Tables"
+      approach = "Two-way tables organize data by two categories. To find a probability or proportion, identify the right cell (intersection of row and column) for the numerator, and the right total (row total, column total, or grand total) for the denominator. The question wording tells you which total to use."
+      commonMistake = "Using the grand total as the denominator when the question specifies a condition ('of those who...' or 'given that...'). Conditional questions use a row or column total, not the grand total."
+      takeaway = "'Of those who...' = use that group's total as denominator. 'Overall' = use grand total."
+    } else if (questionLower.includes("sample") || questionLower.includes("survey") || questionLower.includes("bias") || questionLower.includes("margin")) {
+      concept = "Sampling & Statistical Inference"
+      approach = "A study's conclusions are only valid for the population that was actually sampled. Random sampling lets you generalize to the larger population. Convenience samples (e.g., surveying only your friends) introduce bias. The margin of error tells you the range of likely values — a larger sample gives a smaller margin."
+      commonMistake = "Assuming a study applies to everyone when it only sampled a specific group. If only college students were surveyed, you can't generalize to all adults."
+      takeaway = "Who was sampled? That's who the results apply to. Random = generalizable. Non-random = only that group."
     } else {
-      concept = "Data Analysis & Interpretation"
-      approach = "Read the chart or table carefully. Identify exactly what the numbers represent (counts? percentages? rates?). Then do the math the question asks for \u2014 don\u2019t assume."
-      commonMistake = "Misreading what the y-axis or column headers represent. A \u201Cpercent\u201D and a \u201Ccount\u201D look very different even if the number is the same."
-      takeaway = "Before calculating anything, ask: what do these numbers actually represent? Read every label."
+      concept = "Data Analysis"
+      approach = "Before doing any math, read every label: axis titles, column headers, units, footnotes. Identify exactly what the numbers represent — are they counts, percentages, rates, or averages? Then do exactly what the question asks, step by step."
+      commonMistake = "Jumping into calculation without checking what the numbers represent. A 'percent' and a 'count' can look the same but require completely different math."
+      takeaway = "Read every label before calculating. What do these numbers actually represent?"
     }
   }
 
-  // Build the walkthrough from the existing explanation, made clearer
-  const walkthrough: string[] = []
-  const explParts = q.explanation
-    .split(/[;.]/)
-    .map(s => s.trim())
-    .filter(s => s.length > 3)
-  for (const part of explParts) {
-    walkthrough.push(part + ".")
-  }
-  if (walkthrough.length === 0) {
-    walkthrough.push(`The answer is ${q.correct}) ${correctAnswer}.`)
-  }
-
-  return { concept, approach, walkthrough, commonMistake, takeaway }
+  return { concept, approach, commonMistake, takeaway }
 }
 
 function PlayPageContent() {
@@ -1250,28 +1283,15 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
                     {/* Expanded detailed explanation */}
                     {isExpanded && detailed && (
                       <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                        {/* Concept */}
+                        {/* How to approach this type of problem */}
                         <div className="bg-[#378ADD]/10 border border-[#378ADD]/20 rounded-xl px-3 py-2.5">
-                          <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-1">concept: {detailed.concept}</p>
+                          <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-1">{detailed.concept}</p>
                           <p className="text-[#85B7EB] text-sm leading-relaxed">{detailed.approach}</p>
-                        </div>
-
-                        {/* Solution walkthrough */}
-                        <div className="bg-[#0a2d4a] border border-[#85B7EB]/10 rounded-xl px-3 py-2.5">
-                          <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-1.5">solving this one</p>
-                          <ol className="space-y-1">
-                            {detailed.walkthrough.map((step, si) => (
-                              <li key={si} className="text-[#85B7EB]/90 text-sm leading-relaxed flex gap-2">
-                                <span className="text-green-400 font-bold flex-shrink-0">{si + 1}.</span>
-                                <span>{step}</span>
-                              </li>
-                            ))}
-                          </ol>
                         </div>
 
                         {/* Common mistake */}
                         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
-                          <p className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">common mistake</p>
+                          <p className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">where students go wrong</p>
                           <p className="text-red-300/80 text-sm leading-relaxed">{detailed.commonMistake}</p>
                         </div>
 
