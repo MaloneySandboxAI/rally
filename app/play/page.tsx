@@ -147,46 +147,155 @@ interface AnswerResult {
   gemsEarned: number
 }
 
-// Generate a detailed step-by-step breakdown for a wrong answer
-function getDetailedExplanation(q: Question): { steps: string[]; tip: string } {
+// Generate a genuinely helpful "learn more" breakdown for a wrong answer
+// Structured as: concept → approach → walkthrough → common mistake → takeaway
+function getDetailedExplanation(q: Question): {
+  concept: string
+  approach: string
+  walkthrough: string[]
+  commonMistake: string
+  takeaway: string
+} {
   const options = [q.option_a, q.option_b, q.option_c, q.option_d]
   const correctIdx = letterToIndex(q.correct)
   const correctAnswer = options[correctIdx]
+  const questionLower = q.question.toLowerCase()
 
-  // Build step-by-step from the explanation
-  const steps: string[] = []
-  steps.push(`The question asks: "${q.question}"`)
-  steps.push(`The correct answer is ${q.correct}) ${correctAnswer}.`)
+  // --- Identify the concept being tested ---
+  let concept = "problem solving"
+  let approach = "Break the problem into smaller pieces and work through each one."
+  let commonMistake = "Rushing through without checking your work."
+  let takeaway = "Always verify your answer by plugging it back into the original problem."
 
-  // Break the explanation into individual steps if it contains semicolons or periods
-  const parts = q.explanation
+  // Algebra patterns
+  if (q.category === "Algebra") {
+    if (questionLower.includes("slope")) {
+      concept = "Slope of a Line"
+      approach = "Slope measures steepness: rise over run. Use the formula (y\u2082 \u2013 y\u2081) / (x\u2082 \u2013 x\u2081). The key is keeping the order consistent \u2014 subtract the same point's coordinates on top and bottom."
+      commonMistake = "Mixing up the order of subtraction (putting x values on top instead of y values) or swapping which point is \u201Cpoint 1\u201D vs \u201Cpoint 2\u201D partway through."
+      takeaway = "Slope = rise/run = \u0394y/\u0394x. Pick one point as \u201Cfirst,\u201D stick with it for both subtractions."
+    } else if (questionLower.includes("system") || (questionLower.includes("2x") && questionLower.includes("y ="))) {
+      concept = "Systems of Equations"
+      approach = "You have two equations with two unknowns. Your goal is to eliminate one variable so you can solve for the other. You can either add/subtract the equations directly, or solve one equation for a variable and substitute into the other."
+      commonMistake = "Solving for x but forgetting the question asked for x + y (or some other expression). Always re-read what the question is actually asking for."
+      takeaway = "After finding one variable, substitute back to get the other. Then check: does your answer match what the question asked?"
+    } else if (questionLower.includes("percent") || questionLower.includes("%")) {
+      concept = "Percent Change & Successive Percentages"
+      approach = "When applying multiple percentage changes, multiply the multipliers \u2014 don\u2019t just add the percentages. A 30% increase means \u00D71.30. A 10% decrease means \u00D70.90. Chain them: 1.30 \u00D7 0.90."
+      commonMistake = "Adding percentages directly (thinking 30% up and 10% down = 20% up). That only works for one change, not successive ones."
+      takeaway = "Convert each percent change to a multiplier (1 + rate for increase, 1 \u2013 rate for decrease), then multiply them together."
+    } else if (questionLower.includes("factor") || questionLower.includes("undefined") || questionLower.includes("denominator")) {
+      concept = "Rational Expressions & Factoring"
+      approach = "An expression is undefined when its denominator equals zero. Factor the denominator completely, then set each factor equal to zero to find the restricted values."
+      commonMistake = "Only finding one factor of the denominator, or confusing factors of the numerator with factors of the denominator. The numerator doesn\u2019t affect where the expression is undefined."
+      takeaway = "Undefined = denominator is zero. Factor the denominator, set each factor = 0, solve."
+    } else if (questionLower.includes("f(") || questionLower.includes("function")) {
+      concept = "Function Notation & Recursive Patterns"
+      approach = "When a function rule says f(x+k) = f(x) + c, it tells you how the output changes as x increases by k. Build a table: start with the known value and apply the rule step by step until you reach the target input."
+      commonMistake = "Trying to jump straight to the answer instead of building up step by step. With recursive rules, you must go through each step in order."
+      takeaway = "For recursive functions, make a table and compute each value in sequence. Don\u2019t skip steps."
+    } else if (questionLower.includes("quadratic") || questionLower.includes("x\u00B2") || questionLower.includes("x^2")) {
+      concept = "Quadratic Equations"
+      approach = "Quadratics can be solved by factoring, completing the square, or using the quadratic formula. First check if it factors nicely. If not, use x = (\u2013b \u00B1 \u221A(b\u00B2\u20134ac)) / 2a."
+      commonMistake = "Forgetting the \u00B1 (there are usually two solutions) or making sign errors when applying the formula."
+      takeaway = "Always check: can I factor this? If not, quadratic formula. And remember \u00B1 means two answers."
+    } else {
+      concept = "Algebraic Reasoning"
+      approach = "Identify what the question is asking, isolate the unknown variable step by step, and simplify. Work backwards from the answer choices if you\u2019re stuck."
+      commonMistake = "Doing too many steps in your head. Write each step down to avoid sign errors and arithmetic mistakes."
+      takeaway = "When stuck, try plugging each answer choice back into the original equation to see which one works."
+    }
+  }
+
+  // Reading Comprehension patterns
+  if (q.category === "Reading Comprehension") {
+    if (questionLower.includes("main idea") || questionLower.includes("primarily") || questionLower.includes("central")) {
+      concept = "Main Idea & Central Argument"
+      approach = "The main idea is what the entire passage is about \u2014 not just one paragraph. Look for the claim that everything else supports. Wrong answers often focus on a detail from one section rather than the overall message."
+      commonMistake = "Picking an answer that\u2019s true but only covers part of the passage. The main idea must account for the whole text."
+      takeaway = "Ask: \u201CCould I use this as a title for the entire passage?\u201D If it only fits one paragraph, it\u2019s a detail, not the main idea."
+    } else if (questionLower.includes("evidence") || questionLower.includes("support") || questionLower.includes("best describes")) {
+      concept = "Evidence-Based Reasoning"
+      approach = "The SAT wants you to find the answer that is directly supported by specific words in the passage \u2014 not your interpretation or outside knowledge. Go back to the text and put your finger on the sentence that proves your answer."
+      commonMistake = "Choosing an answer that \u201Cfeels right\u201D but isn\u2019t directly stated in the passage. The SAT rewards literal reading."
+      takeaway = "Before selecting, ask: \u201CWhich exact sentence in the passage proves this?\u201D If you can\u2019t find one, it\u2019s probably wrong."
+    } else if (questionLower.includes("infer") || questionLower.includes("imply") || questionLower.includes("suggest")) {
+      concept = "Inference & Implication"
+      approach = "An inference on the SAT is a very small logical step from what\u2019s stated \u2014 not a big leap. The correct answer will be strongly supported by the text, just not stated in those exact words."
+      commonMistake = "Making too big of a leap. SAT inferences are conservative \u2014 they\u2019re almost directly stated."
+      takeaway = "The best inference is barely an inference at all. If you have to make a big assumption, it\u2019s probably wrong."
+    } else {
+      concept = "Reading Comprehension Strategy"
+      approach = "Read the question first, then go back to the relevant part of the passage. Don\u2019t rely on memory \u2014 always return to the text to verify."
+      commonMistake = "Choosing the first answer that seems reasonable without checking it against the passage."
+      takeaway = "The answer is always in the passage. Find it before you choose."
+    }
+  }
+
+  // Grammar patterns
+  if (q.category === "Grammar") {
+    if (questionLower.includes("comma") || questionLower.includes("punctuat")) {
+      concept = "Comma Rules & Punctuation"
+      approach = "Commas separate items in a list, set off introductory phrases, and surround non-essential information. If removing the phrase between two commas still leaves a complete sentence, the commas are correct."
+      commonMistake = "Adding commas wherever you\u2019d naturally pause when speaking. Pauses don\u2019t always mean commas in writing."
+      takeaway = "Test it: remove the phrase between commas. If the sentence still works, the commas belong."
+    } else if (questionLower.includes("subject") || questionLower.includes("verb") || questionLower.includes("agree")) {
+      concept = "Subject-Verb Agreement"
+      approach = "Find the true subject of the sentence (ignore phrases between the subject and verb). Then match: singular subjects take singular verbs, plural subjects take plural verbs."
+      commonMistake = "Being tricked by a prepositional phrase between the subject and verb. \u201CThe box of chocolates IS\u201D (not \u201Care\u201D) \u2014 the subject is \u201Cbox,\u201D not \u201Cchocolates.\u201D"
+      takeaway = "Cross out everything between the subject and verb. What\u2019s left tells you which verb form is correct."
+    } else if (questionLower.includes("tense") || questionLower.includes("was") || questionLower.includes("were") || questionLower.includes("had")) {
+      concept = "Verb Tense Consistency"
+      approach = "The verbs in a sentence or passage should stay in the same tense unless there\u2019s a clear reason to shift (like describing something that happened before something else). Look at the surrounding verbs for context clues."
+      commonMistake = "Mixing past and present tense in the same paragraph without realizing it."
+      takeaway = "Check the verbs around the blank. They tell you which tense to use."
+    } else {
+      concept = "Grammar & Standard English"
+      approach = "Read the sentence with each answer choice inserted. The correct answer will be clear, concise, and follow standard grammar rules. When two options seem similar, pick the shorter one that doesn\u2019t lose meaning."
+      commonMistake = "Picking the answer that sounds most \u201Cfancy\u201D or formal. The SAT prefers clear and concise over wordy and complex."
+      takeaway = "Shorter is usually better on the SAT, as long as the meaning is preserved."
+    }
+  }
+
+  // Data & Statistics patterns
+  if (q.category === "Data & Statistics") {
+    if (questionLower.includes("mean") || questionLower.includes("average") || questionLower.includes("median")) {
+      concept = "Mean, Median & Measures of Center"
+      approach = "Mean = sum of all values \u00F7 number of values. Median = the middle value when sorted. The mean is pulled toward outliers; the median isn\u2019t. Know which one the question is asking for."
+      commonMistake = "Calculating the mean when the question asks for the median (or vice versa). They can give very different answers when outliers are present."
+      takeaway = "Mean is sensitive to extreme values. Median is resistant. Always check which one the question wants."
+    } else if (questionLower.includes("probability") || questionLower.includes("likely") || questionLower.includes("chance")) {
+      concept = "Probability"
+      approach = "Probability = favorable outcomes \u00F7 total possible outcomes. Make sure you\u2019re counting both correctly. For \u201Cor\u201D questions, add probabilities (but subtract overlap). For \u201Cand\u201D questions, multiply."
+      commonMistake = "Forgetting to account for all possible outcomes in the denominator, or double-counting outcomes that overlap."
+      takeaway = "P(event) = what you want \u00F7 everything possible. Write out both numbers before dividing."
+    } else if (questionLower.includes("scatter") || questionLower.includes("best fit") || questionLower.includes("correlation")) {
+      concept = "Scatterplots & Line of Best Fit"
+      approach = "A line of best fit shows the general trend in scattered data. Use it to estimate values and identify whether the correlation is positive, negative, or none. The slope tells you the rate of change."
+      commonMistake = "Confusing correlation with causation, or misreading the scale on the axes."
+      takeaway = "The line of best fit is for estimation, not exact values. Always check the axis labels and scale."
+    } else {
+      concept = "Data Analysis & Interpretation"
+      approach = "Read the chart or table carefully. Identify exactly what the numbers represent (counts? percentages? rates?). Then do the math the question asks for \u2014 don\u2019t assume."
+      commonMistake = "Misreading what the y-axis or column headers represent. A \u201Cpercent\u201D and a \u201Ccount\u201D look very different even if the number is the same."
+      takeaway = "Before calculating anything, ask: what do these numbers actually represent? Read every label."
+    }
+  }
+
+  // Build the walkthrough from the existing explanation, made clearer
+  const walkthrough: string[] = []
+  const explParts = q.explanation
     .split(/[;.]/)
     .map(s => s.trim())
     .filter(s => s.length > 3)
-  for (const part of parts) {
-    steps.push(part + ".")
+  for (const part of explParts) {
+    walkthrough.push(part + ".")
+  }
+  if (walkthrough.length === 0) {
+    walkthrough.push(`The answer is ${q.correct}) ${correctAnswer}.`)
   }
 
-  // Show why each wrong answer is wrong
-  const wrongOptions = options
-    .map((opt, i) => ({ letter: String.fromCharCode(65 + i), text: opt, isCorrect: i === correctIdx }))
-    .filter(o => !o.isCorrect)
-  if (wrongOptions.length > 0) {
-    steps.push(`The other choices (${wrongOptions.map(o => `${o.letter}: ${o.text}`).join(", ")}) do not satisfy the conditions in the problem.`)
-  }
-
-  // Category-specific tips
-  const tips: Record<string, string> = {
-    "Algebra": "When stuck on algebra, try plugging in the answer choices to check which one works.",
-    "Reading Comprehension": "Look for direct evidence in the passage before choosing an answer.",
-    "Grammar": "Read the full sentence with your answer choice inserted to check if it sounds correct.",
-    "Data & Statistics": "Pay attention to units, labels, and what the question is actually asking for.",
-  }
-
-  return {
-    steps,
-    tip: tips[q.category] || "Take your time and eliminate obviously wrong answers first.",
-  }
+  return { concept, approach, walkthrough, commonMistake, takeaway }
 }
 
 function PlayPageContent() {
@@ -1140,19 +1249,36 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
 
                     {/* Expanded detailed explanation */}
                     {isExpanded && detailed && (
-                      <div className="mt-3 bg-[#0a2d4a] rounded-xl p-3 border border-[#378ADD]/20 animate-in fade-in slide-in-from-top-1 duration-200">
-                        <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-2">step by step</p>
-                        <ol className="space-y-1.5">
-                          {detailed.steps.map((step, si) => (
-                            <li key={si} className="text-[#85B7EB]/90 text-sm leading-relaxed flex gap-2">
-                              <span className="text-[#378ADD] font-bold flex-shrink-0">{si + 1}.</span>
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ol>
-                        <div className="mt-3 bg-[#EF9F27]/10 border border-[#EF9F27]/20 rounded-lg px-3 py-2">
-                          <p className="text-xs font-bold text-[#EF9F27] mb-0.5">tip</p>
-                          <p className="text-[#EF9F27]/80 text-sm">{detailed.tip}</p>
+                      <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {/* Concept */}
+                        <div className="bg-[#378ADD]/10 border border-[#378ADD]/20 rounded-xl px-3 py-2.5">
+                          <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-1">concept: {detailed.concept}</p>
+                          <p className="text-[#85B7EB] text-sm leading-relaxed">{detailed.approach}</p>
+                        </div>
+
+                        {/* Solution walkthrough */}
+                        <div className="bg-[#0a2d4a] border border-[#85B7EB]/10 rounded-xl px-3 py-2.5">
+                          <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-1.5">solving this one</p>
+                          <ol className="space-y-1">
+                            {detailed.walkthrough.map((step, si) => (
+                              <li key={si} className="text-[#85B7EB]/90 text-sm leading-relaxed flex gap-2">
+                                <span className="text-green-400 font-bold flex-shrink-0">{si + 1}.</span>
+                                <span>{step}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+
+                        {/* Common mistake */}
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                          <p className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">common mistake</p>
+                          <p className="text-red-300/80 text-sm leading-relaxed">{detailed.commonMistake}</p>
+                        </div>
+
+                        {/* Takeaway */}
+                        <div className="bg-[#EF9F27]/10 border border-[#EF9F27]/20 rounded-xl px-3 py-2.5">
+                          <p className="text-xs font-bold text-[#EF9F27] uppercase tracking-wide mb-1">remember this</p>
+                          <p className="text-[#EF9F27]/80 text-sm leading-relaxed">{detailed.takeaway}</p>
                         </div>
                       </div>
                     )}
