@@ -79,7 +79,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
       {CATEGORIES.map((category) => (
         <Link
           key={category.id}
-          href={`/play?category=${category.id}`}
+          href={`/play?category=${encodeURIComponent(category.id)}`}
           className="bg-white rounded-2xl p-5 flex flex-col items-start transition-all active:scale-[0.98] hover:shadow-lg"
           style={{
             borderLeft: `4px solid ${category.color}`,
