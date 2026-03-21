@@ -145,6 +145,7 @@ interface AnswerResult {
   difficulty: string
   wasSpeedBonus: boolean
   gemsEarned: number
+  chosenAnswerIndex: number | null // which option the user picked (null = timeout)
 }
 
 // Generate a genuinely helpful "learn more" breakdown for a wrong answer
@@ -518,6 +519,7 @@ function PlayPageContent() {
       difficulty: question?.difficulty || "medium",
       wasSpeedBonus: false,
       gemsEarned: 0,
+      chosenAnswerIndex: null, // timeout — no answer given
     }])
 
     // Show the correct answer briefly then auto-advance
@@ -589,6 +591,7 @@ function PlayPageContent() {
         difficulty: question?.difficulty || "medium",
         wasSpeedBonus: isSpeedBonus,
         gemsEarned: gemsForThis,
+        chosenAnswerIndex: pendingAnswer,
       }])
 
       if (isSpeedBonus) {
@@ -614,6 +617,7 @@ function PlayPageContent() {
         difficulty: question?.difficulty || "medium",
         wasSpeedBonus: false,
         gemsEarned: 0,
+        chosenAnswerIndex: pendingAnswer,
       }])
     }
   }, [pendingAnswer, selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
@@ -1289,6 +1293,20 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
                     </span>
                     {/* Question */}
                     <p className="text-white font-semibold text-sm mt-2 mb-3 leading-relaxed">{q.question}</p>
+                    {/* Your answer */}
+                    {item.chosenAnswerIndex !== null ? (
+                      <div className="flex items-center gap-2 bg-red-500/15 border border-red-500/30 rounded-xl px-3 py-2 mb-2">
+                        <X className="w-4 h-4 text-red-400 flex-shrink-0" strokeWidth={3} />
+                        <span className="text-red-400 text-sm font-semibold">
+                          your answer: {String.fromCharCode(65 + item.chosenAnswerIndex)}) {options[item.chosenAnswerIndex]}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-red-500/15 border border-red-500/30 rounded-xl px-3 py-2 mb-2">
+                        <X className="w-4 h-4 text-red-400 flex-shrink-0" strokeWidth={3} />
+                        <span className="text-red-400 text-sm font-semibold italic">time ran out — no answer given</span>
+                      </div>
+                    )}
                     {/* Correct answer */}
                     <div className="flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-xl px-3 py-2 mb-3">
                       <Check className="w-4 h-4 text-green-400 flex-shrink-0" strokeWidth={3} />
