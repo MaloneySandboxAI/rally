@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, ExternalLink, BookOpen } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
@@ -147,24 +147,46 @@ interface AnswerResult {
   gemsEarned: number
 }
 
-// Khan Academy links for each SAT category
-const KHAN_LINKS: Record<string, { label: string; url: string }> = {
-  "Algebra": {
-    label: "Khan Academy: SAT Algebra",
-    url: "https://www.khanacademy.org/test-prep/v2-sat-math/x0fcc98a58ba3bea7:algebra-easier",
-  },
-  "Reading Comprehension": {
-    label: "Khan Academy: SAT Reading",
-    url: "https://www.khanacademy.org/test-prep/sat-reading-and-writing",
-  },
-  "Grammar": {
-    label: "Khan Academy: SAT Grammar",
-    url: "https://www.khanacademy.org/test-prep/sat-reading-and-writing/x0d47bcec73eb6c4b:digital-sat-grammar-practice",
-  },
-  "Data & Statistics": {
-    label: "Khan Academy: SAT Data Analysis",
-    url: "https://www.khanacademy.org/test-prep/v2-sat-math/x0fcc98a58ba3bea7:problem-solving-and-data-analysis-easier",
-  },
+// Generate a detailed step-by-step breakdown for a wrong answer
+function getDetailedExplanation(q: Question): { steps: string[]; tip: string } {
+  const options = [q.option_a, q.option_b, q.option_c, q.option_d]
+  const correctIdx = letterToIndex(q.correct)
+  const correctAnswer = options[correctIdx]
+
+  // Build step-by-step from the explanation
+  const steps: string[] = []
+  steps.push(`The question asks: "${q.question}"`)
+  steps.push(`The correct answer is ${q.correct}) ${correctAnswer}.`)
+
+  // Break the explanation into individual steps if it contains semicolons or periods
+  const parts = q.explanation
+    .split(/[;.]/)
+    .map(s => s.trim())
+    .filter(s => s.length > 3)
+  for (const part of parts) {
+    steps.push(part + ".")
+  }
+
+  // Show why each wrong answer is wrong
+  const wrongOptions = options
+    .map((opt, i) => ({ letter: String.fromCharCode(65 + i), text: opt, isCorrect: i === correctIdx }))
+    .filter(o => !o.isCorrect)
+  if (wrongOptions.length > 0) {
+    steps.push(`The other choices (${wrongOptions.map(o => `${o.letter}: ${o.text}`).join(", ")}) do not satisfy the conditions in the problem.`)
+  }
+
+  // Category-specific tips
+  const tips: Record<string, string> = {
+    "Algebra": "When stuck on algebra, try plugging in the answer choices to check which one works.",
+    "Reading Comprehension": "Look for direct evidence in the passage before choosing an answer.",
+    "Grammar": "Read the full sentence with your answer choice inserted to check if it sounds correct.",
+    "Data & Statistics": "Pay attention to units, labels, and what the question is actually asking for.",
+  }
+
+  return {
+    steps,
+    tip: tips[q.category] || "Take your time and eliminate obviously wrong answers first.",
+  }
 }
 
 function PlayPageContent() {
@@ -818,6 +840,16 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+
+  const toggleExpanded = (idx: number) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
 
   // Auto-show review modal if there are wrong answers
   const wrongAnswers = answerResults
@@ -1078,6 +1110,8 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
                 const correctIdx = letterToIndex(q.correct)
                 const options = [q.option_a, q.option_b, q.option_c, q.option_d]
                 const diffColors = DIFFICULTY_COLORS[q.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+                const isExpanded = expandedCards.has(idx)
+                const detailed = isExpanded ? getDetailedExplanation(q) : null
                 return (
                   <div key={idx} className="bg-[#021f3d] rounded-2xl p-4 border border-[#85B7EB]/10">
                     {/* Difficulty badge */}
@@ -1091,31 +1125,40 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
                       <Check className="w-4 h-4 text-green-400 flex-shrink-0" strokeWidth={3} />
                       <span className="text-green-400 text-sm font-semibold">{q.correct}) {options[correctIdx]}</span>
                     </div>
-                    {/* Explanation */}
+                    {/* Short explanation */}
                     <p className="text-[#85B7EB]/80 text-sm leading-relaxed">{q.explanation}</p>
+
+                    {/* Learn more toggle */}
+                    <button
+                      onClick={() => toggleExpanded(idx)}
+                      className="mt-3 flex items-center gap-1.5 text-[#378ADD] text-sm font-bold transition-all hover:brightness-125"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      {isExpanded ? "hide details" : "learn more"}
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {/* Expanded detailed explanation */}
+                    {isExpanded && detailed && (
+                      <div className="mt-3 bg-[#0a2d4a] rounded-xl p-3 border border-[#378ADD]/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-2">step by step</p>
+                        <ol className="space-y-1.5">
+                          {detailed.steps.map((step, si) => (
+                            <li key={si} className="text-[#85B7EB]/90 text-sm leading-relaxed flex gap-2">
+                              <span className="text-[#378ADD] font-bold flex-shrink-0">{si + 1}.</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="mt-3 bg-[#EF9F27]/10 border border-[#EF9F27]/20 rounded-lg px-3 py-2">
+                          <p className="text-xs font-bold text-[#EF9F27] mb-0.5">tip</p>
+                          <p className="text-[#EF9F27]/80 text-sm">{detailed.tip}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
-
-              {/* Khan Academy link */}
-              {(() => {
-                const categoryId = sessionQuestions[0]?.category || ""
-                const link = KHAN_LINKS[categoryId]
-                return link ? (
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-[#14532d]/40 border border-green-500/30 rounded-2xl px-4 py-3 transition-all hover:bg-[#14532d]/60"
-                  >
-                    <ExternalLink className="w-5 h-5 text-green-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-green-400 text-sm font-bold">{link.label}</p>
-                      <p className="text-green-400/60 text-xs">free practice on these topics</p>
-                    </div>
-                  </a>
-                ) : null
-              })()}
             </div>
 
             {/* Dismiss button */}
