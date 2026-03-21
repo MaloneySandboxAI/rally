@@ -442,8 +442,11 @@ export function WorkAreaButton({ onClick }: { onClick: () => void }) {
       className="flex items-center gap-1.5 bg-[#0a2d4a] border border-[#378ADD]/30 rounded-full px-3 py-1.5 transition-all active:scale-95 hover:bg-[#0a2d4a]/80"
       aria-label="Open work area"
     >
-      <PenLine className="w-4 h-4 text-[#378ADD]" />
-      <span className="text-xs font-bold text-[#378ADD]">scratch work</span>
+      <div className="flex items-center -space-x-1">
+        <CalculatorIcon className="w-3.5 h-3.5 text-[#378ADD]" />
+        <PenLine className="w-3.5 h-3.5 text-[#378ADD]" />
+      </div>
+      <span className="text-xs font-bold text-[#378ADD]">tools</span>
     </button>
   )
 }
