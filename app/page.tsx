@@ -12,43 +12,46 @@ export default function RallyHome() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      
-      <main className="flex-1 px-4 pb-32 pt-4 overflow-y-auto">
-        <StreakBanner />
 
-        {/* SAT Date Countdown */}
+      <main className="flex-1 px-4 pb-32 pt-2 overflow-y-auto">
+        {/* Hero: Pick a category — visible immediately, no scroll */}
+        <section>
+          <h2 className="text-lg font-extrabold text-foreground mb-1">pick a category</h2>
+          <p className="text-sm text-[#85B7EB]/60 mb-3">10–40 gems per correct answer · 4x more in challenges</p>
+          <CategoryCards variant="grid" />
+        </section>
+
+        {/* Streak + SAT countdown — compact row */}
         <div className="mt-4">
+          <StreakBanner />
+        </div>
+
+        <div className="mt-3">
           <SatCountdown />
         </div>
+
+        {/* Challenge Button */}
+        <div className="mt-4">
+          <ChallengeButton />
+        </div>
+
+        {/* Active games (if any) */}
+        <section className="mt-5">
+          <h2 className="text-lg font-extrabold text-foreground mb-3">your games</h2>
+          <GamesList />
+        </section>
 
         {/* Referral Banner */}
         <div className="mt-4">
           <ReferralBanner />
         </div>
-        
-        <section className="mt-6">
-          <h2 className="text-lg font-extrabold text-foreground mb-4">your games</h2>
-          <GamesList />
-        </section>
-
-        {/* Challenge Button */}
-        <div className="mt-6">
-          <ChallengeButton />
-        </div>
-
-        {/* Practice Solo Section - Always visible */}
-        <section className="mt-8">
-          <h2 className="text-lg font-extrabold text-foreground mb-2">practice solo</h2>
-          <p className="text-sm text-[#85B7EB]/60 mb-4">10–40 gems per correct answer · 4x more in challenges</p>
-          <CategoryCards variant="grid" />
-        </section>
 
         {/* Go Pro */}
-        <div className="mt-6">
+        <div className="mt-4">
           <ProBanner />
         </div>
       </main>
-      
+
       <BottomNav />
     </div>
   )

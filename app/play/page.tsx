@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, ExternalLink, BookOpen } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
@@ -145,6 +145,26 @@ interface AnswerResult {
   difficulty: string
   wasSpeedBonus: boolean
   gemsEarned: number
+}
+
+// Khan Academy links for each SAT category
+const KHAN_LINKS: Record<string, { label: string; url: string }> = {
+  "Algebra": {
+    label: "Khan Academy: SAT Algebra",
+    url: "https://www.khanacademy.org/test-prep/v2-sat-math/x0fcc98a58ba3bea7:algebra-easier",
+  },
+  "Reading Comprehension": {
+    label: "Khan Academy: SAT Reading",
+    url: "https://www.khanacademy.org/test-prep/sat-reading-and-writing",
+  },
+  "Grammar": {
+    label: "Khan Academy: SAT Grammar",
+    url: "https://www.khanacademy.org/test-prep/sat-reading-and-writing/x0d47bcec73eb6c4b:digital-sat-grammar-practice",
+  },
+  "Data & Statistics": {
+    label: "Khan Academy: SAT Data Analysis",
+    url: "https://www.khanacademy.org/test-prep/v2-sat-math/x0fcc98a58ba3bea7:problem-solving-and-data-analysis-easier",
+  },
 }
 
 function PlayPageContent() {
@@ -326,13 +346,7 @@ function PlayPageContent() {
       difficultyRef.current = "easy"
     }
 
-    // Solo play: lose a heart on timeout
-    if (!isChallenge) {
-      const remaining = loseHeart()
-      setHearts(remaining)
-    }
-
-    // Record wrong answer due to timeout
+    // Record wrong answer due to timeout (hearts deducted at end of round, not mid-game)
     setAnswerResults(prev => [...prev, {
       questionIndex: currentQuestion,
       isCorrect: false,
@@ -421,13 +435,7 @@ function PlayPageContent() {
       }
       // Already easy — stay easy
 
-      // Solo play: lose a heart on wrong answer
-      if (!isChallenge) {
-        const remaining = loseHeart()
-        setHearts(remaining)
-      }
-
-      // Record wrong answer
+      // Record wrong answer (hearts deducted at end of round, not mid-game)
       setAnswerResults(prev => [...prev, {
         questionIndex: currentQuestion,
         isCorrect: false,
@@ -477,7 +485,15 @@ function PlayPageContent() {
 
       addGems(correctGems)
       markRoundCompleted()
-      if (!isChallenge) incrementRoundsToday()
+      if (!isChallenge) {
+        incrementRoundsToday()
+        // Deduct hearts at end of round — 1 per wrong answer
+        const wrongCount = answerResults.filter(r => !r.isCorrect).length
+        for (let i = 0; i < wrongCount; i++) {
+          loseHeart()
+        }
+        setHearts(getHearts())
+      }
       const unlockMessage = saveRoundStats({
         categoryId: categoryParam,
         correct: correctCount,
@@ -801,6 +817,19 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+
+  // Auto-show review modal if there are wrong answers
+  const wrongAnswers = answerResults
+    .map((r, i) => ({ ...r, question: sessionQuestions[i] }))
+    .filter(r => !r.isCorrect && r.question)
+
+  // Show review modal automatically when results load if there are wrong answers
+  useEffect(() => {
+    if (wrongAnswers.length > 0) {
+      setShowReviewModal(true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setIsGuest(localStorage.getItem("rally_is_guest") === "true")
@@ -1023,11 +1052,84 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         </button>
       </div>
 
-      <ChallengeWaitlistSheet 
+      <ChallengeWaitlistSheet
         isOpen={showWaitlistSheet}
         onClose={() => setShowWaitlistSheet(false)}
         variant="challenge"
       />
+
+      {/* Review Wrong Answers Modal */}
+      {showReviewModal && wrongAnswers.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center">
+          <div className="bg-[#0a2d4a] w-full max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#85B7EB]/20">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#378ADD]" />
+                <h2 className="text-lg font-extrabold text-white">review mistakes</h2>
+              </div>
+              <span className="text-sm text-[#85B7EB]/60">{wrongAnswers.length} to review</span>
+            </div>
+
+            {/* Scrollable list */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              {wrongAnswers.map((item, idx) => {
+                const q = item.question
+                const correctIdx = letterToIndex(q.correct)
+                const options = [q.option_a, q.option_b, q.option_c, q.option_d]
+                const diffColors = DIFFICULTY_COLORS[q.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+                return (
+                  <div key={idx} className="bg-[#021f3d] rounded-2xl p-4 border border-[#85B7EB]/10">
+                    {/* Difficulty badge */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${diffColors.bg} ${diffColors.text}`}>
+                      {q.difficulty}
+                    </span>
+                    {/* Question */}
+                    <p className="text-white font-semibold text-sm mt-2 mb-3 leading-relaxed">{q.question}</p>
+                    {/* Correct answer */}
+                    <div className="flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-xl px-3 py-2 mb-3">
+                      <Check className="w-4 h-4 text-green-400 flex-shrink-0" strokeWidth={3} />
+                      <span className="text-green-400 text-sm font-semibold">{q.correct}) {options[correctIdx]}</span>
+                    </div>
+                    {/* Explanation */}
+                    <p className="text-[#85B7EB]/80 text-sm leading-relaxed">{q.explanation}</p>
+                  </div>
+                )
+              })}
+
+              {/* Khan Academy link */}
+              {(() => {
+                const categoryId = sessionQuestions[0]?.category || ""
+                const link = KHAN_LINKS[categoryId]
+                return link ? (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 bg-[#14532d]/40 border border-green-500/30 rounded-2xl px-4 py-3 transition-all hover:bg-[#14532d]/60"
+                  >
+                    <ExternalLink className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-green-400 text-sm font-bold">{link.label}</p>
+                      <p className="text-green-400/60 text-xs">free practice on these topics</p>
+                    </div>
+                  </a>
+                ) : null
+              })()}
+            </div>
+
+            {/* Dismiss button */}
+            <div className="px-5 pb-5 pt-3 border-t border-[#85B7EB]/20">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="w-full bg-[#378ADD] text-white rounded-2xl py-3.5 font-extrabold text-base transition-all active:scale-[0.98] hover:brightness-110"
+              >
+                got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
