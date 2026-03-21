@@ -799,12 +799,10 @@ function getEncouragementMessage(score: number): string {
 
 function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
-  const [totalGems, setTotalGems] = useState(0)
+  const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
 
   useEffect(() => {
-    const stored = parseInt(localStorage.getItem("rally_gems") || "300", 10)
-    setTotalGems(isNaN(stored) ? 300 : stored)
     setIsGuest(localStorage.getItem("rally_is_guest") === "true")
   }, [])
   
@@ -813,27 +811,30 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
   const speedBonusCount = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
   const gemsEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
 
-  // Build breakdown by difficulty tier
+  // Build breakdown by difficulty tier — show base gems, then speed bonus extra separately
   const breakdown: { label: string; amount: number }[] = []
   const diffGroups = { easy: [] as AnswerResult[], medium: [] as AnswerResult[], hard: [] as AnswerResult[] }
   for (const r of answerResults.filter(r => r.isCorrect)) {
     const d = (r.difficulty || "easy") as keyof typeof diffGroups
     if (diffGroups[d]) diffGroups[d].push(r)
   }
+  let speedBonusExtra = 0
   for (const [diff, results] of Object.entries(diffGroups)) {
     if (results.length > 0) {
-      const gems = results.reduce((sum, r) => sum + r.gemsEarned, 0)
+      const baseRate = GEM_VALUES.solo[diff as keyof typeof GEM_VALUES.solo] ?? GEM_VALUES.solo.easy
+      const baseGems = results.length * baseRate
+      const actualGems = results.reduce((sum, r) => sum + r.gemsEarned, 0)
+      speedBonusExtra += actualGems - baseGems
       breakdown.push({
         label: `${results.length} ${diff} correct`,
-        amount: gems,
+        amount: baseGems,
       })
     }
   }
-  if (speedBonusCount > 0) {
-    // Speed bonus extra on top of base (already included in gemsEarned per answer)
+  if (speedBonusCount > 0 && speedBonusExtra > 0) {
     breakdown.push({
       label: `${speedBonusCount} speed bonus${speedBonusCount > 1 ? "es" : ""}`,
-      amount: 0, // already counted in per-answer gems above
+      amount: speedBonusExtra,
     })
   }
   if (correctCount === 0) {
