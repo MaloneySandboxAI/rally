@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, Clipboard } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, gemsForAnswer, GEM_VALUES, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
@@ -365,7 +365,7 @@ function PlayPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchQuestion])
 
-  // ── Award gems at round end ───────────────────��───────────────────────────
+  // ── Award gems at round end ─────���─────────────��───────────────────────────
   useEffect(() => {
     if (!showResults || gemsAwarded) return
     const totalEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
@@ -478,6 +478,8 @@ function PlayPageContent() {
         <div className="w-full max-w-[480px] mx-auto space-y-3 pb-4 relative">
           {(["A","B","C","D"] as const).map((letter, index) => {
             const optKey = `option_${letter.toLowerCase()}` as keyof Question
+            const correctLetter = question.correct
+            const correctOptKey = `option_${correctLetter.toLowerCase()}` as keyof Question
             return (
               <AnswerOption
                 key={letter}
@@ -492,6 +494,9 @@ function PlayPageContent() {
                 gemAmount={gemsThisQuestion}
                 isSpeedBonus={currentQuestionIsSpeed}
                 isTimeout={isTimeout}
+                questionText={question.question}
+                correctLetter={correctLetter}
+                correctOptionText={question[correctOptKey] as string}
               />
             )
           })}
@@ -531,9 +536,80 @@ interface AnswerOptionProps {
   explanation: string; onSelect: (i: number) => void
   showGemAnimation: boolean; gemAmount: number
   isSpeedBonus: boolean; isTimeout: boolean
+  // For "Still don't get it?" prompt
+  questionText: string
+  correctLetter: string
+  correctOptionText: string
 }
 
-function AnswerOption({ option, index, letter, selectedAnswer, correctAnswer, explanation, onSelect, showGemAnimation, gemAmount, isSpeedBonus, isTimeout }: AnswerOptionProps) {
+function StillDontGetIt({ questionText, correctLetter, correctOptionText }: {
+  questionText: string
+  correctLetter: string
+  correctOptionText: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const prompt = `I'm studying for the SAT and I got this question wrong: ${questionText}. The correct answer is ${correctLetter}: ${correctOptionText}. Can you explain why this is the correct answer, walk me through the concept step by step, and give me two similar practice questions?`
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // fallback for older browsers
+      const el = document.createElement("textarea")
+      el.value = prompt
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand("copy")
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  return (
+    <div className="mt-3 px-1">
+      <button
+        onClick={() => setIsOpen(v => !v)}
+        className="flex items-center gap-1.5 text-sm text-[#378ADD]/70 hover:text-[#378ADD] transition-colors"
+      >
+        <span>Still don&apos;t get it?</span>
+        <ChevronRight
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+          strokeWidth={2.5}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Prompt text box */}
+          <div className="bg-[#0a2d4a] border border-[#378ADD]/20 rounded-xl p-3 mb-2">
+            <p className="text-xs text-[#85B7EB]/80 leading-relaxed select-all">{prompt}</p>
+          </div>
+
+          {/* Copy button */}
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-2 bg-[#378ADD] text-white text-sm font-bold rounded-xl px-4 py-2 transition-all active:scale-95"
+          >
+            <Clipboard className="w-4 h-4" strokeWidth={2} />
+            {copied ? "copied! ✓" : "copy prompt"}
+          </button>
+
+          {/* Helper text */}
+          <p className="mt-2 text-xs text-[#85B7EB]/40">
+            paste into ChatGPT, Claude, or any AI assistant
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AnswerOption({ option, index, letter, selectedAnswer, correctAnswer, explanation, onSelect, showGemAnimation, gemAmount, isSpeedBonus, isTimeout, questionText, correctLetter, correctOptionText }: AnswerOptionProps) {
   const isSelected   = selectedAnswer === index
   const isCorrect    = index === correctAnswer
   const hasAnswered  = selectedAnswer !== null
@@ -561,9 +637,23 @@ function AnswerOption({ option, index, letter, selectedAnswer, correctAnswer, ex
       </button>
       {showGemAnimation && <FloatingGemIndicator amount={gemAmount} isSpeed={isSpeedBonus} />}
       {showCorrect && (
-        <p className="mt-2 px-4 text-sm text-[#85B7EB] italic leading-relaxed animate-in fade-in slide-in-from-top-2 duration-300">
-          {explanation}
-        </p>
+        <div className="mt-2 px-1 animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="px-3 text-sm text-[#85B7EB] italic leading-relaxed">{explanation}</p>
+          <StillDontGetIt
+            questionText={questionText}
+            correctLetter={correctLetter}
+            correctOptionText={correctOptionText}
+          />
+        </div>
+      )}
+      {showWrong && hasAnswered && (
+        <div className="mt-2 px-1 animate-in fade-in slide-in-from-top-2 duration-300">
+          <StillDontGetIt
+            questionText={questionText}
+            correctLetter={correctLetter}
+            correctOptionText={correctOptionText}
+          />
+        </div>
       )}
     </div>
   )
