@@ -8,7 +8,7 @@ import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sh
 import { Calculator, CalculatorButton } from "@/components/rally/calculator"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getOneQuestion, type Question } from "@/lib/questions"
+import { initQuestions, getOneQuestion, type Question } from "@/lib/questions"
 import { saveRoundStats } from "@/lib/stats"
 import Link from "next/link"
 
@@ -257,13 +257,12 @@ function PlayPageContent() {
     }
   }, [categoryParam])
 
-  // Initial load + load next question
+  // Initial load — await question bank, then fetch first question
   useEffect(() => {
-    if (!isChallenge && !canPlaySolo()) {
-      // Will be handled by render logic
-      return
-    }
-    fetchQuestion(roundDifficulty)
+    if (!isChallenge && !canPlaySolo()) return
+    initQuestions()
+      .then(() => fetchQuestion(roundDifficulty))
+      .catch(() => setFetchError("couldn't load questions — check your connection and try again"))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])  // only on mount
 
@@ -360,7 +359,9 @@ function PlayPageContent() {
     setAnswerResults([])
     setRoundDifficulty("easy")
     setShowNoHearts(false)
-    fetchQuestion("easy")
+    initQuestions()
+      .then(() => fetchQuestion("easy"))
+      .catch(() => setFetchError("couldn't load questions — check your connection and try again"))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchQuestion])
 
