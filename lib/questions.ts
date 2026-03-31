@@ -1,19 +1,11 @@
-"use client"
+// Local question bank — imported at build time, no Supabase fetch needed
+// NOTE: The Supabase client is intentionally NOT imported here.
+//       Waitlist inserts and auth use lib/supabase/client.ts directly.
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
-
-const supabaseUrl = "https://ykxlushgytgfbdigroit.supabase.co"
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreGx1c2hneXRnZmJkaWdyb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NzA0NDQsImV4cCI6MjA4OTM0NjQ0NH0.75TiKhtFEIsfrm1WS5eVAn9nIodgqbLng5lOS4nT8CI"
-
-// Singleton — one client for the whole session
-let supabaseInstance: SupabaseClient | null = null
-
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseKey)
-  }
-  return supabaseInstance
-}
+import algebraQuestions from "../public/algebra_v3.json"
+import readingQuestions from "../public/reading_v3.json"
+import grammarQuestions from "../public/grammar_v3.json"
+import dataQuestions from "../public/data_v3.json"
 
 export interface Question {
   id: number
@@ -28,92 +20,71 @@ export interface Question {
   explanation: string
 }
 
+// Combined bank — built once at module load
+const ALL_QUESTIONS: Question[] = [
+  ...(algebraQuestions as Question[]),
+  ...(readingQuestions as Question[]),
+  ...(grammarQuestions as Question[]),
+  ...(dataQuestions as Question[]),
+]
+
 /**
  * Fetch ONE question for a category + difficulty, excluding already-seen IDs.
- * Query: SELECT * FROM sat_questions
- *        WHERE category = $category
- *          AND difficulty = $difficulty
- *          AND id NOT IN ($excludeIds)
- *        ORDER BY RANDOM()
- *        LIMIT 1
- * If none found at that difficulty (all seen), retries without the excludeIds filter.
+ * Falls back to ignoring exclusions if all questions at that difficulty are exhausted.
  */
-export async function getOneQuestion(
+export function getOneQuestion(
   category: string,
   difficulty: string,
   excludeIds: number[] = []
-): Promise<Question> {
-  if (typeof window === "undefined") throw new Error("server-side call")
+): Question {
+  const excludeSet = new Set(excludeIds)
 
-  const supabase = getSupabase()
+  // Primary: matching category + difficulty, not yet seen
+  let pool = ALL_QUESTIONS.filter(
+    q => q.category === category && q.difficulty === difficulty && !excludeSet.has(q.id)
+  )
 
-  let query = supabase
-    .from("sat_questions")
-    .select("*")
-    .eq("category", category)
-    .eq("difficulty", difficulty)
-
-  if (excludeIds.length > 0) {
-    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  // Fallback: same category + difficulty but ignore exclusions (all seen — reset)
+  if (pool.length === 0) {
+    pool = ALL_QUESTIONS.filter(
+      q => q.category === category && q.difficulty === difficulty
+    )
   }
 
-  // Use random ordering via a random offset trick — Supabase doesn't expose ORDER BY RANDOM() directly
-  // so we fetch up to 20 and shuffle client-side
-  const { data, error } = await query.limit(20)
-
-  if (error) {
-    console.error("[v0] Supabase error in getOneQuestion:", error.message)
-    throw new Error("fetch_failed")
+  // Final fallback: any question in category
+  if (pool.length === 0) {
+    pool = ALL_QUESTIONS.filter(q => q.category === category)
   }
 
-  if (!data || data.length === 0) {
-    // No unseen questions at this difficulty — retry without exclusion list
-    if (excludeIds.length > 0) {
-      return getOneQuestion(category, difficulty, [])
-    }
+  if (pool.length === 0) {
     throw new Error("NO_QUESTIONS")
   }
 
-  // Shuffle and pick one
-  const shuffled = [...data].sort(() => Math.random() - 0.5)
-  return shuffled[0] as Question
+  // Client-side shuffle, pick first
+  const shuffled = [...pool].sort(() => Math.random() - 0.5)
+  return shuffled[0]
 }
 
 /**
- * Legacy batch fetch — kept for compatibility.
- * Fetches 5 questions: NO difficulty filter, excludes seen IDs.
- * Query: SELECT * FROM sat_questions WHERE category = ? AND id NOT IN (...) LIMIT 20
+ * Legacy batch helper — kept for any call sites that still use it.
+ * Returns 5 questions from the local bank, no Supabase involved.
  */
-export async function getQuestions(
+export function getQuestions(
   category: string,
   excludeIds: number[] = [],
   _difficulty?: string | null
-): Promise<Question[]> {
-  if (typeof window === "undefined") return []
+): Question[] {
+  const excludeSet = new Set(excludeIds)
 
-  const supabase = getSupabase()
+  let pool = ALL_QUESTIONS.filter(
+    q => q.category === category && !excludeSet.has(q.id)
+  )
 
-  // Absolutely no difficulty filter anywhere in this query
-  let query = supabase
-    .from("sat_questions")
-    .select("*")
-    .eq("category", category)
-
-  if (excludeIds.length > 0) {
-    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  if (pool.length === 0) {
+    pool = ALL_QUESTIONS.filter(q => q.category === category)
   }
 
-  const { data, error } = await query.limit(20)
+  if (pool.length === 0) return []
 
-  if (error) {
-    console.error("[v0] Supabase error in getQuestions:", error.message)
-    throw new Error("couldn't load questions — check your connection and try again")
-  }
-
-  if (!data || data.length === 0) {
-    throw new Error("RESET_NEEDED")
-  }
-
-  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 5)
-  return shuffled as Question[]
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, 5)
 }

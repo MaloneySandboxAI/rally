@@ -22,15 +22,22 @@ const CATEGORIES = [
 
 const TOTAL_QUESTIONS = 5
 
-// Timer per difficulty (seconds)
-const TIMER_BY_DIFFICULTY: Record<string, number> = {
-  easy:   30,
-  medium: 60,
-  hard:   90,
+// Timer varies by category AND difficulty (seconds)
+function getTimer(category: string, difficulty: string): number {
+  const isMath = category === "Algebra" || category === "Data & Statistics"
+  if (isMath) {
+    if (difficulty === "easy")   return 45
+    if (difficulty === "medium") return 75
+    return 120
+  } else {
+    if (difficulty === "easy")   return 35
+    if (difficulty === "medium") return 55
+    return 90
+  }
 }
 
-function getSpeedThreshold(difficulty: string): number {
-  return Math.floor((TIMER_BY_DIFFICULTY[difficulty] ?? 60) / 2)
+function getSpeedThreshold(category: string, difficulty: string): number {
+  return getTimer(category, difficulty) / 2
 }
 
 // Adaptive difficulty progression within a round
@@ -228,24 +235,23 @@ function PlayPageContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const questionStartRef = useRef(Date.now())
 
-  // ── Fetch one question ───────────────────────────────────────────────────
-  const fetchQuestion = useCallback(async (difficulty: string) => {
+  // ── Fetch one question (synchronous local lookup) ─────────────────────────
+  const fetchQuestion = useCallback((difficulty: string) => {
     setIsLoading(true)
     setFetchError(null)
     try {
       const excluded = getUsedIds(categoryParam)
-      const q = await getOneQuestion(categoryParam, difficulty, excluded)
+      const q = getOneQuestion(categoryParam, difficulty, excluded)
       markIdUsed(categoryParam, q.id)
       setQuestion(q)
-      // Set timer based on actual question difficulty (may differ from requested)
-      const t = TIMER_BY_DIFFICULTY[q.difficulty] ?? 60
+      const t = getTimer(categoryParam, q.difficulty)
       setTotalTime(t)
       setTimeRemaining(t)
       setIsTimerActive(true)
       questionStartRef.current = Date.now()
       setCurrentQuestionIsSpeed(false)
     } catch {
-      setFetchError("couldn't load question — check your connection and try again")
+      setFetchError("couldn't load question — no questions found for this category")
     } finally {
       setIsLoading(false)
     }
@@ -315,7 +321,7 @@ function PlayPageContent() {
     const correctIndex = question.correct.charCodeAt(0) - "A".charCodeAt(0)
     const isCorrect = answerIndex === correctIndex
     const timeTaken = (Date.now() - questionStartRef.current) / 1000
-    const isSpeed = timeTaken <= getSpeedThreshold(question.difficulty)
+    const isSpeed = timeTaken <= getSpeedThreshold(categoryParam, question.difficulty)
     const gems = isCorrect ? gemsForAnswer(question.difficulty, isChallenge, isSpeed) : 0
 
     if (isCorrect) {
@@ -358,7 +364,7 @@ function PlayPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchQuestion])
 
-  // ── Award gems at round end ───────────────────────────────────────────────
+  // ── Award gems at round end ───────────────────��───────────────────────────
   useEffect(() => {
     if (!showResults || gemsAwarded) return
     const totalEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
