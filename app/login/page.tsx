@@ -20,7 +20,7 @@ export default function LoginPage() {
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
     if (error) {
       setError(error.message)
@@ -32,7 +32,10 @@ export default function LoginPage() {
     if (!email.trim()) return
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim() })
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
     setLoading(false)
     if (error) {
       setError(error.message)
