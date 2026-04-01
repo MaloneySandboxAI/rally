@@ -12,6 +12,20 @@ import { getQuestions, getOneQuestion, getQuestionsByIds, type Question } from "
 import { createChallenge, getChallengeUrl, completeChallenge, getChallenge, type ChallengeResult } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
+import { createClient } from "@/lib/supabase/client"
+
+/** Get display name from Supabase auth session, falling back gracefully */
+async function getDisplayName(): Promise<string> {
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      const meta = session.user.user_metadata
+      return meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "anonymous"
+    }
+  } catch {}
+  return "anonymous"
+}
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD", isMath: true },
@@ -722,27 +736,28 @@ function PlayPageContent() {
 
       // If this was a challenge, submit results to Supabase
       if (challengeCode) {
-        const challengerName = localStorage.getItem("rally_display_name") || "friend"
-        const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
-          questionIndex: i,
-          isCorrect: r.isCorrect,
-          difficulty: r.difficulty,
-          wasSpeedBonus: r.wasSpeedBonus,
-          gemsEarned: r.gemsEarned,
-          chosenAnswerIndex: r.chosenAnswerIndex,
-        }))
-        completeChallenge({
-          shareCode: challengeCode,
-          challengerName,
-          challengerScore: correctCount,
-          challengerResults: challengeResults,
-        }).then(success => {
+        ;(async () => {
+          const challengerName = await getDisplayName()
+          const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
+            questionIndex: i,
+            isCorrect: r.isCorrect,
+            difficulty: r.difficulty,
+            wasSpeedBonus: r.wasSpeedBonus,
+            gemsEarned: r.gemsEarned,
+            chosenAnswerIndex: r.chosenAnswerIndex,
+          }))
+          const success = await completeChallenge({
+            shareCode: challengeCode,
+            challengerName,
+            challengerScore: correctCount,
+            challengerResults: challengeResults,
+          })
           if (success) {
             console.log("[rally] Challenge completed successfully!")
           } else {
             console.error("[rally] Failed to submit challenge results")
           }
-        })
+        })()
       }
     }
   }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode])
@@ -1361,7 +1376,7 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
               if (isCreatingChallenge) return
               setIsCreatingChallenge(true)
               try {
-                const creatorName = localStorage.getItem("rally_display_name") || "anonymous"
+                const creatorName = await getDisplayName()
                 const questionIds = sessionQuestions.map(q => q.id)
                 const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
                   questionIndex: i,
