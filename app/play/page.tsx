@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getQuestions, getOneQuestion, type Question } from "@/lib/questions"
+import { getQuestions, getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
+import { createChallenge, getChallengeUrl, completeChallenge, getChallenge, type ChallengeResult } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 
@@ -335,6 +336,7 @@ function getDetailedExplanation(q: Question): {
 function PlayPageContent() {
   const searchParams = useSearchParams()
   const isChallenge = searchParams.get("challenge") === "true"
+  const challengeCode = searchParams.get("challengeCode") || null
   const categoryParam = searchParams.get("category") || "Algebra"
   const { totalGems, addGems } = useGems()
   
@@ -387,12 +389,36 @@ function PlayPageContent() {
   }, [])
 
   // Fetch the FIRST question when the round starts
+  // In challenge mode, load ALL 5 questions by ID at once
   useEffect(() => {
     if (!isMounted) return
     if (isQuestionsReady) return
 
     async function loadFirstQuestion() {
       try {
+        // CHALLENGE MODE: fetch all 5 questions by ID from the challenge
+        if (challengeCode) {
+          const challenge = await getChallenge(challengeCode)
+          if (!challenge) {
+            throw new Error("Challenge not found — the link may be expired or invalid.")
+          }
+          if (challenge.status === "completed") {
+            // Already completed — redirect to results
+            window.location.href = `/challenge/${challengeCode}`
+            return
+          }
+          const questions = await getQuestionsByIds(challenge.question_ids)
+          if (questions.length === 0) {
+            throw new Error("couldn't load challenge questions — try again")
+          }
+          console.log(`[rally] Challenge mode — loaded ${questions.length} questions for code: ${challengeCode}`)
+          setSessionQuestions(questions)
+          setIsQuestionsReady(true)
+          setFetchError(null)
+          return
+        }
+
+        // SOLO MODE: adaptive difficulty, one question at a time
         // Always start a new round at 'easy'
         difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
@@ -413,15 +439,15 @@ function PlayPageContent() {
         setSessionQuestions([question])
         setIsQuestionsReady(true)
         setFetchError(null)
-      } catch {
-        setFetchError("couldn't load questions — check your connection and try again")
+      } catch (err: unknown) {
+        setFetchError(err instanceof Error ? err.message : "couldn't load questions — check your connection and try again")
         setSessionQuestions([])
       }
     }
 
     loadFirstQuestion()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, isQuestionsReady, categoryParam])
+  }, [isMounted, isQuestionsReady, categoryParam, challengeCode])
 
   // Fetch the NEXT question adaptively after each answer
   const fetchNextQuestion = useCallback(async () => {
@@ -538,7 +564,7 @@ function PlayPageContent() {
 
     setTimeout(async () => {
       if (currentQuestion < TOTAL_QUESTIONS - 1) {
-        await fetchNextQuestion()
+        if (!challengeCode) await fetchNextQuestion()
         setCurrentQuestion(prev => prev + 1)
         setPendingAnswer(null)
         setSelectedAnswer(null)
@@ -634,8 +660,8 @@ function PlayPageContent() {
 
   const handleNextQuestion = useCallback(async () => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
-      // Fetch the next question at the current adaptive difficulty
-      await fetchNextQuestion()
+      // In challenge mode, questions are pre-loaded; in solo mode, fetch next adaptively
+      if (!challengeCode) await fetchNextQuestion()
       setCurrentQuestion(prev => prev + 1)
       setPendingAnswer(null)
       setSelectedAnswer(null)
@@ -693,8 +719,33 @@ function PlayPageContent() {
         toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
       }
       setGemsAwarded(true)
+
+      // If this was a challenge, submit results to Supabase
+      if (challengeCode) {
+        const challengerName = localStorage.getItem("rally_display_name") || "friend"
+        const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
+          questionIndex: i,
+          isCorrect: r.isCorrect,
+          difficulty: r.difficulty,
+          wasSpeedBonus: r.wasSpeedBonus,
+          gemsEarned: r.gemsEarned,
+          chosenAnswerIndex: r.chosenAnswerIndex,
+        }))
+        completeChallenge({
+          shareCode: challengeCode,
+          challengerName,
+          challengerScore: correctCount,
+          challengerResults: challengeResults,
+        }).then(success => {
+          if (success) {
+            console.log("[rally] Challenge completed successfully!")
+          } else {
+            console.error("[rally] Failed to submit challenge results")
+          }
+        })
+      }
     }
-  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam])
+  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode])
 
   // Derived values for rendering (always computed, never early return)
   const hasAnswered = selectedAnswer !== null
@@ -765,9 +816,11 @@ function PlayPageContent() {
   // Results screen
   if (showResults) {
     return (
-      <ResultsScreen 
-        score={score} 
+      <ResultsScreen
+        score={score}
         isChallenge={isChallenge}
+        challengeCode={challengeCode}
+        categoryId={categoryParam}
         categoryName={categoryName}
         onPlayAgain={handlePlayAgain}
         answerResults={answerResults}
@@ -1001,6 +1054,8 @@ function AnswerOption({
 interface ResultsScreenProps {
   score: number
   isChallenge: boolean
+  challengeCode: string | null
+  categoryId: string
   categoryName: string
   onPlayAgain: () => void
   answerResults: AnswerResult[]
@@ -1014,12 +1069,15 @@ function getEncouragementMessage(score: number): string {
   return "Tough round. Challenge a friend and see how they do"
 }
 
-function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
+function ResultsScreen({ score, isChallenge, challengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [challengeShareCode, setChallengeShareCode] = useState<string | null>(null)
+  const [isCreatingChallenge, setIsCreatingChallenge] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const toggleExpanded = (idx: number) => {
     setExpandedCards(prev => {
@@ -1239,35 +1297,114 @@ function ResultsScreen({ score, isChallenge, categoryName, onPlayAgain, answerRe
         ← back to home
       </a>
 
+      {/* Challenge a Friend */}
       <div className="w-full max-w-sm space-y-3">
-        {/* Challenge a Friend Button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowWaitlistSheet(true)}
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+        {challengeCode ? (
+          /* Challenger just finished — link to see head-to-head results */
+          <a
+            href={`/challenge/${challengeCode}`}
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
           >
-            <span className="text-lg">challenge a friend</span>
-            <span className="text-xs font-semibold text-white/70">4x gems when it launches</span>
-          </button>
-          <div className="absolute -top-2 -right-2 bg-[#F59E0B] text-[#0a1628] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            soon
+            <Swords className="w-5 h-5" />
+            see head-to-head results
+          </a>
+        ) : challengeShareCode ? (
+          /* Creator just generated a challenge link — show share UI */
+          <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl p-5">
+            <p className="text-white font-bold text-center mb-3">challenge created!</p>
+            <div className="flex items-center gap-2 bg-[#021f3d] rounded-xl px-3 py-2.5 mb-3">
+              <span className="text-[#85B7EB] text-sm flex-1 truncate">{getChallengeUrl(challengeShareCode)}</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(getChallengeUrl(challengeShareCode))
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), 2000)
+                }}
+                className="text-[#378ADD] hover:text-white transition-colors flex-shrink-0"
+              >
+                {linkCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(getChallengeUrl(challengeShareCode))
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), 2000)
+                }}
+                className="flex-1 bg-[#378ADD] text-white rounded-xl py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110"
+              >
+                <Copy className="w-4 h-4" />
+                {linkCopied ? "copied!" : "copy link"}
+              </button>
+              {typeof navigator !== "undefined" && navigator.share && (
+                <button
+                  onClick={() => {
+                    navigator.share({
+                      title: "Rally Challenge",
+                      text: `I scored ${score}/5 in ${categoryName} on Rally! Think you can beat me?`,
+                      url: getChallengeUrl(challengeShareCode),
+                    }).catch(() => {})
+                  }}
+                  className="bg-[#378ADD]/20 text-[#378ADD] rounded-xl px-4 py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:bg-[#378ADD]/30"
+                >
+                  <Share2 className="w-4 h-4" />
+                  share
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-
-        <button
-          onClick={() => setShowWaitlistSheet(true)}
-          className="w-full flex items-center justify-center gap-1 text-[#378ADD] text-sm font-semibold py-1 transition-all hover:brightness-125"
-        >
-          get 500 bonus gems when challenges launch
-        </button>
+        ) : (
+          /* Default — create a new challenge */
+          <button
+            onClick={async () => {
+              if (isCreatingChallenge) return
+              setIsCreatingChallenge(true)
+              try {
+                const creatorName = localStorage.getItem("rally_display_name") || "anonymous"
+                const questionIds = sessionQuestions.map(q => q.id)
+                const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
+                  questionIndex: i,
+                  isCorrect: r.isCorrect,
+                  difficulty: r.difficulty,
+                  wasSpeedBonus: r.wasSpeedBonus,
+                  gemsEarned: r.gemsEarned,
+                  chosenAnswerIndex: r.chosenAnswerIndex,
+                }))
+                const shareCode = await createChallenge({
+                  category: categoryId,
+                  questionIds,
+                  creatorName,
+                  creatorScore: score,
+                  creatorResults: challengeResults,
+                })
+                if (shareCode) {
+                  setChallengeShareCode(shareCode)
+                  // Auto-copy to clipboard
+                  try {
+                    await navigator.clipboard.writeText(getChallengeUrl(shareCode))
+                    setLinkCopied(true)
+                    setTimeout(() => setLinkCopied(false), 2000)
+                  } catch {}
+                  toast.success("Challenge link copied!", { duration: 3000 })
+                } else {
+                  toast.error("Couldn't create challenge — try again", { duration: 3000 })
+                }
+              } catch (err) {
+                console.error("[rally] Error creating challenge:", err)
+                toast.error("Couldn't create challenge — try again", { duration: 3000 })
+              } finally {
+                setIsCreatingChallenge(false)
+              }
+            }}
+            disabled={isCreatingChallenge}
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 disabled:opacity-60"
+          >
+            <Swords className="w-5 h-5" />
+            {isCreatingChallenge ? "creating..." : "challenge a friend"}
+          </button>
+        )}
       </div>
-
-      <ChallengeWaitlistSheet
-        isOpen={showWaitlistSheet}
-        onClose={() => setShowWaitlistSheet(false)}
-        variant="challenge"
-      />
 
       {/* Review Wrong Answers Modal */}
       {showReviewModal && wrongAnswers.length > 0 && (

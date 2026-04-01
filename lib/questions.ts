@@ -122,3 +122,27 @@ export async function getOneQuestion(
   const shuffled = [...data].sort(() => Math.random() - 0.5)
   return shuffled[0] as Question
 }
+
+/**
+ * Fetch specific questions by their IDs (used for challenge mode).
+ * Returns them in the same order as the provided IDs array.
+ */
+export async function getQuestionsByIds(ids: number[]): Promise<Question[]> {
+  if (typeof window === "undefined" || ids.length === 0) return []
+
+  const supabase = getSupabase()
+
+  const { data, error } = await supabase
+    .from("sat_questions")
+    .select("*")
+    .in("id", ids)
+
+  if (error || !data) {
+    console.error("[rally] Error fetching questions by IDs:", error)
+    return []
+  }
+
+  // Return in the same order as the input IDs
+  const map = new Map(data.map(q => [q.id, q]))
+  return ids.map(id => map.get(id)).filter(Boolean) as Question[]
+}
