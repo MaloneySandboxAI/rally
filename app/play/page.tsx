@@ -34,16 +34,20 @@ const CATEGORIES = [
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316", isMath: true },
 ]
 
-// Timer by difficulty (seconds)
-const TIMER_BY_DIFFICULTY: Record<string, number> = {
-  easy: 30,
-  medium: 60,
-  hard: 90,
+// Timer by difficulty (seconds), per category type
+const TIMER_BY_DIFFICULTY: Record<string, Record<string, number>> = {
+  math: { easy: 45, medium: 75, hard: 120 },
+  reading: { easy: 35, medium: 55, hard: 90 },
+}
+
+function getTimerForQuestion(difficulty: string, isMath: boolean): number {
+  const timers = isMath ? TIMER_BY_DIFFICULTY.math : TIMER_BY_DIFFICULTY.reading
+  return timers[difficulty] ?? 60
 }
 
 // Speed bonus threshold = half the question's time
-function getSpeedThreshold(difficulty: string): number {
-  return Math.floor((TIMER_BY_DIFFICULTY[difficulty] ?? 60) / 2)
+function getSpeedThreshold(difficulty: string, isMath: boolean): number {
+  return Math.floor(getTimerForQuestion(difficulty, isMath) / 2)
 }
 
 // Module-level ref so usedIds NEVER resets on component remount
@@ -593,7 +597,7 @@ function PlayPageContent() {
   useEffect(() => {
     if (!isQuestionsReady) return
     const diff = sessionQuestions[currentQuestion]?.difficulty || "medium"
-    const t = TIMER_BY_DIFFICULTY[diff] ?? 60
+    const t = getTimerForQuestion(diff, isMathCategory)
     setTotalTime(t)
     setTimeRemaining(t)
     setIsTimerActive(true)
@@ -619,7 +623,7 @@ function PlayPageContent() {
 
     // Calculate time taken — speed threshold is half of this question's difficulty time
     const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
-    const speedThreshold = getSpeedThreshold(question?.difficulty || "medium")
+    const speedThreshold = getSpeedThreshold(question?.difficulty || "medium", isMathCategory)
     const isSpeedBonus = timeTaken <= speedThreshold
 
     if (pendingAnswer === correctAnswerIndex) {
