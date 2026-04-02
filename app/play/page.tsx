@@ -382,6 +382,9 @@ function PlayPageContent() {
   const [hearts, setHearts] = useState(HEARTS_CONFIG.maxHearts)
   const [soloBlocked, setSoloBlocked] = useState<string | null>(null)
 
+  // Challenge creator's score (for win/loss/tie outcome bonus)
+  const [creatorScore, setCreatorScore] = useState<number | null>(null)
+
   // Questions state - fetched from Supabase one at a time (adaptive difficulty)
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [isQuestionsReady, setIsQuestionsReady] = useState(false)
@@ -430,6 +433,7 @@ function PlayPageContent() {
             throw new Error("couldn't load challenge questions — try again")
           }
           console.log(`[rally] Challenge mode — loaded ${questions.length} questions for code: ${challengeCode}`)
+          setCreatorScore(challenge.creator_score)
           setSessionQuestions(questions)
           setIsQuestionsReady(true)
           setFetchError(null)
@@ -715,7 +719,19 @@ function PlayPageContent() {
         .reduce((sum, r) => sum + r.gemsEarned, 0)
       const correctCount = answerResults.filter(r => r.isCorrect).length
 
-      addGems(correctGems)
+      // Challenge outcome bonus (win/loss/tie)
+      let outcomeBonus = 0
+      if (isChallenge && creatorScore !== null) {
+        if (correctCount > creatorScore) {
+          outcomeBonus = GEM_VALUES.challengeOutcome.win
+        } else if (correctCount < creatorScore) {
+          outcomeBonus = GEM_VALUES.challengeOutcome.loss
+        } else {
+          outcomeBonus = GEM_VALUES.challengeOutcome.tie
+        }
+      }
+
+      addGems(correctGems + outcomeBonus)
       markRoundCompleted()
       if (!isChallenge) {
         incrementRoundsToday()
@@ -764,7 +780,7 @@ function PlayPageContent() {
         })()
       }
     }
-  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode])
+  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode, creatorScore])
 
   // Derived values for rendering (always computed, never early return)
   const hasAnswered = selectedAnswer !== null
@@ -844,6 +860,7 @@ function PlayPageContent() {
         onPlayAgain={handlePlayAgain}
         answerResults={answerResults}
         sessionQuestions={sessionQuestions}
+        creatorScore={creatorScore}
       />
     )
   }
@@ -1079,6 +1096,7 @@ interface ResultsScreenProps {
   onPlayAgain: () => void
   answerResults: AnswerResult[]
   sessionQuestions: Question[]
+  creatorScore: number | null
 }
 
 function getEncouragementMessage(score: number): string {
@@ -1088,7 +1106,7 @@ function getEncouragementMessage(score: number): string {
   return "Tough round. Challenge a friend and see how they do"
 }
 
-function ResultsScreen({ score, isChallenge, challengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions }: ResultsScreenProps) {
+function ResultsScreen({ score, isChallenge, challengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore }: ResultsScreenProps) {
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
@@ -1126,10 +1144,11 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
   // Single source of truth: count correct answers directly from answerResults
   const correctCount = answerResults.filter(r => r.isCorrect).length
   const speedBonusCount = answerResults.filter(r => r.isCorrect && r.wasSpeedBonus).length
-  const gemsEarned = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
+  const answerGems = answerResults.reduce((sum, r) => sum + r.gemsEarned, 0)
 
   // Build breakdown by difficulty tier — show base gems, then speed bonus extra separately
   const breakdown: { label: string; amount: number }[] = []
+  const gemMode = isChallenge ? GEM_VALUES.challenge : GEM_VALUES.solo
   const diffGroups = { easy: [] as AnswerResult[], medium: [] as AnswerResult[], hard: [] as AnswerResult[] }
   for (const r of answerResults.filter(r => r.isCorrect)) {
     const d = (r.difficulty || "easy") as keyof typeof diffGroups
@@ -1138,12 +1157,12 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
   let speedBonusExtra = 0
   for (const [diff, results] of Object.entries(diffGroups)) {
     if (results.length > 0) {
-      const baseRate = GEM_VALUES.solo[diff as keyof typeof GEM_VALUES.solo] ?? GEM_VALUES.solo.easy
+      const baseRate = gemMode[diff as keyof typeof gemMode] ?? gemMode.easy
       const baseGems = results.length * baseRate
       const actualGems = results.reduce((sum, r) => sum + r.gemsEarned, 0)
       speedBonusExtra += actualGems - baseGems
       breakdown.push({
-        label: `${results.length} ${diff} correct`,
+        label: `${results.length} ${diff} correct${isChallenge ? " (4x)" : ""}`,
         amount: baseGems,
       })
     }
@@ -1154,10 +1173,27 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
       amount: speedBonusExtra,
     })
   }
-  if (correctCount === 0) {
+  // Challenge outcome bonus
+  let outcomeBonus = 0
+  let outcomeLabel = ""
+  if (isChallenge && creatorScore !== null) {
+    if (correctCount > creatorScore) {
+      outcomeBonus = GEM_VALUES.challengeOutcome.win
+      outcomeLabel = "challenge won!"
+    } else if (correctCount < creatorScore) {
+      outcomeBonus = GEM_VALUES.challengeOutcome.loss
+      outcomeLabel = "challenge participation"
+    } else {
+      outcomeBonus = GEM_VALUES.challengeOutcome.tie
+      outcomeLabel = "challenge tied"
+    }
+    breakdown.push({ label: outcomeLabel, amount: outcomeBonus })
+  }
+  if (correctCount === 0 && outcomeBonus === 0) {
     breakdown.push({ label: "no correct answers", amount: 0 })
   }
-  
+  const gemsEarned = answerGems + outcomeBonus
+
   // Difficulty breakdown
   const difficultyStats = {
     easy: answerResults.filter(r => r.difficulty === "easy" && r.isCorrect).length,
