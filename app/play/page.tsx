@@ -1112,6 +1112,7 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
   const [isGuest, setIsGuest] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [copiedPromptIdx, setCopiedPromptIdx] = useState<number | null>(null)
   const [challengeShareCode, setChallengeShareCode] = useState<string | null>(null)
   const [isCreatingChallenge, setIsCreatingChallenge] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -1543,6 +1544,32 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
                           <p className="text-xs font-bold text-[#EF9F27] uppercase tracking-wide mb-1">remember this</p>
                           <p className="text-[#EF9F27]/80 text-sm leading-relaxed">{detailed.takeaway}</p>
                         </div>
+
+                        {/* Still don't get it? AI prompt copier */}
+                        <button
+                          onClick={() => {
+                            const userAnswer = item.chosenAnswerIndex !== null
+                              ? `${String.fromCharCode(65 + item.chosenAnswerIndex)}) ${options[item.chosenAnswerIndex]}`
+                              : "I ran out of time"
+                            const prompt = `I'm studying for the SAT and got this question wrong. Can you explain it step by step like I'm in high school?\n\nQuestion: ${q.question}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}\n\nCorrect answer: ${q.correct}) ${options[correctIdx]}\nMy answer: ${userAnswer}\n\nPlease explain:\n1. Why the correct answer is right\n2. Why my answer was wrong\n3. How to recognize this type of problem in the future`
+                            navigator.clipboard.writeText(prompt)
+                            setCopiedPromptIdx(idx)
+                            setTimeout(() => setCopiedPromptIdx(null), 2000)
+                          }}
+                          className="w-full mt-2 bg-purple-500/15 border border-purple-500/30 rounded-xl px-3 py-2.5 flex items-center justify-center gap-2 transition-all hover:bg-purple-500/25 active:scale-[0.98]"
+                        >
+                          {copiedPromptIdx === idx ? (
+                            <>
+                              <Check className="w-4 h-4 text-green-400" strokeWidth={3} />
+                              <span className="text-green-400 text-sm font-bold">copied! paste into ChatGPT or Claude</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 text-purple-400" />
+                              <span className="text-purple-400 text-sm font-bold">still don&apos;t get it? copy AI prompt</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>
