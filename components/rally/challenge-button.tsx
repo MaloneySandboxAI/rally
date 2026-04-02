@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Swords, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Plus, Swords, ChevronRight, LogIn } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 const CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD" },
@@ -12,17 +13,35 @@ const CATEGORIES = [
 
 export function ChallengeButton() {
   const [showPicker, setShowPicker] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [checkedAuth, setCheckedAuth] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session)
+      setCheckedAuth(true)
+    })
+  }, [])
+
+  const handleClick = () => {
+    if (!checkedAuth) return
+    if (!isLoggedIn) {
+      // Redirect to login with a return URL
+      window.location.href = "/login?returnTo=challenge"
+    } else {
+      setShowPicker(true)
+    }
+  }
 
   const handleCategorySelect = (categoryId: string) => {
-    // Navigate to play page — after the round, the results screen
-    // has a "challenge a friend" button that creates the share link
     window.location.href = `/play?category=${encodeURIComponent(categoryId)}`
   }
 
   return (
     <>
       <button
-        onClick={() => setShowPicker(true)}
+        onClick={handleClick}
         className="relative w-full bg-primary text-primary-foreground rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
         aria-label="Challenge a friend"
       >
@@ -31,9 +50,8 @@ export function ChallengeButton() {
           challenge a friend
         </div>
 
-        {/* 4x gems label */}
         <span className="text-xs font-semibold text-white/70">
-          4x gems · 100 per correct answer
+          {isLoggedIn ? "4x gems · 100 per correct answer" : "sign in to challenge friends"}
         </span>
       </button>
 

@@ -1110,6 +1110,7 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
   const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [copiedPromptIdx, setCopiedPromptIdx] = useState<number | null>(null)
@@ -1140,6 +1141,10 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
 
   useEffect(() => {
     setIsGuest(localStorage.getItem("rally_is_guest") === "true")
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session)
+    })
   }, [])
   
   // Single source of truth: count correct answers directly from answerResults
@@ -1410,8 +1415,20 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
               )}
             </div>
           </div>
+        ) : !isLoggedIn ? (
+          /* Guest — prompt to sign in before creating challenge */
+          <a
+            href="/login"
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+          >
+            <div className="flex items-center gap-2">
+              <Swords className="w-5 h-5" />
+              challenge a friend
+            </div>
+            <span className="text-xs font-semibold text-white/70">sign in to create challenges</span>
+          </a>
         ) : (
-          /* Default — create a new challenge */
+          /* Logged in — create a new challenge */
           <button
             onClick={async () => {
               if (isCreatingChallenge) return
