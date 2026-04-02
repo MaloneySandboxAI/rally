@@ -12,7 +12,24 @@ import {
 import { Button } from "@/components/ui/button"
 
 const STORAGE_KEY = "rally_sat_date"
+const TARGET_SCORE_KEY = "rally_target_score"
 const ONBOARDING_COMPLETE_KEY = "rally_onboarding_complete"
+
+// SAT score ranges from 400 to 1600 in increments of 10
+const SAT_MIN = 400
+const SAT_MAX = 1600
+const SAT_STEP = 10
+const SAT_DEFAULT_TARGET = 1200
+
+function getScoreLabel(score: number): string {
+  if (score >= 1500) return "ivy league ready"
+  if (score >= 1400) return "top tier"
+  if (score >= 1300) return "very competitive"
+  if (score >= 1200) return "above average"
+  if (score >= 1100) return "solid foundation"
+  if (score >= 1000) return "good start"
+  return "building up"
+}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -35,6 +52,7 @@ function getDaysUntil(dateStr: string): number {
 
 export function SatCountdown() {
   const [satDate, setSatDate] = useState<string | null>(null)
+  const [targetScore, setTargetScore] = useState<number>(SAT_DEFAULT_TARGET)
   const [showSetupPrompt, setShowSetupPrompt] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
@@ -42,10 +60,14 @@ export function SatCountdown() {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
+    const storedScore = localStorage.getItem(TARGET_SCORE_KEY)
     const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY)
 
     if (stored) {
       setSatDate(stored)
+    }
+    if (storedScore) {
+      setTargetScore(parseInt(storedScore, 10) || SAT_DEFAULT_TARGET)
     }
     // Show the setup prompt every time until the user completes onboarding
     if (!onboardingComplete) {
@@ -60,11 +82,12 @@ export function SatCountdown() {
   const handleSaveDate = () => {
     if (selectedDate) {
       localStorage.setItem(STORAGE_KEY, selectedDate)
-      localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true")
-      setSatDate(selectedDate)
-      setShowDatePicker(false)
-      setShowSetupPrompt(false)
     }
+    localStorage.setItem(TARGET_SCORE_KEY, targetScore.toString())
+    localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true")
+    setSatDate(selectedDate || null)
+    setShowDatePicker(false)
+    setShowSetupPrompt(false)
   }
 
   const handleOpenDatePicker = () => {
@@ -93,7 +116,7 @@ export function SatCountdown() {
               {daysUntil} days until your SAT
             </span>
             <span className="text-xs text-[#85B7EB]">
-              {formatDate(satDate)}
+              {formatDate(satDate)}{targetScore ? ` · target: ${targetScore}` : ""}
             </span>
           </div>
         </div>
@@ -113,18 +136,43 @@ export function SatCountdown() {
         </button>
       )}
 
-      {/* First Launch Setup Prompt — date only */}
+      {/* First Launch Setup Prompt — date + target score */}
       <Dialog open={showSetupPrompt} onOpenChange={setShowSetupPrompt}>
         <DialogContent className="bg-[#0a2d4a] border-[#378ADD]/30 text-white max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-center">
-              When is your SAT?
+              let&apos;s set your goals
             </DialogTitle>
             <DialogDescription className="text-center text-[#85B7EB] text-sm">
-              Set your test date so we can build a study plan for you.
+              We&apos;ll personalize your study plan based on your target.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
+            {/* Target Score Slider */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-[#85B7EB]">target score</label>
+              <div className="text-center">
+                <span className="text-4xl font-extrabold text-white">{targetScore}</span>
+                <p className="text-sm text-[#F59E0B] font-semibold mt-1">{getScoreLabel(targetScore)}</p>
+              </div>
+              <div className="px-1">
+                <input
+                  type="range"
+                  min={SAT_MIN}
+                  max={SAT_MAX}
+                  step={SAT_STEP}
+                  value={targetScore}
+                  onChange={(e) => setTargetScore(parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-[#021f3d] rounded-lg appearance-none cursor-pointer accent-[#378ADD]"
+                />
+                <div className="flex justify-between text-xs text-[#85B7EB]/50 mt-1">
+                  <span>{SAT_MIN}</span>
+                  <span>{SAT_MAX}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* SAT Date */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-bold text-[#85B7EB]">test date</label>
               <input
@@ -137,17 +185,10 @@ export function SatCountdown() {
             </div>
 
             <Button
-              onClick={() => {
-                if (selectedDate) {
-                  handleSaveDate()
-                } else {
-                  localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true")
-                  setShowSetupPrompt(false)
-                }
-              }}
+              onClick={handleSaveDate}
               className="w-full bg-[#378ADD] hover:bg-[#378ADD]/90 text-white font-bold"
             >
-              {selectedDate ? "let's go \u2192" : "skip for now \u2192"}
+              let&apos;s go &rarr;
             </Button>
           </div>
         </DialogContent>
