@@ -146,3 +146,43 @@ export async function getQuestionsByIds(ids: number[]): Promise<Question[]> {
   const map = new Map(data.map(q => [q.id, q]))
   return ids.map(id => map.get(id)).filter(Boolean) as Question[]
 }
+
+/**
+ * Fetch a challenge question pool: 5 easy + 5 medium + 5 hard for a category.
+ * Returns { easy: id[], medium: id[], hard: id[] }.
+ * Both players draw from this shared pool based on their adaptive path,
+ * so if both reach medium on question 3, they get the same medium question.
+ */
+export async function getChallengePool(
+  category: string
+): Promise<{ easy: number[]; medium: number[]; hard: number[] } | null> {
+  if (typeof window === "undefined") return null
+
+  const supabase = getSupabase()
+
+  // Fetch all three difficulties in parallel
+  const [easyRes, medRes, hardRes] = await Promise.all([
+    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "easy").limit(15),
+    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "medium").limit(15),
+    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "hard").limit(15),
+  ])
+
+  if (easyRes.error || medRes.error || hardRes.error) {
+    console.error("[rally] Error fetching challenge pool:", easyRes.error, medRes.error, hardRes.error)
+    return null
+  }
+
+  // Shuffle each set and take 5
+  const shuffle = (arr: { id: number }[]) =>
+    [...arr].sort(() => Math.random() - 0.5).slice(0, 5).map(q => q.id)
+
+  const easy = shuffle(easyRes.data || [])
+  const medium = shuffle(medRes.data || [])
+  const hard = shuffle(hardRes.data || [])
+
+  if (easy.length === 0 && medium.length === 0 && hard.length === 0) {
+    return null
+  }
+
+  return { easy, medium, hard }
+}

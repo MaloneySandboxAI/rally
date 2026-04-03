@@ -8,8 +8,8 @@ import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/ge
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getOneQuestion, type Question } from "@/lib/questions"
-import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, type ChallengeResult } from "@/lib/challenges"
+import { getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
+import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, type ChallengeResult, type ChallengePool } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { createClient } from "@/lib/supabase/client"
@@ -387,6 +387,12 @@ function PlayPageContent() {
   // Challenge creator's score (for win/loss/tie outcome bonus)
   const [creatorScore, setCreatorScore] = useState<number | null>(null)
 
+  // Challenge question pool — shared between both players
+  // Both players draw from the same pool based on their adaptive path
+  const challengePoolRef = useRef<ChallengePool | null>(null)
+  const challengePoolQuestionsRef = useRef<Map<number, Question>>(new Map()) // id → Question cache
+  const poolDrawCountRef = useRef<Record<string, number>>({ easy: 0, medium: 0, hard: 0 })
+
   // Questions state - fetched from Supabase one at a time (adaptive difficulty)
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [isQuestionsReady, setIsQuestionsReady] = useState(false)
@@ -411,34 +417,82 @@ function PlayPageContent() {
     }
   }, [])
 
+  // Helper: draw the next question from challenge pool at current difficulty
+  function drawFromPool(difficulty: string): Question | null {
+    const pool = challengePoolRef.current
+    const cache = challengePoolQuestionsRef.current
+    const counts = poolDrawCountRef.current
+    if (!pool) return null
+
+    // Try requested difficulty, fall back to others
+    const tryDifficulties = [difficulty, "easy", "medium", "hard"]
+    for (const diff of tryDifficulties) {
+      const ids = pool[diff as keyof ChallengePool] || []
+      const idx = counts[diff] || 0
+      if (idx < ids.length) {
+        const qId = ids[idx]
+        counts[diff] = idx + 1
+        const question = cache.get(qId)
+        if (question) return question
+      }
+    }
+    return null
+  }
+
   // Fetch the FIRST question when the round starts
-  // ALL modes (solo, creator challenge, challenger) use adaptive difficulty
   useEffect(() => {
     if (!isMounted) return
     if (isQuestionsReady) return
 
     async function loadFirstQuestion() {
       try {
-        // CHALLENGER MODE: validate challenge exists and isn't completed
-        if (challengeCode) {
-          const challenge = await getChallenge(challengeCode)
+        const isChallengeMode = !!challengeCode || !!creatorChallengeCode
+        const activeCode = challengeCode || creatorChallengeCode
+
+        // CHALLENGE MODE: load shared pool and pre-fetch all questions
+        if (isChallengeMode && activeCode) {
+          const challenge = await getChallenge(activeCode)
           if (!challenge) {
             throw new Error("Challenge not found — the link may be expired or invalid.")
           }
-          if (challenge.status === "completed") {
+          if (challengeCode && challenge.status === "completed") {
             window.location.href = `/challenge/${challengeCode}`
             return
           }
-          // Store creator's gem score for outcome comparison
-          setCreatorScore(challenge.creator_score)
-          console.log(`[rally] Challenger mode — adaptive difficulty, code: ${challengeCode}`)
+          if (challengeCode) {
+            setCreatorScore(challenge.creator_score)
+          }
+
+          // Load the shared pool
+          const pool = challenge.question_ids as unknown as ChallengePool
+          if (!pool || !pool.easy || !pool.medium || !pool.hard) {
+            throw new Error("Challenge data is invalid — please try a new challenge.")
+          }
+          challengePoolRef.current = pool
+          poolDrawCountRef.current = { easy: 0, medium: 0, hard: 0 }
+
+          // Pre-fetch ALL pool questions in one batch
+          const allIds = [...pool.easy, ...pool.medium, ...pool.hard]
+          const allQuestions = await getQuestionsByIds(allIds)
+          const cache = new Map<number, Question>()
+          for (const q of allQuestions) cache.set(q.id, q)
+          challengePoolQuestionsRef.current = cache
+
+          console.log(`[rally] Challenge pool loaded: ${pool.easy.length}E/${pool.medium.length}M/${pool.hard.length}H`)
+
+          // Draw first question at 'easy'
+          difficultyRef.current = "easy"
+          const firstQuestion = drawFromPool("easy")
+          if (!firstQuestion) {
+            throw new Error("couldn't load challenge questions — try again")
+          }
+          setSessionQuestions([firstQuestion])
+          setIsQuestionsReady(true)
+          setFetchError(null)
+          return
         }
 
-        if (creatorChallengeCode) {
-          console.log(`[rally] Creator challenge mode — adaptive difficulty, code: ${creatorChallengeCode}`)
-        }
-
-        // ALL MODES: adaptive difficulty, one question at a time, start at 'easy'
+        // SOLO MODE: adaptive difficulty from Supabase
         difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
         let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
@@ -471,12 +525,21 @@ function PlayPageContent() {
   const fetchNextQuestion = useCallback(async () => {
     setIsLoadingNext(true)
     try {
+      // CHALLENGE MODE: draw from shared pool (instant, no fetch)
+      if (challengePoolRef.current) {
+        const question = drawFromPool(difficultyRef.current)
+        if (question) {
+          setSessionQuestions(prev => [...prev, question])
+          console.log(`[rally] Pool draw — difficulty: ${difficultyRef.current}, question id: ${question.id}`)
+        }
+        setIsLoadingNext(false)
+        return
+      }
+
+      // SOLO MODE: fetch from Supabase
       const excluded = getUsedIdsForCategory(categoryParam)
       let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
       if (!question) {
-        // No unseen questions at this difficulty — getOneQuestion already falls back
-        // to any difficulty internally. If still null, we've exhausted ALL questions
-        // in this category. Only then reset IDs.
         resetUsedIds(categoryParam)
         question = await getOneQuestion(categoryParam, difficultyRef.current, [])
         if (question) {
@@ -762,12 +825,10 @@ function PlayPageContent() {
             gemsEarned: r.gemsEarned,
             chosenAnswerIndex: r.chosenAnswerIndex,
           }))
-          const questionIds = sessionQuestions.map(q => q.id)
           const success = await updateCreatorResults({
             shareCode: creatorChallengeCode,
             creatorScore: correctGems, // gems, not correct count
             creatorResults: challengeResults,
-            questionIds,
           })
           if (success) {
             console.log(`[rally] Creator results updated — ${correctGems} gems`)

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
+import { getChallengePool } from "@/lib/questions"
 import { toast } from "sonner"
 
 const CATEGORIES = [
@@ -61,11 +62,22 @@ export function ChallengeButton() {
     setIsCreating(true)
 
     try {
-      // Create the challenge — just locks in category + share code
-      // Each player gets adaptive difficulty questions independently
+      // 1. Fetch shared question pool: 5 easy + 5 medium + 5 hard
+      const pool = await getChallengePool(categoryId)
+      if (!pool) {
+        toast.error("couldn't load questions — try again", {
+          style: { background: "#dc2626", border: "none", color: "#ffffff" },
+        })
+        setIsCreating(false)
+        setSelectedCategory(null)
+        return
+      }
+
+      // 2. Create the challenge with the shared pool
       const code = await createChallenge({
         category: categoryId,
         creatorName: userName,
+        questionPool: pool,
       })
 
       if (!code) {

@@ -33,11 +33,17 @@ export interface ChallengeResult {
   chosenAnswerIndex: number | null
 }
 
+export interface ChallengePool {
+  easy: number[]
+  medium: number[]
+  hard: number[]
+}
+
 export interface Challenge {
   id: number
   share_code: string
   category: string
-  question_ids: number[] // kept for DB compat; stores creator's question IDs after they play
+  question_ids: ChallengePool // shared pool: 5 easy + 5 medium + 5 hard IDs
   creator_name: string
   creator_score: number // gems earned (-1 = hasn't played yet)
   creator_results: ChallengeResult[] | null
@@ -51,12 +57,15 @@ export interface Challenge {
 
 /**
  * Create a new challenge BEFORE the creator plays.
- * Only locks in category + share code. Each player plays adaptive difficulty independently.
+ * Stores a shared question pool (5 easy + 5 medium + 5 hard).
+ * Both players draw from this pool based on their adaptive path,
+ * so if both reach medium on Q3, they get the same medium question.
  * Score = total gems earned (not correct count).
  */
 export async function createChallenge(params: {
   category: string
   creatorName: string
+  questionPool: ChallengePool
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
   const supabase = getSupabase()
@@ -67,7 +76,7 @@ export async function createChallenge(params: {
     const { error } = await supabase.from("challenges").insert({
       share_code: shareCode,
       category: params.category,
-      question_ids: [], // filled after creator plays
+      question_ids: params.questionPool, // jsonb: { easy: [...], medium: [...], hard: [...] }
       creator_name: params.creatorName,
       creator_score: -1, // sentinel: hasn't played yet
       creator_results: null,
@@ -88,13 +97,12 @@ export async function createChallenge(params: {
 
 /**
  * Update the creator's results after they finish their adaptive round.
- * Score = total gems earned. Question IDs are saved for reference.
+ * Score = total gems earned.
  */
 export async function updateCreatorResults(params: {
   shareCode: string
   creatorScore: number
   creatorResults: ChallengeResult[]
-  questionIds: number[]
 }): Promise<boolean> {
   if (typeof window === "undefined") return false
   const supabase = getSupabase()
@@ -104,7 +112,6 @@ export async function updateCreatorResults(params: {
     .update({
       creator_score: params.creatorScore,
       creator_results: params.creatorResults,
-      question_ids: params.questionIds,
     })
     .eq("share_code", params.shareCode)
     .eq("creator_score", -1)
