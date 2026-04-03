@@ -37,12 +37,12 @@ export interface Challenge {
   id: number
   share_code: string
   category: string
-  question_ids: number[]
+  question_ids: number[] // kept for DB compat; stores creator's question IDs after they play
   creator_name: string
-  creator_score: number // -1 means creator hasn't played yet
+  creator_score: number // gems earned (-1 = hasn't played yet)
   creator_results: ChallengeResult[] | null
   challenger_name: string | null
-  challenger_score: number | null
+  challenger_score: number | null // gems earned
   challenger_results: ChallengeResult[] | null
   status: "pending" | "completed"
   created_at: string
@@ -51,27 +51,25 @@ export interface Challenge {
 
 /**
  * Create a new challenge BEFORE the creator plays.
- * Locks in the question set and share code; creator results are filled in later.
- * Returns the share code for the link.
+ * Only locks in category + share code. Each player plays adaptive difficulty independently.
+ * Score = total gems earned (not correct count).
  */
 export async function createChallenge(params: {
   category: string
-  questionIds: number[]
   creatorName: string
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
   const supabase = getSupabase()
 
-  // Try up to 3 times in case of share code collision
   for (let attempt = 0; attempt < 3; attempt++) {
     const shareCode = generateShareCode()
 
     const { error } = await supabase.from("challenges").insert({
       share_code: shareCode,
       category: params.category,
-      question_ids: params.questionIds,
+      question_ids: [], // filled after creator plays
       creator_name: params.creatorName,
-      creator_score: -1,
+      creator_score: -1, // sentinel: hasn't played yet
       creator_results: null,
       status: "pending",
     })
@@ -80,9 +78,7 @@ export async function createChallenge(params: {
       return shareCode
     }
 
-    // If duplicate share code, try again
     if (error.code === "23505") continue
-
     console.error("[rally] Error creating challenge:", error)
     return null
   }
@@ -91,13 +87,14 @@ export async function createChallenge(params: {
 }
 
 /**
- * Update the creator's results after they finish playing their own challenge.
- * Only updates if creator_score is still -1 (hasn't played yet).
+ * Update the creator's results after they finish their adaptive round.
+ * Score = total gems earned. Question IDs are saved for reference.
  */
 export async function updateCreatorResults(params: {
   shareCode: string
   creatorScore: number
   creatorResults: ChallengeResult[]
+  questionIds: number[]
 }): Promise<boolean> {
   if (typeof window === "undefined") return false
   const supabase = getSupabase()
@@ -107,9 +104,10 @@ export async function updateCreatorResults(params: {
     .update({
       creator_score: params.creatorScore,
       creator_results: params.creatorResults,
+      question_ids: params.questionIds,
     })
     .eq("share_code", params.shareCode)
-    .eq("creator_score", -1) // Only update if creator hasn't played yet
+    .eq("creator_score", -1)
 
   if (error) {
     console.error("[rally] Error updating creator results:", error)
@@ -142,6 +140,7 @@ export async function getChallenge(shareCode: string): Promise<Challenge | null>
 
 /**
  * Submit the challenger's results to complete the challenge.
+ * Score = total gems earned.
  */
 export async function completeChallenge(params: {
   shareCode: string
@@ -162,7 +161,7 @@ export async function completeChallenge(params: {
       completed_at: new Date().toISOString(),
     })
     .eq("share_code", params.shareCode)
-    .eq("status", "pending") // Only complete if still pending
+    .eq("status", "pending")
 
   if (error) {
     console.error("[rally] Error completing challenge:", error)

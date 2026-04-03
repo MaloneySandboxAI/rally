@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { getQuestions } from "@/lib/questions"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { toast } from "sonner"
 
@@ -62,23 +61,10 @@ export function ChallengeButton() {
     setIsCreating(true)
 
     try {
-      // 1. Fetch 5 random questions for this category
-      const questions = await getQuestions(categoryId)
-      if (!questions || questions.length === 0) {
-        toast.error("couldn't load questions — try again", {
-          style: { background: "#dc2626", border: "none", color: "#ffffff" },
-        })
-        setIsCreating(false)
-        setSelectedCategory(null)
-        return
-      }
-
-      const questionIds = questions.map((q) => q.id)
-
-      // 2. Create the challenge in Supabase (no results yet)
+      // Create the challenge — just locks in category + share code
+      // Each player gets adaptive difficulty questions independently
       const code = await createChallenge({
         category: categoryId,
-        questionIds,
         creatorName: userName,
       })
 
@@ -91,7 +77,6 @@ export function ChallengeButton() {
         return
       }
 
-      // 3. Show the share link
       setShareCode(code)
       setShareUrl(getChallengeUrl(code))
       setIsCreating(false)
@@ -124,9 +109,9 @@ export function ChallengeButton() {
   }
 
   const handlePlayNow = () => {
-    if (!shareCode) return
-    // Navigate to play page with creatorChallenge param
-    window.location.href = `/play?creatorChallenge=${shareCode}`
+    if (!shareCode || !selectedCategory) return
+    // Navigate to play page — creator plays adaptive difficulty for this category
+    window.location.href = `/play?creatorChallenge=${shareCode}&category=${encodeURIComponent(selectedCategory)}`
   }
 
   return (

@@ -8,7 +8,7 @@ import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/ge
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getQuestions, getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
+import { getOneQuestion, type Question } from "@/lib/questions"
 import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, type ChallengeResult } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
@@ -412,60 +412,37 @@ function PlayPageContent() {
   }, [])
 
   // Fetch the FIRST question when the round starts
-  // In challenge mode, load ALL 5 questions by ID at once
+  // ALL modes (solo, creator challenge, challenger) use adaptive difficulty
   useEffect(() => {
     if (!isMounted) return
     if (isQuestionsReady) return
 
     async function loadFirstQuestion() {
       try {
-        // CREATOR CHALLENGE MODE: creator plays their own challenge (pre-play flow)
-        if (creatorChallengeCode) {
-          const challenge = await getChallenge(creatorChallengeCode)
-          if (!challenge) {
-            throw new Error("Challenge not found — the link may be expired or invalid.")
-          }
-          const questions = await getQuestionsByIds(challenge.question_ids)
-          if (questions.length === 0) {
-            throw new Error("couldn't load challenge questions — try again")
-          }
-          console.log(`[rally] Creator challenge mode — loaded ${questions.length} questions for code: ${creatorChallengeCode}`)
-          setSessionQuestions(questions)
-          setIsQuestionsReady(true)
-          setFetchError(null)
-          return
-        }
-
-        // CHALLENGER MODE: friend plays via share link
+        // CHALLENGER MODE: validate challenge exists and isn't completed
         if (challengeCode) {
           const challenge = await getChallenge(challengeCode)
           if (!challenge) {
             throw new Error("Challenge not found — the link may be expired or invalid.")
           }
           if (challenge.status === "completed") {
-            // Already completed — redirect to results
             window.location.href = `/challenge/${challengeCode}`
             return
           }
-          const questions = await getQuestionsByIds(challenge.question_ids)
-          if (questions.length === 0) {
-            throw new Error("couldn't load challenge questions — try again")
-          }
-          console.log(`[rally] Challenger mode — loaded ${questions.length} questions for code: ${challengeCode}`)
+          // Store creator's gem score for outcome comparison
           setCreatorScore(challenge.creator_score)
-          setSessionQuestions(questions)
-          setIsQuestionsReady(true)
-          setFetchError(null)
-          return
+          console.log(`[rally] Challenger mode — adaptive difficulty, code: ${challengeCode}`)
         }
 
-        // SOLO MODE: adaptive difficulty, one question at a time
-        // Always start a new round at 'easy'
+        if (creatorChallengeCode) {
+          console.log(`[rally] Creator challenge mode — adaptive difficulty, code: ${creatorChallengeCode}`)
+        }
+
+        // ALL MODES: adaptive difficulty, one question at a time, start at 'easy'
         difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
         let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
         if (!question && excluded.length > 0) {
-          // All questions in this category seen — reset and try again
           resetUsedIds(categoryParam)
           question = await getOneQuestion(categoryParam, difficultyRef.current, [])
           if (question) {
@@ -738,12 +715,12 @@ function PlayPageContent() {
         .reduce((sum, r) => sum + r.gemsEarned, 0)
       const correctCount = answerResults.filter(r => r.isCorrect).length
 
-      // Challenge outcome bonus (win/loss/tie)
+      // Challenge outcome bonus (win/loss/tie) — compare gems, not correct count
       let outcomeBonus = 0
       if (isChallenge && creatorScore !== null && creatorScore >= 0) {
-        if (correctCount > creatorScore) {
+        if (correctGems > creatorScore) {
           outcomeBonus = GEM_VALUES.challengeOutcome.win
-        } else if (correctCount < creatorScore) {
+        } else if (correctGems < creatorScore) {
           outcomeBonus = GEM_VALUES.challengeOutcome.loss
         } else {
           outcomeBonus = GEM_VALUES.challengeOutcome.tie
@@ -774,6 +751,7 @@ function PlayPageContent() {
       setGemsAwarded(true)
 
       // If creator just finished their own challenge, update their results
+      // Score = total gems earned (rewards harder difficulty)
       if (creatorChallengeCode) {
         ;(async () => {
           const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
@@ -784,13 +762,15 @@ function PlayPageContent() {
             gemsEarned: r.gemsEarned,
             chosenAnswerIndex: r.chosenAnswerIndex,
           }))
+          const questionIds = sessionQuestions.map(q => q.id)
           const success = await updateCreatorResults({
             shareCode: creatorChallengeCode,
-            creatorScore: correctCount,
+            creatorScore: correctGems, // gems, not correct count
             creatorResults: challengeResults,
+            questionIds,
           })
           if (success) {
-            console.log("[rally] Creator results updated successfully!")
+            console.log(`[rally] Creator results updated — ${correctGems} gems`)
           } else {
             console.error("[rally] Failed to update creator results")
           }
@@ -811,11 +791,11 @@ function PlayPageContent() {
           const success = await completeChallenge({
             shareCode: challengeCode,
             challengerName,
-            challengerScore: correctCount,
+            challengerScore: correctGems, // gems, not correct count
             challengerResults: challengeResults,
           })
           if (success) {
-            console.log("[rally] Challenge completed successfully!")
+            console.log(`[rally] Challenge completed — ${correctGems} gems`)
           } else {
             console.error("[rally] Failed to submit challenge results")
           }
@@ -1210,14 +1190,14 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
       amount: speedBonusExtra,
     })
   }
-  // Challenge outcome bonus
+  // Challenge outcome bonus — compare gems earned, not correct count
   let outcomeBonus = 0
   let outcomeLabel = ""
   if (isChallenge && creatorScore !== null && creatorScore >= 0) {
-    if (correctCount > creatorScore) {
+    if (answerGems > creatorScore) {
       outcomeBonus = GEM_VALUES.challengeOutcome.win
       outcomeLabel = "challenge won!"
-    } else if (correctCount < creatorScore) {
+    } else if (answerGems < creatorScore) {
       outcomeBonus = GEM_VALUES.challengeOutcome.loss
       outcomeLabel = "challenge participation"
     } else {
