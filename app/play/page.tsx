@@ -911,57 +911,48 @@ function PlayPageContent() {
 
   // Main game screen
   return (
-    <div className="min-h-screen bg-[#021f3d] flex flex-col">
+    <div className="h-[100dvh] bg-[#021f3d] flex flex-col overflow-hidden">
       {/* Speed Bonus Animation */}
       {showSpeedBonus && <SpeedBonusAnimation />}
-      
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          {/* Scratch Work Button — all categories */}
+
+      {/* Header — compact */}
+      <header className="flex-shrink-0 bg-[#021f3d] px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between mb-2">
           <WorkAreaButton onClick={() => setShowWorkArea(true)} />
-
-          <h1 className="text-xl font-extrabold text-white">{categoryName}</h1>
-
-          <div className="flex items-center gap-3">
-            {/* Hearts (solo only) */}
+          <h1 className="text-lg font-extrabold text-white">{categoryName}</h1>
+          <div className="flex items-center gap-2.5">
             {!isChallenge && (
               <div className="flex items-center gap-1">
-                <Heart className="w-4 h-4 text-red-400 fill-red-400" />
-                <span className="text-sm font-bold text-red-400">{hearts}</span>
+                <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" />
+                <span className="text-xs font-bold text-red-400">{hearts}</span>
               </div>
             )}
-            {/* Timer */}
             <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
           </div>
         </div>
-        
-        {/* Progress Pips */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {Array.from({ length: TOTAL_QUESTIONS }).map((_, index) => (
             <div
               key={index}
-              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                index <= currentQuestion
-                  ? "bg-[#378ADD]"
-                  : "bg-[#0a2d4a]"
+              className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                index <= currentQuestion ? "bg-[#378ADD]" : "bg-[#0a2d4a]"
               }`}
             />
           ))}
         </div>
       </header>
 
-      {/* Question Content — compact layout, no scroll on mobile */}
-      <main className="flex-1 flex flex-col px-4 pt-3 pb-4 overflow-hidden">
-        {/* Question Text — compact, no flex-1 */}
-        <div className="mb-3">
-          <h2 className="text-lg font-extrabold text-white text-center leading-snug px-1 max-w-xl mx-auto">
+      {/* Question Content — fills remaining space, no scroll */}
+      <main className="flex-1 flex flex-col px-4 pt-2 pb-3 min-h-0">
+        {/* Question Text */}
+        <div className="mb-2 flex-shrink-0">
+          <h2 className="text-base font-extrabold text-white text-center leading-snug px-1 max-w-xl mx-auto">
             {question?.question}
           </h2>
         </div>
 
-        {/* Answer Options */}
-        <div className="w-full max-w-[480px] mx-auto space-y-2 relative">
+        {/* Answer Options — take available space */}
+        <div className="w-full max-w-[480px] mx-auto space-y-1.5 relative flex-1 flex flex-col justify-center">
           {answerOptions.map((opt, index) => (
             <AnswerOption
               key={opt.letter}
@@ -981,27 +972,24 @@ function PlayPageContent() {
           ))}
         </div>
 
-        {/* Confirm / Next Button Area */}
-        <div className="w-full max-w-[480px] mx-auto mt-3">
-          {/* Confirm button — visible when answer is selected but not yet submitted */}
+        {/* Confirm / Next Button — pinned to bottom */}
+        <div className="w-full max-w-[480px] mx-auto mt-2 flex-shrink-0">
           {pendingAnswer !== null && selectedAnswer === null && (
             <button
               onClick={handleConfirmAnswer}
-              className="w-full bg-[#378ADD] text-white rounded-2xl py-3.5 px-6 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 animate-in fade-in duration-200"
+              className="w-full bg-[#378ADD] text-white rounded-xl py-3 px-5 flex items-center justify-center gap-2 font-extrabold text-sm shadow-lg shadow-[#378ADD]/30 active:scale-[0.98] animate-in fade-in duration-200"
             >
               lock in answer
-              <Check className="w-5 h-5" strokeWidth={3} />
+              <Check className="w-4 h-4" strokeWidth={3} />
             </button>
           )}
-
-          {/* Next Question button — visible after confirming */}
           {hasAnswered && !isTimeout && (
             <button
               onClick={handleNextQuestion}
-              className="w-full bg-[#378ADD] text-white rounded-2xl py-3.5 px-6 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 animate-in fade-in slide-in-from-bottom-4 duration-300"
+              className="w-full bg-[#378ADD] text-white rounded-xl py-3 px-5 flex items-center justify-center gap-2 font-extrabold text-sm shadow-lg shadow-[#378ADD]/30 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-4 duration-300"
             >
               {currentQuestion < TOTAL_QUESTIONS - 1 ? "next question" : "see results"}
-              <ChevronRight className="w-5 h-5" strokeWidth={3} />
+              <ChevronRight className="w-4 h-4" strokeWidth={3} />
             </button>
           )}
         </div>
@@ -1089,7 +1077,7 @@ function AnswerOption({
       <button
         onClick={() => onSelect(index)}
         disabled={hasConfirmed}
-        className={`w-full rounded-2xl py-2.5 px-4 flex items-center gap-3 transition-all duration-200 ${
+        className={`w-full rounded-xl py-2 px-3 flex items-center gap-2.5 transition-all duration-200 ${
           hasConfirmed ? "cursor-default" : "active:scale-[0.98] hover:shadow-lg cursor-pointer"
         } ${isPending ? "ring-2 ring-white/30 shadow-lg shadow-[#378ADD]/30" : ""}`}
         style={{
@@ -1109,7 +1097,7 @@ function AnswerOption({
         </div>
 
         {/* Answer Text */}
-        <span className="text-base font-bold flex-1 text-left">{option}</span>
+        <span className="text-sm font-bold flex-1 text-left leading-snug">{option}</span>
 
         {/* Check/X Icon */}
         {showAsCorrect && <Check className="w-5 h-5 flex-shrink-0" strokeWidth={3} />}
@@ -1255,170 +1243,95 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
   }
 
   return (
-    <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-5 py-8">
-      <div className="text-center mb-6">
-        {/* Answer Circles with Check/X */}
-        <div className="flex items-center justify-center gap-3 mb-3">
-          {answerResults.map((result, index) => (
-            <div
-              key={index}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                result.isCorrect
-                  ? "bg-green-500"
-                  : "bg-red-500"
-              }`}
-            >
-              {result.isCorrect ? (
-                <Check className="w-5 h-5 text-white" strokeWidth={3} />
-              ) : (
-                <X className="w-5 h-5 text-white" strokeWidth={3} />
-              )}
-            </div>
-          ))}
-        </div>
-        
-        {/* Difficulty Badges */}
-        <div className="flex items-center justify-center gap-3 mb-6">
+    <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center px-4 pt-6 pb-4">
+      {/* Score + Answer Pips — compact top section */}
+      <div className="text-center mb-3">
+        {/* Answer circles with difficulty color-coded borders */}
+        <div className="flex items-center justify-center gap-2.5 mb-3">
           {answerResults.map((result, index) => {
-            const colors = DIFFICULTY_COLORS[result.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+            const diffColor = result.difficulty === "hard" ? "#EF4444" : result.difficulty === "medium" ? "#F59E0B" : "#22C55E"
             return (
-              <span
-                key={index}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}
-              >
-                {result.difficulty}
-              </span>
+              <div key={index} className="flex flex-col items-center gap-1">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    result.isCorrect ? "bg-green-500" : "bg-red-500"
+                  }`}
+                >
+                  {result.isCorrect ? (
+                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                  ) : (
+                    <X className="w-4 h-4 text-white" strokeWidth={3} />
+                  )}
+                </div>
+                <span className="text-[9px] font-bold" style={{ color: diffColor }}>{result.difficulty}</span>
+              </div>
             )
           })}
         </div>
 
-        <h1 className="text-5xl font-extrabold text-white mb-2">
-          {correctCount} out of {TOTAL_QUESTIONS}
+        <h1 className="text-4xl font-extrabold text-white leading-none">
+          {correctCount}/{TOTAL_QUESTIONS}
         </h1>
-        <p className="text-[#85B7EB] text-xl font-semibold">{categoryName}</p>
-        <p className="text-[#85B7EB]/80 text-lg mt-4 max-w-xs mx-auto">
+        <p className="text-[#85B7EB] text-base font-semibold mt-0.5">{categoryName}</p>
+        <p className="text-[#85B7EB]/70 text-sm mt-1.5 max-w-[280px] mx-auto leading-snug">
           {getEncouragementMessage(correctCount)}
         </p>
       </div>
 
-      {/* Running gem total */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <Diamond className="w-3.5 h-3.5 text-[#F59E0B] fill-[#F59E0B]" />
-        <span className="text-sm text-[#85B7EB]/70">your total: {totalGems} gems</span>
-      </div>
-
-      {/* Guest save-progress banner */}
+      {/* Guest save-progress banner — compact */}
       {isGuest && (
-        <div className="w-full max-w-sm mb-4 bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl px-5 py-4 flex items-center justify-between gap-3">
-          <p className="text-[#85B7EB] text-sm font-medium leading-snug flex-1">
+        <div className="w-full max-w-sm mb-3 bg-[#0a2d4a] border border-[#378ADD]/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-2">
+          <p className="text-[#85B7EB] text-xs font-medium leading-snug flex-1">
             save your progress — create a free account
           </p>
           <a
             href="/login"
-            className="bg-[#378ADD] text-white text-sm font-bold rounded-xl px-4 py-2 whitespace-nowrap hover:brightness-110 transition-all"
+            className="bg-[#378ADD] text-white text-xs font-bold rounded-lg px-3 py-1.5 whitespace-nowrap"
           >
-            sign up free
+            sign up
           </a>
         </div>
       )}
 
-      {/* Gems Earned Card */}
-      <div className="w-full max-w-sm mb-4 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 border border-[#F59E0B]/40 rounded-2xl p-5">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <Diamond className="w-6 h-6 text-[#F59E0B] fill-[#F59E0B]" />
-          <span className="text-2xl font-extrabold text-white">+{gemsEarned} gems</span>
+      {/* Gems Earned — merged with difficulty stats */}
+      <div className="w-full max-w-sm mb-3 bg-gradient-to-r from-[#F59E0B]/15 to-[#F97316]/15 border border-[#F59E0B]/30 rounded-xl p-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <Diamond className="w-5 h-5 text-[#F59E0B] fill-[#F59E0B]" />
+            <span className="text-xl font-extrabold text-white">+{gemsEarned}</span>
+          </div>
+          <span className="text-xs text-[#85B7EB]/50">total: {totalGems}</span>
         </div>
-        
-        {/* Breakdown */}
-        <div className="space-y-1">
+        {/* Breakdown — single line items */}
+        <div className="space-y-0.5">
           {breakdown.map((item, index) => (
-            <div key={index} className="flex justify-between text-sm">
-              <span className="text-[#85B7EB]/80">{item.label}</span>
+            <div key={index} className="flex justify-between text-xs">
+              <span className="text-[#85B7EB]/70">{item.label}</span>
               <span className="text-[#F59E0B] font-semibold">+{item.amount}</span>
             </div>
           ))}
         </div>
       </div>
-      
-      {/* Difficulty Breakdown Stats */}
-      <div className="w-full max-w-sm mb-6 bg-[#0a2d4a] rounded-2xl p-4">
-        <p className="text-xs font-bold text-[#85B7EB]/60 mb-2 uppercase tracking-wide">By Difficulty</p>
-        <div className="flex justify-between gap-2">
-          <div className="flex-1 text-center">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.easy.text}`}>{difficultyStats.easy}</span>
-            <p className="text-xs text-[#85B7EB]/60">easy</p>
-          </div>
-          <div className="flex-1 text-center border-x border-[#85B7EB]/20">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.medium.text}`}>{difficultyStats.medium}</span>
-            <p className="text-xs text-[#85B7EB]/60">medium</p>
-          </div>
-          <div className="flex-1 text-center">
-            <span className={`text-lg font-bold ${DIFFICULTY_COLORS.hard.text}`}>{difficultyStats.hard}</span>
-            <p className="text-xs text-[#85B7EB]/60">hard</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Play Again Button */}
-      <button
-        onClick={onPlayAgain}
-        className="w-full max-w-sm mb-6 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg transition-all active:scale-[0.98] hover:bg-[#378ADD]/10"
-      >
-        <RotateCcw className="w-5 h-5" strokeWidth={2.5} />
-        play again
-      </button>
-
-      {/* Category Picker */}
-      <div className="w-full max-w-sm mb-6">
-        <p className="text-[#85B7EB]/60 text-sm font-medium mb-3 text-center">try a different category</p>
-        <div className="grid grid-cols-2 gap-2">
-          {CATEGORIES.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategorySelect(category.id)}
-              className="bg-white rounded-xl p-3 flex flex-col items-start transition-all active:scale-[0.98] hover:shadow-lg"
-              style={{
-                borderLeft: `3px solid ${category.color}`,
-              }}
-            >
-              <span className="text-[#0a1628] font-bold text-sm">{category.name}</span>
-              <span 
-                className="text-xs font-semibold mt-0.5 flex items-center gap-0.5"
-                style={{ color: category.color }}
-              >
-                play <ChevronRight className="w-3 h-3" strokeWidth={3} />
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Home link */}
-      <a
-        href="/"
-        className="text-[#85B7EB]/50 text-sm font-medium mb-4 hover:text-[#85B7EB] transition-colors"
-      >
-        ← back to home
-      </a>
-
-      {/* Challenge Section */}
-      <div className="w-full max-w-sm space-y-3">
+      {/* Action buttons — primary actions first */}
+      <div className="w-full max-w-sm space-y-2.5 mb-3">
+        {/* Challenge section — top priority */}
         {isCreatorChallenge && creatorChallengeCode ? (
-          /* Creator just finished playing their challenge — show share reminder */
-          <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl p-5">
-            <p className="text-white font-bold text-center mb-1">your score is locked in!</p>
-            <p className="text-[#85B7EB]/70 text-sm text-center mb-4">share the link so your friend can try to beat you</p>
-            <div className="flex items-center gap-2 bg-[#021f3d] rounded-xl px-3 py-2.5 mb-3">
-              <span className="text-[#85B7EB] text-sm flex-1 truncate">{getChallengeUrl(creatorChallengeCode)}</span>
+          /* Creator just finished — share reminder */
+          <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-xl p-3.5">
+            <p className="text-white font-bold text-sm text-center mb-1">score locked in!</p>
+            <p className="text-[#85B7EB]/60 text-xs text-center mb-3">share so your friend can try to beat you</p>
+            <div className="flex items-center gap-2 bg-[#021f3d] rounded-lg px-3 py-2 mb-2.5">
+              <span className="text-[#85B7EB] text-xs flex-1 truncate font-mono">{getChallengeUrl(creatorChallengeCode)}</span>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(getChallengeUrl(creatorChallengeCode))
                   setLinkCopied(true)
                   setTimeout(() => setLinkCopied(false), 2000)
                 }}
-                className="text-[#378ADD] hover:text-white transition-colors flex-shrink-0"
+                className="text-[#378ADD] flex-shrink-0"
               >
-                {linkCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                {linkCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
             <div className="flex gap-2">
@@ -1428,9 +1341,9 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                   setLinkCopied(true)
                   setTimeout(() => setLinkCopied(false), 2000)
                 }}
-                className="flex-1 bg-[#378ADD] text-white rounded-xl py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110"
+                className="flex-1 bg-[#378ADD] text-white rounded-lg py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.98]"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-3.5 h-3.5" />
                 {linkCopied ? "copied!" : "copy link"}
               </button>
               {typeof navigator !== "undefined" && navigator.share && (
@@ -1442,33 +1355,50 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                       url: getChallengeUrl(creatorChallengeCode),
                     }).catch(() => {})
                   }}
-                  className="bg-[#378ADD]/20 text-[#378ADD] rounded-xl px-4 py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:bg-[#378ADD]/30"
+                  className="bg-[#378ADD]/20 text-[#378ADD] rounded-lg px-3.5 py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <Share2 className="w-3.5 h-3.5" />
                   share
                 </button>
               )}
             </div>
           </div>
         ) : challengeCode ? (
-          /* Challenger just finished — link to see head-to-head results */
+          /* Challenger — see results */
           <a
             href={`/challenge/${challengeCode}`}
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+            className="w-full bg-[#378ADD] text-white rounded-xl py-3.5 px-5 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 active:scale-[0.98]"
           >
-            <Swords className="w-5 h-5" />
+            <Swords className="w-4 h-4" />
             see head-to-head results
           </a>
         ) : (
-          /* Solo round — link to challenge from home */
+          /* Solo — challenge from home */
           <a
             href="/"
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+            className="w-full bg-[#378ADD] text-white rounded-xl py-3.5 px-5 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 active:scale-[0.98]"
           >
-            <Swords className="w-5 h-5" />
+            <Swords className="w-4 h-4" />
             challenge a friend
           </a>
         )}
+
+        {/* Play again + category picker row */}
+        <div className="flex gap-2">
+          <button
+            onClick={onPlayAgain}
+            className="flex-1 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-xl py-3 flex items-center justify-center gap-1.5 font-bold text-sm active:scale-[0.98]"
+          >
+            <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
+            play again
+          </button>
+          <a
+            href="/"
+            className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 flex items-center justify-center gap-1.5 font-bold text-sm active:scale-[0.98]"
+          >
+            home
+          </a>
+        </div>
       </div>
 
       {/* Review Wrong Answers Modal */}

@@ -75,23 +75,22 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2">
       {CATEGORIES.map((category) => (
         <Link
           key={category.id}
           href={`/play?category=${encodeURIComponent(category.id)}`}
-          className="bg-white rounded-2xl p-5 flex flex-col items-start transition-all active:scale-[0.98] hover:shadow-lg"
+          className="bg-white rounded-xl py-3 px-3.5 flex items-center justify-between transition-all active:scale-[0.98] hover:shadow-lg"
           style={{
-            borderLeft: `4px solid ${category.color}`,
+            borderLeft: `3px solid ${category.color}`,
           }}
         >
-          <div className="flex items-center justify-between w-full">
-            <span className="text-[#0a1628] font-extrabold text-base">{category.name}</span>
+          <div>
+            <span className="text-[#0a1628] font-extrabold text-sm block">{category.name}</span>
             {levels[category.id] && (
               <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-[9px] font-bold"
                 style={{
-                  backgroundColor: `${DIFFICULTY_BADGE[levels[category.id]]?.color ?? "#22c55e"}20`,
                   color: DIFFICULTY_BADGE[levels[category.id]]?.color ?? "#22c55e",
                 }}
               >
@@ -99,12 +98,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
               </span>
             )}
           </div>
-          <span
-            className="text-sm font-bold mt-2 flex items-center gap-1"
-            style={{ color: category.color }}
-          >
-            play <ChevronRight className="w-4 h-4" strokeWidth={3} />
-          </span>
+          <ChevronRight className="w-4 h-4 flex-shrink-0" strokeWidth={3} style={{ color: category.color }} />
         </Link>
       ))}
     </div>
