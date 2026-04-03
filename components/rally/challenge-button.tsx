@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2 } from "lucide-react"
+import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2, Share2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
@@ -51,6 +51,7 @@ export function ChallengeButton() {
       setShareCode(null)
       setShareUrl(null)
       setCopied(false)
+      setLinkShared(false)
       setSelectedCategory(null)
       setIsCreating(false)
       setShowPicker(true)
@@ -102,12 +103,16 @@ export function ChallengeButton() {
     }
   }
 
+  // Track whether the link has been shared/copied (gates play button)
+  const [linkShared, setLinkShared] = useState(false)
+
   const handleCopyLink = async () => {
     if (!shareUrl) return
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
-      toast.success("link copied!", {
+      setLinkShared(true)
+      toast.success("link copied! now tap play", {
         style: { background: "#16a34a", border: "none", color: "#ffffff" },
         duration: 2000,
       })
@@ -117,6 +122,21 @@ export function ChallengeButton() {
       toast.error("couldn't copy — long press the link to copy", {
         style: { background: "#dc2626", border: "none", color: "#ffffff" },
       })
+    }
+  }
+
+  const handleShareLink = async () => {
+    if (!shareUrl) return
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Rally Challenge", url: shareUrl })
+        setLinkShared(true)
+      } else {
+        // Fallback to copy
+        await handleCopyLink()
+      }
+    } catch {
+      // User cancelled share — that's fine, don't mark as shared
     }
   }
 
@@ -195,35 +215,55 @@ export function ChallengeButton() {
               </div>
             )}
 
-            {/* State 3: Share link + play */}
+            {/* State 3: Share link (must share before playing) */}
             {shareCode && shareUrl && !isCreating && (
               <>
                 <p className="text-xs text-[#85B7EB]/60 mb-3">
-                  send this link to your friend, then tap play
+                  {linkShared
+                    ? "link sent! now play your round"
+                    : "send this link to your friend to unlock play"}
                 </p>
 
-                {/* Share link box — tap to copy */}
-                <div
-                  className="bg-[#021f3d] rounded-lg px-3 py-2.5 flex items-center gap-2 mb-3 cursor-pointer active:scale-[0.99]"
-                  onClick={handleCopyLink}
-                >
-                  <span className="text-xs text-white font-mono flex-1 truncate">{shareUrl}</span>
-                  <div className="flex-shrink-0">
+                {/* Share / Copy buttons */}
+                <div className="flex gap-2 mb-3">
+                  {/* Share button (uses native share on mobile, copy on desktop) */}
+                  <button
+                    onClick={handleShareLink}
+                    className="flex-1 bg-[#021f3d] rounded-lg px-3 py-2.5 flex items-center justify-center gap-2 active:scale-[0.99]"
+                  >
+                    <Share2 className="w-4 h-4 text-[#378ADD]" />
+                    <span className="text-xs text-white font-semibold">share link</span>
+                  </button>
+
+                  {/* Copy button */}
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex-1 bg-[#021f3d] rounded-lg px-3 py-2.5 flex items-center justify-center gap-2 active:scale-[0.99]"
+                  >
                     {copied ? (
                       <Check className="w-4 h-4 text-green-400" />
                     ) : (
                       <Copy className="w-4 h-4 text-[#378ADD]" />
                     )}
-                  </div>
+                    <span className="text-xs text-white font-semibold">
+                      {copied ? "copied!" : "copy link"}
+                    </span>
+                  </button>
                 </div>
 
-                {/* Play now button */}
-                <button
-                  onClick={handlePlayNow}
-                  className="w-full py-3.5 rounded-xl bg-[#378ADD] text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-[#378ADD]/30"
-                >
-                  play your round <ChevronRight className="w-5 h-5" strokeWidth={3} />
-                </button>
+                {/* Play now button — ONLY shown after link has been shared/copied */}
+                {linkShared ? (
+                  <button
+                    onClick={handlePlayNow}
+                    className="w-full py-3.5 rounded-xl bg-[#378ADD] text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-[#378ADD]/30"
+                  >
+                    play your round <ChevronRight className="w-5 h-5" strokeWidth={3} />
+                  </button>
+                ) : (
+                  <div className="w-full py-3.5 rounded-xl bg-[#378ADD]/30 text-white/40 font-bold text-base flex items-center justify-center gap-2 cursor-not-allowed">
+                    share link to unlock play
+                  </div>
+                )}
 
                 <p className="text-center text-[11px] text-[#85B7EB]/40 mt-2">
                   your friend plays the same questions · highest score wins
