@@ -43,7 +43,7 @@ export interface Challenge {
   id: number
   share_code: string
   category: string
-  question_ids: ChallengePool // shared pool: 5 easy + 5 medium + 5 hard IDs
+  question_ids: number[] // flat array: [5 easy, 5 medium, 5 hard] — use poolFromFlat() to reconstruct
   creator_name: string
   creator_score: number // gems earned (-1 = hasn't played yet)
   creator_results: ChallengeResult[] | null
@@ -53,6 +53,20 @@ export interface Challenge {
   status: "pending" | "completed"
   created_at: string
   completed_at: string | null
+}
+
+/** Flatten a pool into [easy0..4, medium0..4, hard0..4] for DB storage */
+export function poolToFlat(pool: ChallengePool): number[] {
+  return [...pool.easy, ...pool.medium, ...pool.hard]
+}
+
+/** Reconstruct a pool from a flat array [easy0..4, medium0..4, hard0..4] */
+export function poolFromFlat(flat: number[]): ChallengePool {
+  return {
+    easy: flat.slice(0, 5),
+    medium: flat.slice(5, 10),
+    hard: flat.slice(10, 15),
+  }
 }
 
 /**
@@ -76,7 +90,7 @@ export async function createChallenge(params: {
     const { error } = await supabase.from("challenges").insert({
       share_code: shareCode,
       category: params.category,
-      question_ids: params.questionPool, // jsonb: { easy: [...], medium: [...], hard: [...] }
+      question_ids: poolToFlat(params.questionPool), // [5 easy, 5 medium, 5 hard]
       creator_name: params.creatorName,
       creator_score: -1, // sentinel: hasn't played yet
       creator_results: null,

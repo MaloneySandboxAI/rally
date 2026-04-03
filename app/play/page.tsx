@@ -9,7 +9,7 @@ import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
-import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, type ChallengeResult, type ChallengePool } from "@/lib/challenges"
+import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, poolFromFlat, type ChallengeResult, type ChallengePool } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { createClient } from "@/lib/supabase/client"
@@ -463,9 +463,9 @@ function PlayPageContent() {
             setCreatorScore(challenge.creator_score)
           }
 
-          // Load the shared pool
-          const pool = challenge.question_ids as unknown as ChallengePool
-          if (!pool || !pool.easy || !pool.medium || !pool.hard) {
+          // Reconstruct the shared pool from flat array [5 easy, 5 medium, 5 hard]
+          const pool = poolFromFlat(challenge.question_ids)
+          if (!pool.easy.length && !pool.medium.length && !pool.hard.length) {
             throw new Error("Challenge data is invalid — please try a new challenge.")
           }
           challengePoolRef.current = pool
