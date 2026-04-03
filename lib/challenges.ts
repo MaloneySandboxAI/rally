@@ -39,12 +39,12 @@ export interface Challenge {
   category: string
   question_ids: number[]
   creator_name: string
-  creator_score: number | null
+  creator_score: number // -1 means creator hasn't played yet
   creator_results: ChallengeResult[] | null
   challenger_name: string | null
   challenger_score: number | null
   challenger_results: ChallengeResult[] | null
-  status: "created" | "pending" | "completed"
+  status: "pending" | "completed"
   created_at: string
   completed_at: string | null
 }
@@ -71,9 +71,9 @@ export async function createChallenge(params: {
       category: params.category,
       question_ids: params.questionIds,
       creator_name: params.creatorName,
-      creator_score: null,
+      creator_score: -1,
       creator_results: null,
-      status: "created",
+      status: "pending",
     })
 
     if (!error) {
@@ -92,7 +92,7 @@ export async function createChallenge(params: {
 
 /**
  * Update the creator's results after they finish playing their own challenge.
- * Transitions status from "created" → "pending" (waiting for challenger).
+ * Only updates if creator_score is still -1 (hasn't played yet).
  */
 export async function updateCreatorResults(params: {
   shareCode: string
@@ -107,10 +107,9 @@ export async function updateCreatorResults(params: {
     .update({
       creator_score: params.creatorScore,
       creator_results: params.creatorResults,
-      status: "pending",
     })
     .eq("share_code", params.shareCode)
-    .eq("status", "created") // Only update if still in "created" state
+    .eq("creator_score", -1) // Only update if creator hasn't played yet
 
   if (error) {
     console.error("[rally] Error updating creator results:", error)
@@ -163,7 +162,7 @@ export async function completeChallenge(params: {
       completed_at: new Date().toISOString(),
     })
     .eq("share_code", params.shareCode)
-    .in("status", ["pending", "created"]) // Accept both states (creator may not have played yet)
+    .eq("status", "pending") // Only complete if still pending
 
   if (error) {
     console.error("[rally] Error completing challenge:", error)

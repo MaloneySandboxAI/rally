@@ -740,7 +740,7 @@ function PlayPageContent() {
 
       // Challenge outcome bonus (win/loss/tie)
       let outcomeBonus = 0
-      if (isChallenge && creatorScore !== null) {
+      if (isChallenge && creatorScore !== null && creatorScore >= 0) {
         if (correctCount > creatorScore) {
           outcomeBonus = GEM_VALUES.challengeOutcome.win
         } else if (correctCount < creatorScore) {
@@ -1213,7 +1213,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
   // Challenge outcome bonus
   let outcomeBonus = 0
   let outcomeLabel = ""
-  if (isChallenge && creatorScore !== null) {
+  if (isChallenge && creatorScore !== null && creatorScore >= 0) {
     if (correctCount > creatorScore) {
       outcomeBonus = GEM_VALUES.challengeOutcome.win
       outcomeLabel = "challenge won!"

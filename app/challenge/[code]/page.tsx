@@ -116,7 +116,7 @@ export default function ChallengePage() {
   }
 
   // Challenge is pending or created — show accept screen
-  const hasCreatorScore = challenge.creator_score !== null
+  const hasCreatorScore = challenge.creator_score >= 0
   return (
     <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
       <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
