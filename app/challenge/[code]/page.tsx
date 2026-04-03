@@ -117,13 +117,17 @@ export default function ChallengePage() {
     )
   }
 
-  // Challenge is pending — show accept screen
+  // Challenge is pending or created — show accept screen
+  const hasCreatorScore = challenge.creator_score !== null
   return (
     <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 text-center">
       <Swords className="w-16 h-16 text-[#378ADD] mb-4" />
       <h1 className="text-2xl font-extrabold text-white mb-1">you&apos;ve been challenged!</h1>
       <p className="text-[#85B7EB]/60 text-sm mb-2">
-        {challenge.creator_name} scored {challenge.creator_score}/5 in {getCategoryDisplay(challenge.category)}
+        {hasCreatorScore
+          ? `${challenge.creator_name} scored ${challenge.creator_score}/5 in ${getCategoryDisplay(challenge.category)}`
+          : `${challenge.creator_name} challenged you in ${getCategoryDisplay(challenge.category)}`
+        }
       </p>
       <p className="text-[#85B7EB]/40 text-xs mb-8">
         play the same 5 questions and see who wins

@@ -39,26 +39,25 @@ export interface Challenge {
   category: string
   question_ids: number[]
   creator_name: string
-  creator_score: number
+  creator_score: number | null
   creator_results: ChallengeResult[] | null
   challenger_name: string | null
   challenger_score: number | null
   challenger_results: ChallengeResult[] | null
-  status: "pending" | "completed"
+  status: "created" | "pending" | "completed"
   created_at: string
   completed_at: string | null
 }
 
 /**
- * Create a new challenge after the creator finishes their round.
+ * Create a new challenge BEFORE the creator plays.
+ * Locks in the question set and share code; creator results are filled in later.
  * Returns the share code for the link.
  */
 export async function createChallenge(params: {
   category: string
   questionIds: number[]
   creatorName: string
-  creatorScore: number
-  creatorResults: ChallengeResult[]
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
   const supabase = getSupabase()
@@ -72,9 +71,9 @@ export async function createChallenge(params: {
       category: params.category,
       question_ids: params.questionIds,
       creator_name: params.creatorName,
-      creator_score: params.creatorScore,
-      creator_results: params.creatorResults,
-      status: "pending",
+      creator_score: null,
+      creator_results: null,
+      status: "created",
     })
 
     if (!error) {
@@ -89,6 +88,36 @@ export async function createChallenge(params: {
   }
 
   return null
+}
+
+/**
+ * Update the creator's results after they finish playing their own challenge.
+ * Transitions status from "created" → "pending" (waiting for challenger).
+ */
+export async function updateCreatorResults(params: {
+  shareCode: string
+  creatorScore: number
+  creatorResults: ChallengeResult[]
+}): Promise<boolean> {
+  if (typeof window === "undefined") return false
+  const supabase = getSupabase()
+
+  const { error } = await supabase
+    .from("challenges")
+    .update({
+      creator_score: params.creatorScore,
+      creator_results: params.creatorResults,
+      status: "pending",
+    })
+    .eq("share_code", params.shareCode)
+    .eq("status", "created") // Only update if still in "created" state
+
+  if (error) {
+    console.error("[rally] Error updating creator results:", error)
+    return false
+  }
+
+  return true
 }
 
 /**
@@ -134,7 +163,7 @@ export async function completeChallenge(params: {
       completed_at: new Date().toISOString(),
     })
     .eq("share_code", params.shareCode)
-    .eq("status", "pending") // Only update if still pending (prevent double-submit)
+    .in("status", ["pending", "created"]) // Accept both states (creator may not have played yet)
 
   if (error) {
     console.error("[rally] Error completing challenge:", error)

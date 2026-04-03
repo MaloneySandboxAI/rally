@@ -4,12 +4,12 @@ import { useState, useCallback, useEffect, Suspense, useRef } from "react"
 import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
-import { ChallengeWaitlistSheet } from "@/components/rally/challenge-waitlist-sheet"
+// ChallengeWaitlistSheet removed — challenges are now created before playing
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getQuestions, getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
-import { createChallenge, getChallengeUrl, completeChallenge, getChallenge, type ChallengeResult } from "@/lib/challenges"
+import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, type ChallengeResult } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { createClient } from "@/lib/supabase/client"
@@ -353,8 +353,10 @@ function getDetailedExplanation(q: Question): {
 
 function PlayPageContent() {
   const searchParams = useSearchParams()
-  const isChallenge = searchParams.get("challenge") === "true"
   const challengeCode = searchParams.get("challengeCode") || null
+  const creatorChallengeCode = searchParams.get("creatorChallenge") || null
+  const isChallenge = searchParams.get("challenge") === "true" || !!creatorChallengeCode || !!challengeCode
+  const isCreatorChallenge = !!creatorChallengeCode // creator playing their own challenge (pre-play flow)
   const categoryParam = searchParams.get("category") || "Algebra"
   const { totalGems, addGems } = useGems()
   
@@ -417,7 +419,24 @@ function PlayPageContent() {
 
     async function loadFirstQuestion() {
       try {
-        // CHALLENGE MODE: fetch all 5 questions by ID from the challenge
+        // CREATOR CHALLENGE MODE: creator plays their own challenge (pre-play flow)
+        if (creatorChallengeCode) {
+          const challenge = await getChallenge(creatorChallengeCode)
+          if (!challenge) {
+            throw new Error("Challenge not found — the link may be expired or invalid.")
+          }
+          const questions = await getQuestionsByIds(challenge.question_ids)
+          if (questions.length === 0) {
+            throw new Error("couldn't load challenge questions — try again")
+          }
+          console.log(`[rally] Creator challenge mode — loaded ${questions.length} questions for code: ${creatorChallengeCode}`)
+          setSessionQuestions(questions)
+          setIsQuestionsReady(true)
+          setFetchError(null)
+          return
+        }
+
+        // CHALLENGER MODE: friend plays via share link
         if (challengeCode) {
           const challenge = await getChallenge(challengeCode)
           if (!challenge) {
@@ -432,7 +451,7 @@ function PlayPageContent() {
           if (questions.length === 0) {
             throw new Error("couldn't load challenge questions — try again")
           }
-          console.log(`[rally] Challenge mode — loaded ${questions.length} questions for code: ${challengeCode}`)
+          console.log(`[rally] Challenger mode — loaded ${questions.length} questions for code: ${challengeCode}`)
           setCreatorScore(challenge.creator_score)
           setSessionQuestions(questions)
           setIsQuestionsReady(true)
@@ -469,7 +488,7 @@ function PlayPageContent() {
 
     loadFirstQuestion()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, isQuestionsReady, categoryParam, challengeCode])
+  }, [isMounted, isQuestionsReady, categoryParam, challengeCode, creatorChallengeCode])
 
   // Fetch the NEXT question adaptively after each answer
   const fetchNextQuestion = useCallback(async () => {
@@ -754,8 +773,31 @@ function PlayPageContent() {
       }
       setGemsAwarded(true)
 
-      // If this was a challenge, submit results to Supabase
-      if (challengeCode) {
+      // If creator just finished their own challenge, update their results
+      if (creatorChallengeCode) {
+        ;(async () => {
+          const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
+            questionIndex: i,
+            isCorrect: r.isCorrect,
+            difficulty: r.difficulty,
+            wasSpeedBonus: r.wasSpeedBonus,
+            gemsEarned: r.gemsEarned,
+            chosenAnswerIndex: r.chosenAnswerIndex,
+          }))
+          const success = await updateCreatorResults({
+            shareCode: creatorChallengeCode,
+            creatorScore: correctCount,
+            creatorResults: challengeResults,
+          })
+          if (success) {
+            console.log("[rally] Creator results updated successfully!")
+          } else {
+            console.error("[rally] Failed to update creator results")
+          }
+        })()
+      }
+      // If challenger just finished, submit results to complete the challenge
+      else if (challengeCode) {
         ;(async () => {
           const challengerName = await getDisplayName()
           const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
@@ -780,7 +822,7 @@ function PlayPageContent() {
         })()
       }
     }
-  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode, creatorScore])
+  }, [showResults, gemsAwarded, isChallenge, addGems, answerResults, categoryParam, challengeCode, creatorChallengeCode, creatorScore])
 
   // Derived values for rendering (always computed, never early return)
   const hasAnswered = selectedAnswer !== null
@@ -854,7 +896,9 @@ function PlayPageContent() {
       <ResultsScreen
         score={score}
         isChallenge={isChallenge}
+        isCreatorChallenge={isCreatorChallenge}
         challengeCode={challengeCode}
+        creatorChallengeCode={creatorChallengeCode}
         categoryId={categoryParam}
         categoryName={categoryName}
         onPlayAgain={handlePlayAgain}
@@ -1090,7 +1134,9 @@ function AnswerOption({
 interface ResultsScreenProps {
   score: number
   isChallenge: boolean
+  isCreatorChallenge: boolean
   challengeCode: string | null
+  creatorChallengeCode: string | null
   categoryId: string
   categoryName: string
   onPlayAgain: () => void
@@ -1106,16 +1152,13 @@ function getEncouragementMessage(score: number): string {
   return "Tough round. Challenge a friend and see how they do"
 }
 
-function ResultsScreen({ score, isChallenge, challengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore }: ResultsScreenProps) {
-  const [showWaitlistSheet, setShowWaitlistSheet] = useState(false)
+function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore }: ResultsScreenProps) {
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [copiedPromptIdx, setCopiedPromptIdx] = useState<number | null>(null)
-  const [challengeShareCode, setChallengeShareCode] = useState<string | null>(null)
-  const [isCreatingChallenge, setIsCreatingChallenge] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
   const toggleExpanded = (idx: number) => {
@@ -1358,26 +1401,18 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
         ← back to home
       </a>
 
-      {/* Challenge a Friend */}
+      {/* Challenge Section */}
       <div className="w-full max-w-sm space-y-3">
-        {challengeCode ? (
-          /* Challenger just finished — link to see head-to-head results */
-          <a
-            href={`/challenge/${challengeCode}`}
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
-          >
-            <Swords className="w-5 h-5" />
-            see head-to-head results
-          </a>
-        ) : challengeShareCode ? (
-          /* Creator just generated a challenge link — show share UI */
+        {isCreatorChallenge && creatorChallengeCode ? (
+          /* Creator just finished playing their challenge — show share reminder */
           <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-2xl p-5">
-            <p className="text-white font-bold text-center mb-3">challenge created!</p>
+            <p className="text-white font-bold text-center mb-1">your score is locked in!</p>
+            <p className="text-[#85B7EB]/70 text-sm text-center mb-4">share the link so your friend can try to beat you</p>
             <div className="flex items-center gap-2 bg-[#021f3d] rounded-xl px-3 py-2.5 mb-3">
-              <span className="text-[#85B7EB] text-sm flex-1 truncate">{getChallengeUrl(challengeShareCode)}</span>
+              <span className="text-[#85B7EB] text-sm flex-1 truncate">{getChallengeUrl(creatorChallengeCode)}</span>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(getChallengeUrl(challengeShareCode))
+                  navigator.clipboard.writeText(getChallengeUrl(creatorChallengeCode))
                   setLinkCopied(true)
                   setTimeout(() => setLinkCopied(false), 2000)
                 }}
@@ -1389,7 +1424,7 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(getChallengeUrl(challengeShareCode))
+                  navigator.clipboard.writeText(getChallengeUrl(creatorChallengeCode))
                   setLinkCopied(true)
                   setTimeout(() => setLinkCopied(false), 2000)
                 }}
@@ -1404,7 +1439,7 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
                     navigator.share({
                       title: "Rally Challenge",
                       text: `I scored ${score}/5 in ${categoryName} on Rally! Think you can beat me?`,
-                      url: getChallengeUrl(challengeShareCode),
+                      url: getChallengeUrl(creatorChallengeCode),
                     }).catch(() => {})
                   }}
                   className="bg-[#378ADD]/20 text-[#378ADD] rounded-xl px-4 py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:bg-[#378ADD]/30"
@@ -1415,67 +1450,24 @@ function ResultsScreen({ score, isChallenge, challengeCode, categoryId, category
               )}
             </div>
           </div>
-        ) : !isLoggedIn ? (
-          /* Guest — prompt to sign in before creating challenge */
+        ) : challengeCode ? (
+          /* Challenger just finished — link to see head-to-head results */
           <a
-            href="/login"
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex flex-col items-center justify-center gap-1 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
-          >
-            <div className="flex items-center gap-2">
-              <Swords className="w-5 h-5" />
-              challenge a friend
-            </div>
-            <span className="text-xs font-semibold text-white/70">sign in to create challenges</span>
-          </a>
-        ) : (
-          /* Logged in — create a new challenge */
-          <button
-            onClick={async () => {
-              if (isCreatingChallenge) return
-              setIsCreatingChallenge(true)
-              try {
-                const creatorName = await getDisplayName()
-                const questionIds = sessionQuestions.map(q => q.id)
-                const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
-                  questionIndex: i,
-                  isCorrect: r.isCorrect,
-                  difficulty: r.difficulty,
-                  wasSpeedBonus: r.wasSpeedBonus,
-                  gemsEarned: r.gemsEarned,
-                  chosenAnswerIndex: r.chosenAnswerIndex,
-                }))
-                const shareCode = await createChallenge({
-                  category: categoryId,
-                  questionIds,
-                  creatorName,
-                  creatorScore: score,
-                  creatorResults: challengeResults,
-                })
-                if (shareCode) {
-                  setChallengeShareCode(shareCode)
-                  // Auto-copy to clipboard
-                  try {
-                    await navigator.clipboard.writeText(getChallengeUrl(shareCode))
-                    setLinkCopied(true)
-                    setTimeout(() => setLinkCopied(false), 2000)
-                  } catch {}
-                  toast.success("Challenge link copied!", { duration: 3000 })
-                } else {
-                  toast.error("Couldn't create challenge — try again", { duration: 3000 })
-                }
-              } catch (err) {
-                console.error("[rally] Error creating challenge:", err)
-                toast.error("Couldn't create challenge — try again", { duration: 3000 })
-              } finally {
-                setIsCreatingChallenge(false)
-              }
-            }}
-            disabled={isCreatingChallenge}
-            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110 disabled:opacity-60"
+            href={`/challenge/${challengeCode}`}
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
           >
             <Swords className="w-5 h-5" />
-            {isCreatingChallenge ? "creating..." : "challenge a friend"}
-          </button>
+            see head-to-head results
+          </a>
+        ) : (
+          /* Solo round — link to challenge from home */
+          <a
+            href="/"
+            className="w-full bg-[#378ADD] text-white rounded-2xl py-4 px-6 flex items-center justify-center gap-2 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.98] hover:brightness-110"
+          >
+            <Swords className="w-5 h-5" />
+            challenge a friend
+          </a>
         )}
       </div>
 
