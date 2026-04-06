@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { PostHogProvider } from '@/lib/posthog-provider'
 import { FeedbackButton } from '@/components/rally/feedback-button'
 import { GemProvider } from '@/lib/gem-context'
 import { QuestionTrackerProvider } from '@/lib/question-tracker-context'
@@ -53,15 +54,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
-        <GemProvider>
-          <QuestionTrackerProvider>
-            <AuthGate>
-              {children}
-              <FeedbackButton />
-              <Toaster position="top-center" />
-            </AuthGate>
-          </QuestionTrackerProvider>
-        </GemProvider>
+        <PostHogProvider>
+          <GemProvider>
+            <QuestionTrackerProvider>
+              <AuthGate>
+                {children}
+                <FeedbackButton />
+                <Toaster position="top-center" />
+              </AuthGate>
+            </QuestionTrackerProvider>
+          </GemProvider>
+        </PostHogProvider>
         <Analytics />
       </body>
     </html>
