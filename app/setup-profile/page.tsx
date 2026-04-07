@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { User2, Check, AlertCircle, Loader2 } from "lucide-react"
+import { processPendingReferral } from "@/lib/referrals"
 
 export default function SetupProfilePage() {
   const router = useRouter()
@@ -110,10 +111,15 @@ export default function SetupProfilePage() {
       data: { display_name: username },
     })
 
+    // Process any pending referral (from /join?ref=CODE link)
+    await processPendingReferral()
+
     router.push("/age-verify")
   }
 
-  function handleSkip() {
+  async function handleSkip() {
+    // Still process referral even if they skip username
+    await processPendingReferral()
     router.push("/age-verify")
   }
 

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, Suspense, useRef } from "react"
 import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2, Flame, TrendingUp } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
+import { completeReferralIfPending } from "@/lib/referrals"
 // ChallengeWaitlistSheet removed — challenges are now created before playing
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
@@ -828,6 +829,14 @@ function PlayPageContent() {
         setGemMilestone(milestone)
       }
       markRoundCompleted()
+      // Complete referral bonus if this is the referred user's first round
+      completeReferralIfPending(addGems).then(({ completed, referrerName }) => {
+        if (completed) {
+          toast.success(`🎉 +500 referral bonus gems! thanks for joining via ${referrerName || "a friend"}`, {
+            duration: 5000,
+          })
+        }
+      })
       if (!isChallenge) {
         incrementRoundsToday()
         // Deduct hearts at end of round — 1 per wrong answer
