@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import { Rocket, Check, Swords, Diamond, Zap, ChevronLeft, Loader2, Crown } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { toast } from "sonner"
 
 function UpgradeContent() {
   const searchParams = useSearchParams()
@@ -45,6 +46,7 @@ function UpgradeContent() {
       window.location.href = url
     } catch (err) {
       console.error("Upgrade error:", err)
+      toast.error("Something went wrong — please try again")
       setLoading(false)
     }
   }
