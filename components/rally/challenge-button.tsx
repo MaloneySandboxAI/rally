@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2, Share2 } from "lucide-react"
+import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2, Share2, Lock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
+import { usePremium } from "@/lib/premium-context"
 import { toast } from "sonner"
 
 const CATEGORIES = [
@@ -15,6 +16,7 @@ const CATEGORIES = [
 ]
 
 export function ChallengeButton() {
+  const { isPremium } = usePremium()
   const [showPicker, setShowPicker] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [checkedAuth, setCheckedAuth] = useState(false)
@@ -46,7 +48,13 @@ export function ChallengeButton() {
     if (!checkedAuth) return
     if (!isLoggedIn) {
       window.location.href = "/login?returnTo=challenge"
-    } else {
+      return
+    }
+    if (!isPremium) {
+      window.location.href = "/upgrade?reason=challenges"
+      return
+    }
+    {
       // Reset state for fresh picker
       setShareCode(null)
       setShareUrl(null)
@@ -154,12 +162,20 @@ export function ChallengeButton() {
         aria-label="Challenge a friend"
       >
         <div className="flex items-center gap-2 text-base">
-          <Plus className="w-4 h-4" strokeWidth={3} />
+          {!isPremium && isLoggedIn ? (
+            <Lock className="w-4 h-4" strokeWidth={3} />
+          ) : (
+            <Plus className="w-4 h-4" strokeWidth={3} />
+          )}
           challenge a friend
         </div>
 
         <span className="text-[11px] font-semibold text-white/70">
-          {isLoggedIn ? "4x gems · 100 per correct answer" : "sign in to challenge friends"}
+          {!isLoggedIn
+            ? "sign in to challenge friends"
+            : !isPremium
+            ? "premium feature \u2014 tap to unlock"
+            : "4x gems \u00b7 100 per correct answer"}
         </span>
       </button>
 

@@ -13,6 +13,7 @@ import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge,
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
 import { checkGemMilestone, GemMilestoneCelebration } from "@/components/rally/gem-milestone"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
+import { usePremium } from "@/lib/premium-context"
 import { createClient } from "@/lib/supabase/client"
 
 /** Get display name from Supabase auth session, falling back gracefully */
@@ -360,7 +361,8 @@ function PlayPageContent() {
   const isCreatorChallenge = !!creatorChallengeCode // creator playing their own challenge (pre-play flow)
   const categoryParam = searchParams.get("category") || "Algebra"
   const { totalGems, addGems } = useGems()
-  
+  const { isPremium, dailyGemsCapped, dailyGemsRemaining, recordGemsEarned } = usePremium()
+
   // Find category info
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
   const categoryName = categoryInfo.name
@@ -793,10 +795,22 @@ function PlayPageContent() {
         }
       }
 
+      // Apply daily gem cap for free users
+      let totalEarned = correctGems + outcomeBonus
+      let wasCapped = false
+      if (!isPremium && !isChallenge) {
+        const capped = Math.min(totalEarned, dailyGemsRemaining)
+        if (capped < totalEarned) {
+          wasCapped = true
+        }
+        totalEarned = capped
+        recordGemsEarned(totalEarned)
+      }
+
       // Check for gem milestone before adding (compare before vs after)
       const gemsBefore = totalGems
-      addGems(correctGems + outcomeBonus)
-      const milestone = checkGemMilestone(gemsBefore, gemsBefore + correctGems + outcomeBonus)
+      addGems(totalEarned)
+      const milestone = checkGemMilestone(gemsBefore, gemsBefore + totalEarned)
       if (milestone) {
         setGemMilestone(milestone)
       }
@@ -821,6 +835,18 @@ function PlayPageContent() {
         toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
       }
       setGemsAwarded(true)
+
+      // Show upsell if free user hit the daily gem cap
+      if (wasCapped) {
+        toast("you hit today\u2019s gem limit!", {
+          description: "upgrade to earn unlimited gems",
+          action: {
+            label: "unlock",
+            onClick: () => { window.location.href = "/upgrade?reason=gem_cap" },
+          },
+          duration: 8000,
+        })
+      }
 
       // If creator just finished their own challenge, update their results
       // Score = total gems earned (rewards harder difficulty)

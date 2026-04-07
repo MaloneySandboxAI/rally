@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { PostHogProvider } from '@/lib/posthog-provider'
 import { FeedbackButton } from '@/components/rally/feedback-button'
 import { GemProvider } from '@/lib/gem-context'
+import { PremiumProvider } from '@/lib/premium-context'
 import { QuestionTrackerProvider } from '@/lib/question-tracker-context'
 import { AuthGate } from '@/components/rally/auth-gate'
 import { Toaster } from 'sonner'
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
         <PostHogProvider>
           <GemProvider>
+            <PremiumProvider>
             <QuestionTrackerProvider>
               <AuthGate>
                 {children}
@@ -63,6 +65,7 @@ export default function RootLayout({
                 <Toaster position="top-center" />
               </AuthGate>
             </QuestionTrackerProvider>
+            </PremiumProvider>
           </GemProvider>
         </PostHogProvider>
         <Analytics />

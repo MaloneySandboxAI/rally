@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { User, Trash2, LogOut, Shield, FileText, ChevronRight } from "lucide-react"
+import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { usePremium } from "@/lib/premium-context"
 
 export default function AccountPage() {
   const router = useRouter()
@@ -14,6 +15,9 @@ export default function AccountPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [deleting, setDeleting] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const { isPremium, subscription } = usePremium()
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const guest = localStorage.getItem("rally_is_guest") === "true"
@@ -24,6 +28,7 @@ export default function AccountPage() {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           setEmail(session.user.email || null)
+          setUserId(session.user.id)
           const meta = session.user.user_metadata
           setDisplayName(
             meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "Player"
@@ -65,6 +70,24 @@ export default function AccountPage() {
     router.replace("/login")
   }
 
+  async function handleManageSubscription() {
+    if (!userId) return
+    setPortalLoading(true)
+    try {
+      const res = await fetch("/api/stripe/customer-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+      const { url, error } = await res.json()
+      if (error) throw new Error(error)
+      window.location.href = url
+    } catch (err) {
+      console.error("Portal error:", err)
+      setPortalLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
@@ -92,6 +115,48 @@ export default function AccountPage() {
             </div>
           </div>
         </div>
+
+        {/* Subscription section */}
+        {!isGuest && (
+          <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
+            {isPremium ? (
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="w-full flex items-center justify-between px-5 py-4 active:bg-[#378ADD]/10 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 text-[#378ADD]" />
+                  <div className="text-left">
+                    <span className="text-white font-semibold text-sm block">Manage Subscription</span>
+                    <span className="text-[#85B7EB]/40 text-xs">
+                      {subscription?.subscriptionStatus === "trialing" ? "Free trial" : "Premium"} &middot; {subscription?.subscriptionPeriod || "active"}
+                    </span>
+                  </div>
+                </div>
+                {portalLoading ? (
+                  <Loader2 className="w-4 h-4 text-[#85B7EB]/30 animate-spin" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-[#85B7EB]/30" />
+                )}
+              </button>
+            ) : (
+              <Link
+                href="/upgrade"
+                className="flex items-center justify-between px-5 py-4 active:bg-[#378ADD]/10 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Crown className="w-5 h-5 text-[#F97316]" />
+                  <div>
+                    <span className="text-white font-semibold text-sm block">Upgrade to Premium</span>
+                    <span className="text-[#85B7EB]/40 text-xs">Unlimited gems &middot; Challenge friends</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#85B7EB]/30" />
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Legal links */}
         <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
