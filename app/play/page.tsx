@@ -658,7 +658,7 @@ function PlayPageContent() {
 
     setTimeout(async () => {
       if (currentQuestion < TOTAL_QUESTIONS - 1) {
-        if (!challengeCode) await fetchNextQuestion()
+        await fetchNextQuestion()
         setCurrentQuestion(prev => prev + 1)
         setPendingAnswer(null)
         setSelectedAnswer(null)
@@ -754,8 +754,8 @@ function PlayPageContent() {
 
   const handleNextQuestion = useCallback(async () => {
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
-      // In challenge mode, questions are pre-loaded; in solo mode, fetch next adaptively
-      if (!challengeCode) await fetchNextQuestion()
+      // fetchNextQuestion handles both modes: draws from pool in challenge, fetches from Supabase in solo
+      await fetchNextQuestion()
       setCurrentQuestion(prev => prev + 1)
       setPendingAnswer(null)
       setSelectedAnswer(null)
