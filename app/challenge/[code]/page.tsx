@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { getChallenge, type Challenge } from "@/lib/challenges"
+import { getChallenge, isChallengeExpired, getChallengeTimeRemaining, type Challenge } from "@/lib/challenges"
 import { Spinner } from "@/components/ui/spinner"
-import { Diamond, Trophy, Swords, ChevronRight } from "lucide-react"
+import { Diamond, Trophy, Swords, ChevronRight, Clock } from "lucide-react"
 
 const CATEGORIES: Record<string, string> = {
   "Algebra": "Algebra",
@@ -127,8 +127,28 @@ export default function ChallengePage() {
     )
   }
 
+  // Check if challenge has expired (48 hours)
+  if (challenge.status === "pending" && isChallengeExpired(challenge)) {
+    return (
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
+        <Clock className="w-12 h-12 text-[#85B7EB]/30 mb-3" />
+        <h1 className="text-lg font-extrabold text-white mb-1">challenge expired</h1>
+        <p className="text-[#85B7EB]/60 text-xs mb-5 max-w-[260px]">
+          This challenge from {challenge.creator_name} has expired. Challenges last 48 hours.
+        </p>
+        <a
+          href="/"
+          className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold flex items-center gap-2 text-sm"
+        >
+          create a new challenge <ChevronRight className="w-4 h-4" strokeWidth={3} />
+        </a>
+      </div>
+    )
+  }
+
   // Challenge pending — show accept screen
   const hasCreatorScore = challenge.creator_score >= 0
+  const timeRemaining = getChallengeTimeRemaining(challenge)
   return (
     <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
       <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
@@ -139,9 +159,15 @@ export default function ChallengePage() {
           : `${challenge.creator_name} challenged you in ${getCategoryDisplay(challenge.category)}`
         }
       </p>
-      <p className="text-[#85B7EB]/40 text-xs mb-6">
+      <p className="text-[#85B7EB]/40 text-xs mb-2">
         play 5 questions at your level · most gems wins
       </p>
+      {timeRemaining && (
+        <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mb-4">
+          <Clock className="w-3.5 h-3.5" />
+          <span>expires in {timeRemaining.hours}h {timeRemaining.minutes}m</span>
+        </div>
+      )}
 
       <button
         onClick={() => {

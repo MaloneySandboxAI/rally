@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2 } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2, Flame, TrendingUp } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 // ChallengeWaitlistSheet removed — challenges are now created before playing
@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
 import { getChallengeUrl, completeChallenge, updateCreatorResults, getChallenge, poolFromFlat, type ChallengeResult, type ChallengePool } from "@/lib/challenges"
 import { saveRoundStats, getAdaptiveDifficulty } from "@/lib/stats"
+import { checkGemMilestone, GemMilestoneCelebration } from "@/components/rally/gem-milestone"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { createClient } from "@/lib/supabase/client"
 
@@ -566,6 +567,7 @@ function PlayPageContent() {
   const [showGemAnimation, setShowGemAnimation] = useState(false)
   const [showSpeedBonus, setShowSpeedBonus] = useState(false)
   const [gemsAwarded, setGemsAwarded] = useState(false)
+  const [gemMilestone, setGemMilestone] = useState<number | null>(null)
   const [showWorkArea, setShowWorkArea] = useState(false)
   
   // Timer state — totalTime is per-question based on difficulty
@@ -762,6 +764,7 @@ function PlayPageContent() {
     setShowGemAnimation(false)
     setShowSpeedBonus(false)
     setGemsAwarded(false)
+    setGemMilestone(null)
     setAnswerResults([])
     setCurrentQuestionSpeedBonus(false)
     setSessionQuestions([])
@@ -790,7 +793,13 @@ function PlayPageContent() {
         }
       }
 
+      // Check for gem milestone before adding (compare before vs after)
+      const gemsBefore = totalGems
       addGems(correctGems + outcomeBonus)
+      const milestone = checkGemMilestone(gemsBefore, gemsBefore + correctGems + outcomeBonus)
+      if (milestone) {
+        setGemMilestone(milestone)
+      }
       markRoundCompleted()
       if (!isChallenge) {
         incrementRoundsToday()
@@ -934,19 +943,27 @@ function PlayPageContent() {
   // Results screen
   if (showResults) {
     return (
-      <ResultsScreen
-        score={score}
-        isChallenge={isChallenge}
-        isCreatorChallenge={isCreatorChallenge}
-        challengeCode={challengeCode}
-        creatorChallengeCode={creatorChallengeCode}
-        categoryId={categoryParam}
-        categoryName={categoryName}
-        onPlayAgain={handlePlayAgain}
-        answerResults={answerResults}
-        sessionQuestions={sessionQuestions}
-        creatorScore={creatorScore}
-      />
+      <>
+        <ResultsScreen
+          score={score}
+          isChallenge={isChallenge}
+          isCreatorChallenge={isCreatorChallenge}
+          challengeCode={challengeCode}
+          creatorChallengeCode={creatorChallengeCode}
+          categoryId={categoryParam}
+          categoryName={categoryName}
+          onPlayAgain={handlePlayAgain}
+          answerResults={answerResults}
+          sessionQuestions={sessionQuestions}
+          creatorScore={creatorScore}
+        />
+        {gemMilestone && (
+          <GemMilestoneCelebration
+            milestone={gemMilestone}
+            onDismiss={() => setGemMilestone(null)}
+          />
+        )}
+      </>
     )
   }
 
@@ -1352,6 +1369,89 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Streak + Difficulty Reached + Weak Spot Nudge */}
+      <div className="w-full max-w-sm mb-3 space-y-2">
+        {/* Streak status */}
+        {(() => {
+          const streak = typeof window !== "undefined" ? parseInt(localStorage.getItem("rally_streak") || "0", 10) : 0
+          if (streak > 0) {
+            return (
+              <div className="flex items-center gap-2 bg-[#EF9F27]/10 border border-[#EF9F27]/25 rounded-xl px-3.5 py-2.5">
+                <Flame className="w-5 h-5 text-[#EF9F27]" />
+                <span className="text-sm font-bold text-[#EF9F27]">Day {streak} streak</span>
+                {streak >= 7 && <span className="text-xs text-[#EF9F27]/60 ml-auto">keep it going!</span>}
+              </div>
+            )
+          }
+          return null
+        })()}
+
+        {/* Highest difficulty reached */}
+        {(() => {
+          const hardCount = answerResults.filter(r => r.difficulty === "hard").length
+          const medCount = answerResults.filter(r => r.difficulty === "medium").length
+          const hardCorrect = answerResults.filter(r => r.difficulty === "hard" && r.isCorrect).length
+          if (hardCount > 0 && hardCorrect > 0) {
+            return (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/25 rounded-xl px-3.5 py-2.5">
+                <TrendingUp className="w-5 h-5 text-red-400" />
+                <span className="text-sm font-bold text-red-400">You nailed {hardCorrect} hard question{hardCorrect > 1 ? "s" : ""}!</span>
+              </div>
+            )
+          } else if (medCount > 0) {
+            const medCorrect = answerResults.filter(r => r.difficulty === "medium" && r.isCorrect).length
+            if (medCorrect > 0) {
+              return (
+                <div className="flex items-center gap-2 bg-[#F59E0B]/10 border border-[#F59E0B]/25 rounded-xl px-3.5 py-2.5">
+                  <TrendingUp className="w-5 h-5 text-[#F59E0B]" />
+                  <span className="text-sm font-bold text-[#F59E0B]">Reached medium difficulty!</span>
+                </div>
+              )
+            }
+          }
+          return null
+        })()}
+
+        {/* Weak spot nudge — suggest weakest category */}
+        {(() => {
+          if (typeof window === "undefined") return null
+          try {
+            const raw = localStorage.getItem("rally_stats")
+            if (!raw) return null
+            const stats = JSON.parse(raw)
+            const cats = stats.byCategory as Record<string, { correct: number; total: number }> | undefined
+            if (!cats) return null
+            let weakest = ""
+            let weakestAcc = 100
+            for (const [cat, data] of Object.entries(cats)) {
+              if (data.total >= 10 && cat !== categoryId) {
+                const acc = Math.round((data.correct / data.total) * 100)
+                if (acc < weakestAcc) {
+                  weakestAcc = acc
+                  weakest = cat
+                }
+              }
+            }
+            if (weakest && weakestAcc < 70) {
+              const wrongInCat = answerResults.filter(r => !r.isCorrect).length
+              return (
+                <a
+                  href={`/play?category=${encodeURIComponent(weakest)}`}
+                  className="flex items-center gap-2 bg-[#378ADD]/10 border border-[#378ADD]/25 rounded-xl px-3.5 py-2.5 active:scale-[0.98] transition-transform"
+                >
+                  <Sparkles className="w-5 h-5 text-[#378ADD]" />
+                  <span className="text-sm text-[#85B7EB] flex-1">
+                    Your weak spot: <span className="font-bold text-white">{weakest}</span> ({weakestAcc}%)
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[#378ADD]" />
+                </a>
+              )
+            }
+          } catch {}
+          return null
+        })()}
       </div>
 
       {/* Action buttons — primary actions first */}

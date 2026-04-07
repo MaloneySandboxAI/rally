@@ -6,6 +6,7 @@ import { ChallengeButton } from "@/components/rally/challenge-button"
 import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryCards } from "@/components/rally/category-cards"
 import { ReferralBanner } from "@/components/rally/referral-banner"
+import { WeakSpotCard } from "@/components/rally/weak-spot-card"
 import { ProBanner } from "@/components/rally/pro-banner"
 
 export default function RallyHome() {
@@ -24,6 +25,11 @@ export default function RallyHome() {
         {/* Challenge Button — moved up for visibility */}
         <div className="mt-3">
           <ChallengeButton />
+        </div>
+
+        {/* Weak spot drill nudge */}
+        <div className="mt-3">
+          <WeakSpotCard />
         </div>
 
         {/* Streak + SAT countdown */}

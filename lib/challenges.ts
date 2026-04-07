@@ -199,3 +199,31 @@ export function getChallengeUrl(shareCode: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://rallyplaylive.com"
   return `${origin}/challenge/${shareCode}`
 }
+
+/** Challenge expiry duration in hours */
+export const CHALLENGE_EXPIRY_HOURS = 48
+
+/**
+ * Check if a challenge has expired (48 hours after creation).
+ */
+export function isChallengeExpired(challenge: Challenge): boolean {
+  const created = new Date(challenge.created_at)
+  const expiresAt = new Date(created.getTime() + CHALLENGE_EXPIRY_HOURS * 60 * 60 * 1000)
+  return new Date() > expiresAt
+}
+
+/**
+ * Get time remaining until challenge expires.
+ * Returns { hours, minutes } or null if expired.
+ */
+export function getChallengeTimeRemaining(challenge: Challenge): { hours: number; minutes: number } | null {
+  const created = new Date(challenge.created_at)
+  const expiresAt = new Date(created.getTime() + CHALLENGE_EXPIRY_HOURS * 60 * 60 * 1000)
+  const now = new Date()
+  const diff = expiresAt.getTime() - now.getTime()
+  if (diff <= 0) return null
+  return {
+    hours: Math.floor(diff / (1000 * 60 * 60)),
+    minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+  }
+}
