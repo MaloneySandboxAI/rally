@@ -1217,11 +1217,17 @@ interface ResultsScreenProps {
   creatorScore: number | null
 }
 
-function getEncouragementMessage(score: number): string {
-  if (score === 5) return "Perfect score! Dare someone to match it"
-  if (score === 4) return "Really strong! Think your friends can beat that?"
-  if (score === 3) return "Not bad! Bet you can beat your friends though"
-  return "Tough round. Challenge a friend and see how they do"
+function getEncouragementMessage(score: number, isChallenge: boolean): string {
+  if (isChallenge) {
+    if (score === 5) return "Perfect score! Let\u2019s see if they can match it"
+    if (score === 4) return "Strong round! Hard to beat that"
+    if (score === 3) return "Solid effort \u2014 could go either way"
+    return "Tough round \u2014 anything can happen"
+  }
+  if (score === 5) return "Flawless! You nailed every question"
+  if (score === 4) return "Really strong round!"
+  if (score === 3) return "Not bad! Room to improve"
+  return "Tough round. Keep practicing!"
 }
 
 function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore }: ResultsScreenProps) {
@@ -1358,7 +1364,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
         </h1>
         <p className="text-[#85B7EB] text-base font-semibold mt-0.5">{categoryName}</p>
         <p className="text-[#85B7EB]/70 text-sm mt-1.5 max-w-[280px] mx-auto leading-snug">
-          {getEncouragementMessage(correctCount)}
+          {getEncouragementMessage(correctCount, isChallenge || isCreatorChallenge)}
         </p>
       </div>
 
@@ -1484,51 +1490,20 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
       <div className="w-full max-w-sm space-y-2.5 mb-3">
         {/* Challenge section — top priority */}
         {isCreatorChallenge && creatorChallengeCode ? (
-          /* Creator just finished — share reminder */
-          <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-xl p-3.5">
-            <p className="text-white font-bold text-sm text-center mb-1">score locked in!</p>
-            <p className="text-[#85B7EB]/60 text-xs text-center mb-3">share so your friend can try to beat you</p>
-            <div className="flex items-center gap-2 bg-[#021f3d] rounded-lg px-3 py-2 mb-2.5">
-              <span className="text-[#85B7EB] text-xs flex-1 truncate font-mono">{getChallengeUrl(creatorChallengeCode)}</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(getChallengeUrl(creatorChallengeCode))
-                  setLinkCopied(true)
-                  setTimeout(() => setLinkCopied(false), 2000)
-                }}
-                className="text-[#378ADD] flex-shrink-0"
-              >
-                {linkCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-              </button>
+          /* Creator just finished — waiting for friend's results */
+          <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-xl p-4">
+            <div className="flex items-center justify-center gap-2 mb-1.5">
+              <Swords className="w-4 h-4 text-[#378ADD]" />
+              <p className="text-white font-bold text-sm">score locked in!</p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(getChallengeUrl(creatorChallengeCode))
-                  setLinkCopied(true)
-                  setTimeout(() => setLinkCopied(false), 2000)
-                }}
-                className="flex-1 bg-[#378ADD] text-white rounded-lg py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.98]"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                {linkCopied ? "copied!" : "copy link"}
-              </button>
-              {typeof navigator !== "undefined" && navigator.share && (
-                <button
-                  onClick={() => {
-                    navigator.share({
-                      title: "Rally Challenge",
-                      text: `I scored ${score}/5 in ${categoryName} on Rally! Think you can beat me?`,
-                      url: getChallengeUrl(creatorChallengeCode),
-                    }).catch(() => {})
-                  }}
-                  className="bg-[#378ADD]/20 text-[#378ADD] rounded-lg px-3.5 py-2.5 font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  share
-                </button>
-              )}
-            </div>
+            <p className="text-[#85B7EB]/60 text-xs text-center mb-3">waiting for your friend to play — results will appear when they finish</p>
+            <a
+              href={`/challenge/${creatorChallengeCode}`}
+              className="w-full bg-[#378ADD] text-white rounded-lg py-3 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <Swords className="w-4 h-4" />
+              show results
+            </a>
           </div>
         ) : challengeCode ? (
           /* Challenger — see results */
@@ -1539,16 +1514,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
             <Swords className="w-4 h-4" />
             see head-to-head results
           </a>
-        ) : (
-          /* Solo — challenge from home */
-          <a
-            href="/"
-            className="w-full bg-[#378ADD] text-white rounded-xl py-3.5 px-5 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 active:scale-[0.98]"
-          >
-            <Swords className="w-4 h-4" />
-            challenge a friend
-          </a>
-        )}
+        ) : null}
 
         {/* Play again + category picker row */}
         <div className="flex gap-2">
