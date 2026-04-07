@@ -5,6 +5,7 @@ import { claimDailyLogin, checkStreakMilestone } from "@/lib/gem-context"
 import { useGems } from "@/lib/gem-context"
 
 function getValidStreak(): number {
+  if (typeof window === "undefined") return 0
   const lastPlayed = localStorage.getItem("rally_last_played")
   const storedStreak = parseInt(localStorage.getItem("rally_streak") || "0", 10)
   if (!lastPlayed) return 0

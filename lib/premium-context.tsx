@@ -40,7 +40,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check localStorage fast-path first for responsiveness
-    const isPro = localStorage.getItem("rally_is_pro") === "true"
+    const isPro = typeof window !== "undefined" && localStorage.getItem("rally_is_pro") === "true"
     if (isPro) {
       // Still load from server but don't block
       setIsLoading(false)
@@ -48,7 +48,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     loadSubscription()
   }, [])
 
-  const isPremium = subscription?.isPremium ?? (localStorage.getItem("rally_is_pro") === "true")
+  const isPremium = subscription?.isPremium ?? (typeof window !== "undefined" && localStorage.getItem("rally_is_pro") === "true")
 
   const cap = checkDailyGemCap(subscription ?? {
     subscriptionStatus: "free",
