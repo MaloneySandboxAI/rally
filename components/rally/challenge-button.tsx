@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Swords, ChevronRight, LogIn, Copy, Check, Loader2, Share2, Lock } from "lucide-react"
+import { Plus, Swords, ChevronRight, LogIn, Loader2, Share2, Lock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
@@ -251,32 +251,14 @@ export function ChallengeButton() {
                     : "send this link to your friend to unlock play"}
                 </p>
 
-                {/* Share / Copy buttons */}
-                <div className="flex gap-2 mb-3">
-                  {/* Share button (uses native share on mobile, copy on desktop) */}
-                  <button
-                    onClick={handleShareLink}
-                    className="flex-1 bg-[#021f3d] rounded-lg px-3 py-2.5 flex items-center justify-center gap-2 active:scale-[0.99]"
-                  >
-                    <Share2 className="w-4 h-4 text-[#378ADD]" />
-                    <span className="text-xs text-white font-semibold">share link</span>
-                  </button>
-
-                  {/* Copy button */}
-                  <button
-                    onClick={handleCopyLink}
-                    className="flex-1 bg-[#021f3d] rounded-lg px-3 py-2.5 flex items-center justify-center gap-2 active:scale-[0.99]"
-                  >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-[#378ADD]" />
-                    )}
-                    <span className="text-xs text-white font-semibold">
-                      {copied ? "copied!" : "copy link"}
-                    </span>
-                  </button>
-                </div>
+                {/* Share button — must use native share to unlock play */}
+                <button
+                  onClick={handleShareLink}
+                  className="w-full bg-[#021f3d] rounded-lg px-3 py-3 flex items-center justify-center gap-2 active:scale-[0.99] mb-3"
+                >
+                  <Share2 className="w-4 h-4 text-[#378ADD]" />
+                  <span className="text-sm text-white font-semibold">send challenge link</span>
+                </button>
 
                 {/* Play now button — ONLY shown after link has been shared/copied */}
                 {linkShared ? (
