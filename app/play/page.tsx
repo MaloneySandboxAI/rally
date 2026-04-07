@@ -426,8 +426,12 @@ function PlayPageContent() {
       if (!check.allowed) {
         setSoloBlocked(check.reason)
       }
+      // Also block if daily gem cap is already reached
+      if (dailyGemsCapped) {
+        setSoloBlocked("you've hit today's gem limit")
+      }
     }
-  }, [])
+  }, [dailyGemsCapped])
 
   // Helper: draw the next question from challenge pool at current difficulty
   function drawFromPool(difficulty: string): Question | null {
@@ -915,29 +919,48 @@ function PlayPageContent() {
   const hasAnswered = selectedAnswer !== null
   const isTimeout = selectedAnswer === -1
 
-  // Solo play blocked (no hearts or daily limit reached)
+  // Solo play blocked (no hearts, daily round limit, or gem cap reached)
   if (soloBlocked && !isChallenge) {
+    const isGemCap = dailyGemsCapped
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 text-center">
-        <Heart className="w-16 h-16 text-red-400 mb-4" />
+        {isGemCap ? (
+          <Diamond className="w-16 h-16 text-[#EF9F27] mb-4" />
+        ) : (
+          <Heart className="w-16 h-16 text-red-400 mb-4" />
+        )}
         <h1 className="text-2xl font-extrabold text-white mb-2">{soloBlocked}</h1>
+        <p className="text-[#85B7EB]/60 text-sm mb-2">
+          {isGemCap
+            ? "free players can earn 100 gems per day. upgrade for unlimited."
+            : "wrong answers cost hearts. come back tomorrow or refill now."}
+        </p>
         <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
-          <button
-            onClick={() => {
-              const success = refillHearts(totalGems, addGems)
-              if (success) {
-                setHearts(HEARTS_CONFIG.maxHearts)
-                setSoloBlocked(null)
-                toast.success("hearts refilled!", { duration: 2000 })
-              } else {
-                toast.error("not enough gems", { duration: 2000 })
-              }
-            }}
-            className="bg-[#EF9F27] text-white rounded-2xl py-3 px-6 font-bold flex items-center justify-center gap-2"
-          >
-            <Diamond className="w-4 h-4 fill-white" />
-            refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
-          </button>
+          {isGemCap ? (
+            <a
+              href="/upgrade?reason=gem_cap"
+              className="bg-gradient-to-r from-[#378ADD] to-[#A855F7] text-white rounded-2xl py-3 px-6 font-bold text-center"
+            >
+              unlock unlimited gems
+            </a>
+          ) : (
+            <button
+              onClick={() => {
+                const success = refillHearts(totalGems, addGems)
+                if (success) {
+                  setHearts(HEARTS_CONFIG.maxHearts)
+                  setSoloBlocked(null)
+                  toast.success("hearts refilled!", { duration: 2000 })
+                } else {
+                  toast.error("not enough gems", { duration: 2000 })
+                }
+              }}
+              className="bg-[#EF9F27] text-white rounded-2xl py-3 px-6 font-bold flex items-center justify-center gap-2"
+            >
+              <Diamond className="w-4 h-4 fill-white" />
+              refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
+            </button>
+          )}
           <a
             href="/"
             className="bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-3 px-6 font-bold text-center"

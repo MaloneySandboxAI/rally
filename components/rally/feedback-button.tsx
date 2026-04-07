@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { Send, X, Check } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-type Reaction = "loving" | "ok" | "broken" | null
+type Reaction = "loving" | "ok" | "broken" | "other" | null
 
 export function FeedbackButton() {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState<Reaction>(null)
   const [feedback, setFeedback] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (isSubmitted) {
@@ -23,16 +25,34 @@ export function FeedbackButton() {
     }
   }, [isSubmitted])
 
-  const handleSubmit = () => {
-    // Here you would send feedback to your backend
-    console.log("Feedback submitted:", { reaction: selectedReaction, feedback })
-    setIsSubmitted(true)
+  const handleSubmit = async () => {
+    if (!selectedReaction) return
+    setIsSubmitting(true)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id || null
+      const page = typeof window !== "undefined" ? window.location.pathname : null
+
+      await supabase.from("feedback").insert({
+        user_id: userId,
+        reaction: selectedReaction,
+        message: feedback.trim() || null,
+        page,
+      })
+    } catch (err) {
+      console.error("Failed to save feedback:", err)
+    } finally {
+      setIsSubmitting(false)
+      setIsSubmitted(true)
+    }
   }
 
   const reactions = [
     { id: "loving" as const, emoji: "😍", label: "loving it" },
     { id: "ok" as const, emoji: "😐", label: "it's ok" },
-    { id: "broken" as const, emoji: "😤", label: "something's broken" },
+    { id: "broken" as const, emoji: "😤", label: "broken" },
+    { id: "other" as const, emoji: "💬", label: "other" },
   ]
 
   return (
@@ -50,7 +70,7 @@ export function FeedbackButton() {
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-50 transition-opacity"
-          onClick={() => !isSubmitted && setIsOpen(false)}
+          onClick={() => !isSubmitted && !isSubmitting && setIsOpen(false)}
         />
       )}
 
@@ -89,31 +109,31 @@ export function FeedbackButton() {
             </div>
 
             {/* Emoji Reactions */}
-            <div className="flex justify-center gap-4 mb-6">
+            <div className="flex justify-center gap-3 mb-6">
               {reactions.map((reaction) => (
                 <button
                   key={reaction.id}
                   onClick={() => setSelectedReaction(reaction.id)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all ${
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
                     selectedReaction === reaction.id
                       ? "bg-[#378ADD]/10 ring-2 ring-[#378ADD]"
                       : "bg-gray-50 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="text-4xl">{reaction.emoji}</span>
-                  <span className="text-xs font-semibold text-[#6b7280]">
+                  <span className="text-3xl">{reaction.emoji}</span>
+                  <span className="text-[10px] font-semibold text-[#6b7280]">
                     {reaction.label}
                   </span>
                 </button>
               ))}
             </div>
 
-            {/* Text Field */}
+            {/* Text Field — required for "other", optional for rest */}
             <div className="mb-6">
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="tell us more (optional)"
+                placeholder={selectedReaction === "other" ? "tell us what's on your mind" : "tell us more (optional)"}
                 className="w-full h-24 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-[#0a1628] placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#378ADD] focus:border-transparent"
               />
             </div>
@@ -121,10 +141,10 @@ export function FeedbackButton() {
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              disabled={!selectedReaction}
+              disabled={!selectedReaction || isSubmitting || (selectedReaction === "other" && !feedback.trim())}
               className="w-full py-4 rounded-2xl bg-[#378ADD] text-white font-bold text-lg transition-all hover:bg-[#2d7bc4] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              send feedback
+              {isSubmitting ? "sending..." : "send feedback"}
             </button>
 
             {/* Safe area padding for bottom */}
