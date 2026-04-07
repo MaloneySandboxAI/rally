@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 // Pages that are always accessible without auth
-const PUBLIC_PATHS = ["/login"]
+const PUBLIC_PATHS = ["/login", "/age-verify", "/privacy", "/terms"]
 const PUBLIC_PREFIXES = ["/challenge/"]
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -22,6 +22,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
       if (!session && !isGuest) {
         router.replace("/login")
+        return
+      }
+      // Enforce age verification for authenticated/guest users
+      const ageVerified = localStorage.getItem("rally_age_verified") === "true"
+      if (!ageVerified && (session || isGuest)) {
+        router.replace("/age-verify")
       }
     })
 

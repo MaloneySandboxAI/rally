@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   function handleGuestPlay() {
     localStorage.setItem("rally_is_guest", "true")
-    router.push("/")
+    router.push("/age-verify")
   }
 
   return (
@@ -128,6 +128,13 @@ export default function LoginPage() {
         >
           Play as guest →
         </button>
+      </div>
+
+      {/* Legal links */}
+      <div className="mt-8 flex gap-4 text-[#85B7EB]/30 text-xs">
+        <a href="/privacy" className="hover:text-[#85B7EB]/60 transition-colors">Privacy Policy</a>
+        <span>·</span>
+        <a href="/terms" className="hover:text-[#85B7EB]/60 transition-colors">Terms of Service</a>
       </div>
     </div>
   )

@@ -40,9 +40,15 @@ export default function StorePage() {
         >
           keep earning gems
         </Link>
+        <Link
+          href="/account"
+          className="mt-6 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors"
+        >
+          account settings
+        </Link>
         <button
           onClick={handleSignOut}
-          className="mt-6 text-[#85B7EB]/40 text-sm hover:text-[#85B7EB]/70 transition-colors"
+          className="mt-2 text-[#85B7EB]/40 text-sm hover:text-[#85B7EB]/70 transition-colors"
         >
           sign out
         </button>
