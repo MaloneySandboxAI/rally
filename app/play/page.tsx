@@ -23,10 +23,19 @@ async function getDisplayName(): Promise<string> {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
       const meta = session.user.user_metadata
-      return meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "anonymous"
+      return meta?.display_name || meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "anonymous"
     }
   } catch {}
   return "anonymous"
+}
+
+async function getUserId(): Promise<string | undefined> {
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.user?.id
+  } catch {}
+  return undefined
 }
 
 const CATEGORIES = [
@@ -876,6 +885,7 @@ function PlayPageContent() {
       else if (challengeCode) {
         ;(async () => {
           const challengerName = await getDisplayName()
+          const challengerId = await getUserId()
           const challengeResults: ChallengeResult[] = answerResults.map((r, i) => ({
             questionIndex: i,
             isCorrect: r.isCorrect,
@@ -887,6 +897,7 @@ function PlayPageContent() {
           const success = await completeChallenge({
             shareCode: challengeCode,
             challengerName,
+            challengerId,
             challengerScore: correctGems, // gems, not correct count
             challengerResults: challengeResults,
           })

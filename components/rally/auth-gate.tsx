@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 // Pages that are always accessible without auth
-const PUBLIC_PATHS = ["/login", "/age-verify", "/privacy", "/terms"]
+const PUBLIC_PATHS = ["/login", "/age-verify", "/setup-profile", "/privacy", "/terms"]
 const PUBLIC_PREFIXES = ["/challenge/", "/upgrade"]
 
 export function AuthGate({ children }: { children: React.ReactNode }) {

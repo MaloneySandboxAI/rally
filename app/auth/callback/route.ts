@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       // Redirect to age verification — page will check if already verified
-      return NextResponse.redirect(`${origin}/age-verify`)
+      return NextResponse.redirect(`${origin}/setup-profile`)
     }
   }
 
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       type: type as "email" | "recovery" | "invite" | "magiclink" | "signup" | "email_change",
     })
     if (!error) {
-      return NextResponse.redirect(`${origin}/age-verify`)
+      return NextResponse.redirect(`${origin}/setup-profile`)
     }
   }
 

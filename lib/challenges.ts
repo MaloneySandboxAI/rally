@@ -44,9 +44,11 @@ export interface Challenge {
   share_code: string
   category: string
   question_ids: number[] // flat array: [5 easy, 5 medium, 5 hard] — use poolFromFlat() to reconstruct
+  creator_id: string | null
   creator_name: string
   creator_score: number // gems earned (-1 = hasn't played yet)
   creator_results: ChallengeResult[] | null
+  challenger_id: string | null
   challenger_name: string | null
   challenger_score: number | null // gems earned
   challenger_results: ChallengeResult[] | null
@@ -79,6 +81,7 @@ export function poolFromFlat(flat: number[]): ChallengePool {
 export async function createChallenge(params: {
   category: string
   creatorName: string
+  creatorId?: string
   questionPool: ChallengePool
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
@@ -91,6 +94,7 @@ export async function createChallenge(params: {
       share_code: shareCode,
       category: params.category,
       question_ids: poolToFlat(params.questionPool), // [5 easy, 5 medium, 5 hard]
+      creator_id: params.creatorId || null,
       creator_name: params.creatorName,
       creator_score: -1, // sentinel: hasn't played yet
       creator_results: null,
@@ -166,6 +170,7 @@ export async function getChallenge(shareCode: string): Promise<Challenge | null>
 export async function completeChallenge(params: {
   shareCode: string
   challengerName: string
+  challengerId?: string
   challengerScore: number
   challengerResults: ChallengeResult[]
 }): Promise<boolean> {
@@ -175,6 +180,7 @@ export async function completeChallenge(params: {
   const { error } = await supabase
     .from("challenges")
     .update({
+      challenger_id: params.challengerId || null,
       challenger_name: params.challengerName,
       challenger_score: params.challengerScore,
       challenger_results: params.challengerResults,
@@ -198,6 +204,82 @@ export async function completeChallenge(params: {
 export function getChallengeUrl(shareCode: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://rallyplaylive.com"
   return `${origin}/challenge/${shareCode}`
+}
+
+/**
+ * Fetch all challenges for a given user (as creator or challenger).
+ * Returns most recent first, limited to 20.
+ */
+export async function getUserChallenges(userId: string): Promise<Challenge[]> {
+  if (typeof window === "undefined") return []
+  const supabase = getSupabase()
+
+  const { data, error } = await supabase
+    .from("challenges")
+    .select("*")
+    .or(`creator_id.eq.${userId},challenger_id.eq.${userId}`)
+    .order("created_at", { ascending: false })
+    .limit(20)
+
+  if (error) {
+    console.error("[rally] Error fetching user challenges:", error)
+    return []
+  }
+
+  return (data || []) as Challenge[]
+}
+
+/**
+ * Fetch leaderboard: top users by total gems earned in challenges.
+ * Queries completed challenges and aggregates scores.
+ */
+export async function getLeaderboard(): Promise<Array<{
+  userId: string
+  username: string
+  totalGems: number
+  wins: number
+  played: number
+}>> {
+  if (typeof window === "undefined") return []
+  const supabase = getSupabase()
+
+  // Get all completed challenges
+  const { data, error } = await supabase
+    .from("challenges")
+    .select("creator_id, creator_name, creator_score, challenger_id, challenger_name, challenger_score, status")
+    .eq("status", "completed")
+    .not("creator_id", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(200)
+
+  if (error || !data) return []
+
+  // Aggregate per user
+  const users = new Map<string, { username: string; totalGems: number; wins: number; played: number }>()
+
+  for (const c of data) {
+    // Creator
+    if (c.creator_id) {
+      const entry = users.get(c.creator_id) || { username: c.creator_name, totalGems: 0, wins: 0, played: 0 }
+      entry.totalGems += Math.max(0, c.creator_score || 0)
+      entry.played += 1
+      if ((c.creator_score || 0) > (c.challenger_score || 0)) entry.wins += 1
+      users.set(c.creator_id, entry)
+    }
+    // Challenger
+    if (c.challenger_id) {
+      const entry = users.get(c.challenger_id) || { username: c.challenger_name || "friend", totalGems: 0, wins: 0, played: 0 }
+      entry.totalGems += Math.max(0, c.challenger_score || 0)
+      entry.played += 1
+      if ((c.challenger_score || 0) > (c.creator_score || 0)) entry.wins += 1
+      users.set(c.challenger_id, entry)
+    }
+  }
+
+  return Array.from(users.entries())
+    .map(([userId, stats]) => ({ userId, ...stats }))
+    .sort((a, b) => b.totalGems - a.totalGems)
+    .slice(0, 50)
 }
 
 /** Challenge expiry duration in hours */

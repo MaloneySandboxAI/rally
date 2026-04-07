@@ -31,7 +31,7 @@ export default function AccountPage() {
           setUserId(session.user.id)
           const meta = session.user.user_metadata
           setDisplayName(
-            meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "Player"
+            meta?.display_name || meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "Player"
           )
         }
       })

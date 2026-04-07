@@ -22,12 +22,12 @@ export function ChallengeButton() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [userName, setUserName] = useState("")
+  const [userId, setUserId] = useState<string | null>(null)
 
   // Challenge creation state
   const [isCreating, setIsCreating] = useState(false)
   const [shareCode, setShareCode] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   useEffect(() => {
@@ -36,7 +36,9 @@ export function ChallengeButton() {
       setIsLoggedIn(!!session)
       setCheckedAuth(true)
       if (session?.user) {
+        setUserId(session.user.id)
         setUserName(
+          session.user.user_metadata?.display_name ||
           session.user.user_metadata?.full_name ||
           session.user.email?.split("@")[0] ||
           "challenger"
@@ -61,7 +63,6 @@ export function ChallengeButton() {
       // Reset state for fresh picker
       setShareCode(null)
       setShareUrl(null)
-      setCopied(false)
       setLinkShared(false)
       setSelectedCategory(null)
       setIsCreating(false)
@@ -89,6 +90,7 @@ export function ChallengeButton() {
       const code = await createChallenge({
         category: categoryId,
         creatorName: userName,
+        creatorId: userId || undefined,
         questionPool: pool,
       })
 
@@ -123,25 +125,6 @@ export function ChallengeButton() {
   // Track whether the link has been shared/copied (gates play button)
   const [linkShared, setLinkShared] = useState(false)
 
-  const handleCopyLink = async () => {
-    if (!shareUrl) return
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setLinkShared(true)
-      toast.success("link copied! now tap play", {
-        style: { background: "#16a34a", border: "none", color: "#ffffff" },
-        duration: 2000,
-      })
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fallback for clipboard API failure
-      toast.error("couldn't copy — long press the link to copy", {
-        style: { background: "#dc2626", border: "none", color: "#ffffff" },
-      })
-    }
-  }
-
   const handleShareLink = async () => {
     if (!shareUrl) return
     try {
@@ -149,8 +132,11 @@ export function ChallengeButton() {
         await navigator.share({ title: "Rally Challenge", url: shareUrl })
         setLinkShared(true)
       } else {
-        // Fallback to copy
-        await handleCopyLink()
+        // Desktop fallback: open mailto with the link
+        const subject = encodeURIComponent("Rally SAT Challenge")
+        const body = encodeURIComponent(`Think you can beat me? Take my challenge:\n${shareUrl}`)
+        window.open(`mailto:?subject=${subject}&body=${body}`, "_blank")
+        setLinkShared(true)
       }
     } catch {
       // User cancelled share — that's fine, don't mark as shared
