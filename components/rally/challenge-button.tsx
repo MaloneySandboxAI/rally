@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
 import { usePremium } from "@/lib/premium-context"
+import { getFreeChallengesRemaining, useDailyChallenge } from "@/lib/access"
 import { toast } from "sonner"
 
 const CATEGORIES = [
@@ -44,13 +45,15 @@ export function ChallengeButton() {
     })
   }, [])
 
+  const [freeChallengesLeft, setFreeChallengesLeft] = useState(() => getFreeChallengesRemaining())
+
   const handleClick = () => {
     if (!checkedAuth) return
     if (!isLoggedIn) {
       window.location.href = "/login?returnTo=challenge"
       return
     }
-    if (!isPremium) {
+    if (!isPremium && freeChallengesLeft <= 0) {
       window.location.href = "/upgrade?reason=challenges"
       return
     }
@@ -96,6 +99,12 @@ export function ChallengeButton() {
         setIsCreating(false)
         setSelectedCategory(null)
         return
+      }
+
+      // Track free user's daily challenge usage
+      if (!isPremium) {
+        useDailyChallenge()
+        setFreeChallengesLeft(getFreeChallengesRemaining())
       }
 
       setShareCode(code)
@@ -162,7 +171,7 @@ export function ChallengeButton() {
         aria-label="Challenge a friend"
       >
         <div className="flex items-center gap-2 text-base">
-          {!isPremium && isLoggedIn ? (
+          {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
             <Lock className="w-4 h-4" strokeWidth={3} />
           ) : (
             <Plus className="w-4 h-4" strokeWidth={3} />
@@ -173,9 +182,11 @@ export function ChallengeButton() {
         <span className="text-[11px] font-semibold text-white/70">
           {!isLoggedIn
             ? "sign in to challenge friends"
+            : !isPremium && freeChallengesLeft <= 0
+            ? "daily challenge used \u2014 upgrade for unlimited"
             : !isPremium
-            ? "premium feature \u2014 tap to unlock"
-            : "4x gems \u00b7 100 per correct answer"}
+            ? `${freeChallengesLeft} free challenge today \u00b7 4x gems`
+            : "4x gems \u00b7 unlimited challenges"}
         </span>
       </button>
 
