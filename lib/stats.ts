@@ -110,16 +110,25 @@ export interface CategoryStats {
   total: number
 }
 
+export interface DifficultyBreakdown {
+  easy: CategoryStats
+  medium: CategoryStats
+  hard: CategoryStats
+}
+
+export interface CategoryDetail {
+  correct: number
+  total: number
+  byDifficulty: DifficultyBreakdown
+}
+
 export interface RallyStats {
   totalGames: number
   totalCorrect: number
   totalQuestions: number
   byCategory: Record<string, CategoryStats>
-  byDifficulty: {
-    easy: CategoryStats
-    medium: CategoryStats
-    hard: CategoryStats
-  }
+  byCategoryDifficulty: Record<string, CategoryDetail>
+  byDifficulty: DifficultyBreakdown
   bestStreak: number
   totalGemsEarned: number
 }
@@ -139,17 +148,22 @@ export function loadStats(): RallyStats {
   }
 }
 
+function defaultDifficultyBreakdown(): DifficultyBreakdown {
+  return {
+    easy: { correct: 0, total: 0 },
+    medium: { correct: 0, total: 0 },
+    hard: { correct: 0, total: 0 },
+  }
+}
+
 function defaultStats(): RallyStats {
   return {
     totalGames: 0,
     totalCorrect: 0,
     totalQuestions: 0,
     byCategory: {},
-    byDifficulty: {
-      easy: { correct: 0, total: 0 },
-      medium: { correct: 0, total: 0 },
-      hard: { correct: 0, total: 0 },
-    },
+    byCategoryDifficulty: {},
+    byDifficulty: defaultDifficultyBreakdown(),
     bestStreak: 0,
     totalGemsEarned: 0,
   }
@@ -181,7 +195,19 @@ export function saveRoundStats(round: RoundResult): string | null {
   stats.byCategory[round.categoryId].correct += round.correct
   stats.byCategory[round.categoryId].total += round.total
 
-  // By difficulty
+  // By difficulty (global + per-category)
+  if (!stats.byCategoryDifficulty) stats.byCategoryDifficulty = {}
+  if (!stats.byCategoryDifficulty[round.categoryId]) {
+    stats.byCategoryDifficulty[round.categoryId] = {
+      correct: 0,
+      total: 0,
+      byDifficulty: defaultDifficultyBreakdown(),
+    }
+  }
+  const catDetail = stats.byCategoryDifficulty[round.categoryId]
+  catDetail.correct += round.correct
+  catDetail.total += round.total
+
   for (const r of round.answerResults) {
     const diff = (r.difficulty || "medium") as "easy" | "medium" | "hard"
     if (!stats.byDifficulty[diff]) {
@@ -189,6 +215,13 @@ export function saveRoundStats(round: RoundResult): string | null {
     }
     stats.byDifficulty[diff].total += 1
     if (r.isCorrect) stats.byDifficulty[diff].correct += 1
+
+    // Per-category difficulty
+    if (!catDetail.byDifficulty[diff]) {
+      catDetail.byDifficulty[diff] = { correct: 0, total: 0 }
+    }
+    catDetail.byDifficulty[diff].total += 1
+    if (r.isCorrect) catDetail.byDifficulty[diff].correct += 1
   }
 
   // Best streak

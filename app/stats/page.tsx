@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react"
-import { loadStats, getAdaptiveDifficulty, type RallyStats } from "@/lib/stats"
+import { loadStats, getAdaptiveDifficulty, type RallyStats, type CategoryDetail } from "@/lib/stats"
 import Link from "next/link"
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -194,10 +194,17 @@ export default function StatsPage() {
           <div className="space-y-3">
             {ALL_CATEGORIES.map((cat) => {
               const s = stats.byCategory[cat] ?? { correct: 0, total: 0 }
+              const catDetail: CategoryDetail | undefined = stats.byCategoryDifficulty?.[cat]
               const color = CATEGORY_COLORS[cat]
               const accuracy = pct(s.correct, s.total)
               const diffLevel = getAdaptiveDifficulty(cat) || "easy"
               const trend = getTrend(cat)
+
+              const DIFF_COLORS = {
+                easy: { text: "text-green-400", bg: "rgba(34,197,94,0.12)", label: "#22C55E" },
+                medium: { text: "text-amber-400", bg: "rgba(245,158,11,0.12)", label: "#F59E0B" },
+                hard: { text: "text-red-400", bg: "rgba(239,68,68,0.12)", label: "#EF4444" },
+              }
 
               return (
                 <div key={cat} className="bg-[#0a2d4a] rounded-2xl p-4">
@@ -225,6 +232,27 @@ export default function StatsPage() {
                   </div>
 
                   <AccuracyBar correct={s.correct} total={s.total} color={color} />
+
+                  {/* Per-difficulty breakdown within this category */}
+                  {catDetail && catDetail.total > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {(["easy", "medium", "hard"] as const).map((diff) => {
+                        const d = catDetail.byDifficulty?.[diff] ?? { correct: 0, total: 0 }
+                        const c = DIFF_COLORS[diff]
+                        return (
+                          <div key={diff} className="rounded-lg px-2 py-2 text-center" style={{ backgroundColor: c.bg }}>
+                            <p className={`text-sm font-extrabold ${c.text}`}>
+                              {d.total === 0 ? "—" : pctStr(d.correct, d.total)}
+                            </p>
+                            <p className="text-[10px] capitalize" style={{ color: c.label, opacity: 0.7 }}>{diff}</p>
+                            {d.total > 0 && (
+                              <p className="text-[10px] text-[#85B7EB]/40">{d.correct}/{d.total}</p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
 
                   {/* Drill weak spot link */}
                   {s.total >= 10 && accuracy < 60 && (
