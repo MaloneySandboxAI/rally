@@ -1667,7 +1667,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                           {copiedPromptIdx === idx ? (
                             <>
                               <Check className="w-4 h-4 text-green-400" strokeWidth={3} />
-                              <span className="text-green-400 text-sm font-bold">copied! paste into ChatGPT or Claude</span>
+                              <span className="text-green-400 text-sm font-bold">copied! paste into your favorite AI tool</span>
                             </>
                           ) : (
                             <>
