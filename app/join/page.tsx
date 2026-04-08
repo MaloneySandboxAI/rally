@@ -1,19 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Sparkles, Diamond, Loader2 } from "lucide-react"
+import { Sparkles, Diamond } from "lucide-react"
 import { storePendingReferral } from "@/lib/referrals"
 import { GEM_ECONOMY } from "@/lib/gem-context"
 
-export default function JoinPage() {
+function JoinContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const refCode = searchParams.get("ref")
 
   useEffect(() => {
     if (refCode) {
-      // Store the referral code so we can use it after signup
       storePendingReferral(refCode)
     }
   }, [refCode])
@@ -57,5 +56,17 @@ export default function JoinPage() {
         already have an account? sign in
       </button>
     </div>
+  )
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[100dvh] bg-[#021f3d] flex items-center justify-center">
+        <Diamond className="w-10 h-10 text-[#F59E0B] fill-[#F59E0B] animate-pulse" />
+      </div>
+    }>
+      <JoinContent />
+    </Suspense>
   )
 }
