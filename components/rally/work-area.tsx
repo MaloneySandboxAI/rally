@@ -18,6 +18,17 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
   const [activeTab, setActiveTab] = useState<TabId>("notepad")
   const sheetRef = useRef<HTMLDivElement>(null)
 
+  // Lifted notepad state so it survives tab switches
+  const [notepadText, setNotepadText] = useState("")
+
+  // Lifted calculator state so it survives tab switches
+  const [calcDisplay, setCalcDisplay] = useState("0")
+  const [calcExpression, setCalcExpression] = useState("")
+  const [calcMemory, setCalcMemory] = useState<number | null>(null)
+  const [calcPreviousValue, setCalcPreviousValue] = useState<number | null>(null)
+  const [calcOperation, setCalcOperation] = useState<string | null>(null)
+  const [calcWaitingForOperand, setCalcWaitingForOperand] = useState(false)
+
   // Scroll sheet to top whenever it opens
   useEffect(() => {
     if (isOpen && sheetRef.current) {
@@ -74,11 +85,24 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
           ))}
         </div>
 
-        {/* Tab content */}
+        {/* Tab content — all tabs stay mounted, hidden with CSS to preserve state */}
         <div className="flex-1 px-4 pb-4 overflow-hidden">
-          {activeTab === "notepad" && <NotepadTab />}
-          {activeTab === "calc" && <CalculatorTab />}
-          {activeTab === "draw" && <DrawTab />}
+          <div className={activeTab === "notepad" ? "h-full" : "hidden"}>
+            <NotepadTab text={notepadText} setText={setNotepadText} />
+          </div>
+          <div className={activeTab === "calc" ? "h-full" : "hidden"}>
+            <CalculatorTab
+              display={calcDisplay} setDisplay={setCalcDisplay}
+              expression={calcExpression} setExpression={setCalcExpression}
+              memory={calcMemory} setMemory={setCalcMemory}
+              previousValue={calcPreviousValue} setPreviousValue={setCalcPreviousValue}
+              operation={calcOperation} setOperation={setCalcOperation}
+              waitingForOperand={calcWaitingForOperand} setWaitingForOperand={setCalcWaitingForOperand}
+            />
+          </div>
+          <div className={activeTab === "draw" ? "h-full" : "hidden"}>
+            <DrawTab />
+          </div>
         </div>
       </div>
     </div>
@@ -89,8 +113,7 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
 // NOTEPAD TAB — lined text area for typing intermediate work
 // ============================================================
 
-function NotepadTab() {
-  const [text, setText] = useState("")
+function NotepadTab({ text, setText }: { text: string; setText: (t: string) => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Don't auto-focus — it causes the browser to scroll down past the tabs
@@ -128,13 +151,16 @@ function NotepadTab() {
 // CALCULATOR TAB — upgraded with parentheses, exponents, sqrt, memory
 // ============================================================
 
-function CalculatorTab() {
-  const [display, setDisplay] = useState("0")
-  const [expression, setExpression] = useState("")
-  const [memory, setMemory] = useState<number | null>(null)
-  const [previousValue, setPreviousValue] = useState<number | null>(null)
-  const [operation, setOperation] = useState<string | null>(null)
-  const [waitingForOperand, setWaitingForOperand] = useState(false)
+interface CalculatorTabProps {
+  display: string; setDisplay: (v: string) => void
+  expression: string; setExpression: (v: string) => void
+  memory: number | null; setMemory: (v: number | null) => void
+  previousValue: number | null; setPreviousValue: (v: number | null) => void
+  operation: string | null; setOperation: (v: string | null) => void
+  waitingForOperand: boolean; setWaitingForOperand: (v: boolean) => void
+}
+
+function CalculatorTab({ display, setDisplay, expression, setExpression, memory, setMemory, previousValue, setPreviousValue, operation, setOperation, waitingForOperand, setWaitingForOperand }: CalculatorTabProps) {
 
   const inputDigit = useCallback((digit: string) => {
     if (waitingForOperand) {
