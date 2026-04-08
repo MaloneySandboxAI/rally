@@ -16,6 +16,7 @@ import { checkGemMilestone, GemMilestoneCelebration } from "@/components/rally/g
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { usePremium } from "@/lib/premium-context"
 import { createClient } from "@/lib/supabase/client"
+import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 
 /** Get display name from Supabase auth session, falling back gracefully */
 async function getDisplayName(): Promise<string> {
@@ -370,6 +371,7 @@ function PlayPageContent() {
   const isChallenge = searchParams.get("challenge") === "true" || !!creatorChallengeCode || !!challengeCode
   const isCreatorChallenge = !!creatorChallengeCode // creator playing their own challenge (pre-play flow)
   const categoryParam = searchParams.get("category") || "Algebra"
+  const subtopicParam = searchParams.get("subtopic") || null
   const { totalGems, addGems } = useGems()
   const { isPremium, dailyGemsCapped, dailyGemsRemaining, recordGemsEarned } = usePremium()
 
@@ -512,10 +514,10 @@ function PlayPageContent() {
         // SOLO MODE: adaptive difficulty from Supabase
         difficultyRef.current = "easy"
         const excluded = getUsedIdsForCategory(categoryParam)
-        let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
+        let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam)
         if (!question && excluded.length > 0) {
           resetUsedIds(categoryParam)
-          question = await getOneQuestion(categoryParam, difficultyRef.current, [])
+          question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam)
           if (question) {
             toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
           }
@@ -555,10 +557,10 @@ function PlayPageContent() {
 
       // SOLO MODE: fetch from Supabase
       const excluded = getUsedIdsForCategory(categoryParam)
-      let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded)
+      let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam)
       if (!question) {
         resetUsedIds(categoryParam)
-        question = await getOneQuestion(categoryParam, difficultyRef.current, [])
+        question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam)
         if (question) {
           toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
         }
@@ -1058,7 +1060,14 @@ function PlayPageContent() {
       <header className="flex-shrink-0 bg-[#021f3d] px-4 pt-3 pb-2">
         <div className="flex items-center justify-between mb-2">
           <WorkAreaButton onClick={() => setShowWorkArea(true)} />
-          <h1 className="text-lg font-extrabold text-white">{categoryName}</h1>
+          <div className="text-center">
+            <h1 className="text-lg font-extrabold text-white">{categoryName}</h1>
+            {subtopicParam && (
+              <p className="text-[10px] text-[#85B7EB]/50 -mt-0.5">
+                {SUBTOPIC_MAP[categoryParam]?.find(s => s.id === subtopicParam)?.label || subtopicParam}
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2.5">
             {!isChallenge && (
               <div className="flex items-center gap-1">

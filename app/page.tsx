@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryCards } from "@/components/rally/category-cards"
 import { ReferralBanner } from "@/components/rally/referral-banner"
 import { WeakSpotCard } from "@/components/rally/weak-spot-card"
+import { DiagnosticCard } from "@/components/rally/diagnostic-card"
 
 export default function RallyHome() {
   return (
@@ -21,7 +22,12 @@ export default function RallyHome() {
           <CategoryCards variant="grid" />
         </section>
 
-        {/* Challenge Button — moved up for visibility */}
+        {/* Diagnostic Test */}
+        <div className="mt-3">
+          <DiagnosticCard />
+        </div>
+
+        {/* Challenge Button */}
         <div className="mt-3">
           <ChallengeButton />
         </div>

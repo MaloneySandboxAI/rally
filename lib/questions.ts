@@ -19,6 +19,7 @@ export interface Question {
   id: number
   category: string
   difficulty: string
+  subtopic?: string
   question: string
   option_a: string
   option_b: string
@@ -75,7 +76,8 @@ export async function getQuestions(
 export async function getOneQuestion(
   category: string,
   difficulty: string,
-  excludeIds: number[] = []
+  excludeIds: number[] = [],
+  subtopic?: string | null
 ): Promise<Question | null> {
   if (typeof window === "undefined") return null
 
@@ -86,6 +88,10 @@ export async function getOneQuestion(
     .select("*")
     .eq("category", category)
     .eq("difficulty", difficulty)
+
+  if (subtopic) {
+    query = query.eq("subtopic", subtopic)
+  }
 
   if (excludeIds.length > 0) {
     query = query.not("id", "in", `(${excludeIds.join(",")})`)
@@ -104,6 +110,10 @@ export async function getOneQuestion(
       .from("sat_questions")
       .select("*")
       .eq("category", category)
+
+    if (subtopic) {
+      fallbackQuery = fallbackQuery.eq("subtopic", subtopic)
+    }
 
     if (excludeIds.length > 0) {
       fallbackQuery = fallbackQuery.not("id", "in", `(${excludeIds.join(",")})`)
@@ -185,4 +195,90 @@ export async function getChallengePool(
   }
 
   return { easy, medium, hard }
+}
+
+/**
+ * Fetch one random question per subtopic for the diagnostic test.
+ * Returns questions in category order (Algebra → Reading → Grammar → Data & Stats).
+ */
+export async function getDiagnosticQuestions(
+  subtopics: { category: string; id: string }[]
+): Promise<Question[]> {
+  if (typeof window === "undefined") return []
+
+  const supabase = getSupabase()
+  const questions: Question[] = []
+
+  // Fetch one question per subtopic — run in small parallel batches
+  const batchSize = 6
+  for (let i = 0; i < subtopics.length; i += batchSize) {
+    const batch = subtopics.slice(i, i + batchSize)
+    const results = await Promise.all(
+      batch.map(async ({ category, id }) => {
+        const { data, error } = await supabase
+          .from("sat_questions")
+          .select("*")
+          .eq("category", category)
+          .eq("subtopic", id)
+          .limit(5)
+
+        if (error || !data || data.length === 0) return null
+        // Pick one randomly
+        const shuffled = [...data].sort(() => Math.random() - 0.5)
+        return shuffled[0] as Question
+      })
+    )
+    for (const q of results) {
+      if (q) questions.push(q)
+    }
+  }
+
+  return questions
+}
+
+/**
+ * Fetch a single question for a specific subtopic + difficulty.
+ * Used for drilling weak subtopics from diagnostic results.
+ */
+export async function getSubtopicQuestion(
+  category: string,
+  subtopic: string,
+  difficulty: string,
+  excludeIds: number[] = []
+): Promise<Question | null> {
+  if (typeof window === "undefined") return null
+
+  const supabase = getSupabase()
+
+  let query = supabase
+    .from("sat_questions")
+    .select("*")
+    .eq("category", category)
+    .eq("subtopic", subtopic)
+    .eq("difficulty", difficulty)
+
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  }
+
+  const { data, error } = await query.limit(10)
+
+  if (error || !data || data.length === 0) {
+    // Fallback: any difficulty in this subtopic
+    let fallback = supabase
+      .from("sat_questions")
+      .select("*")
+      .eq("category", category)
+      .eq("subtopic", subtopic)
+
+    if (excludeIds.length > 0) {
+      fallback = fallback.not("id", "in", `(${excludeIds.join(",")})`)
+    }
+
+    const { data: fbData } = await fallback.limit(10)
+    if (!fbData || fbData.length === 0) return null
+    return [...fbData].sort(() => Math.random() - 0.5)[0] as Question
+  }
+
+  return [...data].sort(() => Math.random() - 0.5)[0] as Question
 }
