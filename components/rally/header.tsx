@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Diamond, Crown, Heart, User } from "lucide-react"
+import { Diamond, Crown, Heart, User, LogIn } from "lucide-react"
 import { useGems } from "@/lib/gem-context"
 import { usePremium } from "@/lib/premium-context"
 import { getHearts } from "@/lib/hearts"
@@ -28,13 +28,21 @@ export function Header() {
         <h1 className="text-2xl font-extrabold text-secondary tracking-tight">
           rally
         </h1>
-        {isLoggedIn && (
+        {isLoggedIn ? (
           <Link
             href="/account"
             className="w-7 h-7 rounded-full bg-[#378ADD]/20 flex items-center justify-center hover:bg-[#378ADD]/30 transition-colors"
             title="Account"
           >
             <User className="w-3.5 h-3.5 text-[#378ADD]" />
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 text-[#378ADD] text-sm font-semibold hover:text-[#378ADD]/80 transition-colors"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            sign in
           </Link>
         )}
       </div>
