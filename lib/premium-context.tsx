@@ -28,6 +28,15 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       const sub = await getUserSubscription()
       setSubscription(sub)
       if (sub) {
+        // Sync localStorage pro flag with server truth — prevents stale
+        // localStorage from tricking the hearts system into skipping deductions
+        if (typeof window !== "undefined") {
+          if (sub.isPremium) {
+            localStorage.setItem("rally_is_pro", "true")
+          } else {
+            localStorage.removeItem("rally_is_pro")
+          }
+        }
         const { earned } = checkDailyGemCap(sub)
         setDailyGemsEarnedLocal(earned)
       }

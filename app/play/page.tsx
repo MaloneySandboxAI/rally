@@ -770,6 +770,18 @@ function PlayPageContent() {
   }, [currentQuestion, fetchNextQuestion])
 
   const handlePlayAgain = useCallback(() => {
+    // Re-check hearts/round limits before allowing another round
+    if (!isChallenge) {
+      const currentHearts = getHearts()
+      setHearts(currentHearts)
+      const check = canPlaySolo()
+      if (!check.allowed) {
+        setSoloBlocked(check.reason)
+        setShowResults(false)
+        setGemsAwarded(false)
+        return
+      }
+    }
     // Reset all game state in-place so usedIds ref is preserved across rounds
     difficultyRef.current = "easy" // Always restart at easy
     setCurrentQuestion(0)
@@ -787,7 +799,7 @@ function PlayPageContent() {
     setIsQuestionsReady(false)
     setIsLoadingNext(false)
     setFetchError(null)
-  }, [])
+  }, [isChallenge])
 
   // Award gems when showing results — only correct answers + speed bonuses
   useEffect(() => {
