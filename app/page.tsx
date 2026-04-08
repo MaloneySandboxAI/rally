@@ -7,7 +7,6 @@ import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryCards } from "@/components/rally/category-cards"
 import { ReferralBanner } from "@/components/rally/referral-banner"
 import { WeakSpotCard } from "@/components/rally/weak-spot-card"
-import { ProBanner } from "@/components/rally/pro-banner"
 
 export default function RallyHome() {
   return (
@@ -52,10 +51,6 @@ export default function RallyHome() {
           <ReferralBanner />
         </div>
 
-        {/* Go Pro */}
-        <div className="mt-3">
-          <ProBanner />
-        </div>
       </main>
 
       <BottomNav />
