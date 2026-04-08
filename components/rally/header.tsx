@@ -1,13 +1,20 @@
 "use client"
 
-import { Diamond, Crown } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Diamond, Crown, Heart } from "lucide-react"
 import { useGems } from "@/lib/gem-context"
 import { usePremium } from "@/lib/premium-context"
+import { getHearts } from "@/lib/hearts"
 import Link from "next/link"
 
 export function Header() {
   const { totalGems } = useGems()
   const { isPremium, dailyGemsRemaining, dailyGemCap, dailyGemsCapped } = usePremium()
+  const [hearts, setHearts] = useState(5)
+
+  useEffect(() => {
+    setHearts(getHearts())
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 bg-background px-4 py-4 flex items-center justify-between">
@@ -29,6 +36,13 @@ export function Header() {
 
         {isPremium && (
           <Crown className="w-3.5 h-3.5 text-[#F97316]" />
+        )}
+
+        {!isPremium && (
+          <Link href="/store" className="flex items-center gap-1 bg-muted rounded-full px-2.5 py-1.5">
+            <Heart className="w-3.5 h-3.5 text-[#EF4444] fill-[#EF4444]" />
+            <span className="text-sm font-bold text-[#EF4444]">{hearts}</span>
+          </Link>
         )}
 
         <div className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1.5">
