@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { initSync } from "@/lib/sync"
 
 // Pages that are always accessible without auth
 const PUBLIC_PATHS = ["/login", "/age-verify", "/setup-profile", "/privacy", "/terms", "/join"]
@@ -23,6 +24,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       if (!session && !isGuest) {
         router.replace("/login")
         return
+      }
+      // Restore server state on load (logged-in users only)
+      if (session) {
+        initSync()
       }
       // Enforce age verification for authenticated/guest users
       const ageVerified = localStorage.getItem("rally_age_verified") === "true"

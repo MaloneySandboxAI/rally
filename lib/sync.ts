@@ -77,71 +77,74 @@ async function getUserId(): Promise<string | null> {
 }
 
 /**
- * Sync local state TO Supabase (Phase 2 — currently a no-op)
+ * Sync local state TO Supabase
  * Call this after any state mutation to persist server-side
  */
 export async function syncToServer(): Promise<void> {
+  if (typeof window === "undefined") return
   const userId = await getUserId()
   if (!userId) return // guest or not logged in
 
-  // Phase 2: Uncomment when user_state table is created
-  /*
-  const supabase = createClient()
-  const state = {
-    user_id: userId,
-    gems: parseInt(localStorage.getItem(KEYS.gems) || "300", 10),
-    hearts: parseInt(localStorage.getItem(KEYS.hearts) || "5", 10),
-    hearts_date: localStorage.getItem(KEYS.heartsDate),
-    rounds_today: parseInt(localStorage.getItem(KEYS.roundsToday) || "0", 10),
-    rounds_date: localStorage.getItem(KEYS.roundsDate),
-    streak: parseInt(localStorage.getItem(KEYS.streak) || "0", 10),
-    last_played: localStorage.getItem(KEYS.lastPlayed),
-    streak_freeze: localStorage.getItem(KEYS.streakFreeze) === "true",
-    stats_deep_dive: localStorage.getItem(KEYS.statsDeepDive) === "true",
-    stats: JSON.parse(localStorage.getItem(KEYS.stats) || "null"),
-    last_login_date: localStorage.getItem(KEYS.lastLogin),
-    updated_at: new Date().toISOString(),
-  }
+  try {
+    const supabase = createClient()
+    const state = {
+      user_id: userId,
+      gems: parseInt(localStorage.getItem(KEYS.gems) || "300", 10),
+      hearts: parseInt(localStorage.getItem(KEYS.hearts) || "5", 10),
+      hearts_date: localStorage.getItem(KEYS.heartsDate),
+      rounds_today: parseInt(localStorage.getItem(KEYS.roundsToday) || "0", 10),
+      rounds_date: localStorage.getItem(KEYS.roundsDate),
+      streak: parseInt(localStorage.getItem(KEYS.streak) || "0", 10),
+      last_played: localStorage.getItem(KEYS.lastPlayed),
+      streak_freeze: localStorage.getItem(KEYS.streakFreeze) === "true",
+      stats_deep_dive: localStorage.getItem(KEYS.statsDeepDive) === "true",
+      stats: JSON.parse(localStorage.getItem(KEYS.stats) || "null"),
+      last_login_date: localStorage.getItem(KEYS.lastLogin),
+      updated_at: new Date().toISOString(),
+    }
 
-  await supabase.from("user_state").upsert(state, { onConflict: "user_id" })
-  */
+    await supabase.from("user_state").upsert(state, { onConflict: "user_id" })
+  } catch {
+    // Silently fail — local state is the source of truth until sync succeeds
+  }
 }
 
 /**
- * Sync FROM Supabase to local state (Phase 2 — currently a no-op)
+ * Sync FROM Supabase to local state
  * Call this on app load / login to restore server state
  */
 export async function syncFromServer(): Promise<boolean> {
+  if (typeof window === "undefined") return false
   const userId = await getUserId()
   if (!userId) return false
 
-  // Phase 2: Uncomment when user_state table is created
-  /*
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("user_state")
-    .select("*")
-    .eq("user_id", userId)
-    .single()
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("user_state")
+      .select("*")
+      .eq("user_id", userId)
+      .single()
 
-  if (error || !data) return false
+    if (error || !data) return false
 
-  // Server wins on conflicts — overwrite local state
-  localStorage.setItem(KEYS.gems, String(data.gems))
-  localStorage.setItem(KEYS.hearts, String(data.hearts))
-  if (data.hearts_date) localStorage.setItem(KEYS.heartsDate, data.hearts_date)
-  localStorage.setItem(KEYS.roundsToday, String(data.rounds_today))
-  if (data.rounds_date) localStorage.setItem(KEYS.roundsDate, data.rounds_date)
-  localStorage.setItem(KEYS.streak, String(data.streak))
-  if (data.last_played) localStorage.setItem(KEYS.lastPlayed, data.last_played)
-  localStorage.setItem(KEYS.streakFreeze, String(data.streak_freeze))
-  localStorage.setItem(KEYS.statsDeepDive, String(data.stats_deep_dive))
-  if (data.stats) localStorage.setItem(KEYS.stats, JSON.stringify(data.stats))
-  if (data.last_login_date) localStorage.setItem(KEYS.lastLogin, data.last_login_date)
+    // Server wins on conflicts — overwrite local state
+    localStorage.setItem(KEYS.gems, String(data.gems))
+    localStorage.setItem(KEYS.hearts, String(data.hearts))
+    if (data.hearts_date) localStorage.setItem(KEYS.heartsDate, data.hearts_date)
+    localStorage.setItem(KEYS.roundsToday, String(data.rounds_today))
+    if (data.rounds_date) localStorage.setItem(KEYS.roundsDate, data.rounds_date)
+    localStorage.setItem(KEYS.streak, String(data.streak))
+    if (data.last_played) localStorage.setItem(KEYS.lastPlayed, data.last_played)
+    localStorage.setItem(KEYS.streakFreeze, String(data.streak_freeze))
+    localStorage.setItem(KEYS.statsDeepDive, String(data.stats_deep_dive))
+    if (data.stats) localStorage.setItem(KEYS.stats, JSON.stringify(data.stats))
+    if (data.last_login_date) localStorage.setItem(KEYS.lastLogin, data.last_login_date)
 
-  return true
-  */
-  return false
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**

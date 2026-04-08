@@ -1,6 +1,7 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react"
+import { syncToServer } from "@/lib/sync"
 
 const STORAGE_KEY = "rally_gems"
 
@@ -51,9 +52,16 @@ export function GemProvider({ children }: { children: ReactNode }) {
     return isNaN(parsed) ? 300 : parsed
   })
 
-  // Persist every gem change to localStorage
+  // Persist every gem change to localStorage + server
+  const isInitialMount = useRef(true)
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, totalGems.toString())
+    // Skip server sync on initial mount (avoids overwriting server state on load)
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+    syncToServer()
   }, [totalGems])
 
   const addGems = useCallback((amount: number) => {
@@ -169,6 +177,7 @@ export function markRoundCompleted() {
   
   localStorage.setItem("rally_last_played", today)
   localStorage.setItem("rally_streak", newStreak.toString())
+  syncToServer()
 }
 
 export function useGems() {
