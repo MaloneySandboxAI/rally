@@ -49,7 +49,7 @@ export function WeakSpotCard() {
 
   return (
     <Link
-      href={`/play?category=${encodeURIComponent(weakCategory.id)}`}
+      href={`/skills?category=${encodeURIComponent(weakCategory.id)}`}
       className="block bg-gradient-to-r from-[#EF4444]/10 to-[#F97316]/10 border border-[#EF4444]/20 rounded-2xl px-4 py-3.5 active:scale-[0.98] transition-transform"
     >
       <div className="flex items-center justify-between">
@@ -59,7 +59,7 @@ export function WeakSpotCard() {
           </div>
           <div>
             <p className="text-sm font-bold text-white">drill {weakCategory.label.toLowerCase()}</p>
-            <p className="text-xs text-[#85B7EB]/50">{weakCategory.accuracy}% accuracy — let&apos;s improve it</p>
+            <p className="text-xs text-[#85B7EB]/50">{weakCategory.accuracy}% accuracy — pick a skill to level up</p>
           </div>
         </div>
         <ChevronRight className="w-4 h-4 text-[#85B7EB]/40" />
