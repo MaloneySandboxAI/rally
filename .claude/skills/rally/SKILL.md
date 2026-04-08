@@ -52,17 +52,18 @@ SQL migrations live in `supabase/migrations/`. They must be run manually in the 
 ### Dual Currency System
 The app has two currencies that serve different purposes:
 
-- **Gems** (earned): Reward currency earned by answering correctly. Harder questions = more gems. Speed bonus (1.5x) for answering in under half the allotted time. Free users capped at 100 gems/day.
+- **Gems** (earned): Reward currency earned by answering correctly. Harder questions = more gems. Speed bonus (1.5x) for answering in under half the allotted time. Free users earn ~180+ gems/day (150 from questions + 30 login bonus, more with speed bonuses).
 - **Hearts** (spent): Gating currency for solo play. Start with 5/day. Lose 1 per wrong answer (deducted at end of round, not mid-game). Run out = can't play until tomorrow.
 
 **Gem spending:**
 - Heart refill: 200 gems → restores 5 hearts
 - Streak freeze: 150 gems → protects streak for 1 missed day (consumable, one-time use)
+- Stats deep dive: 500 gems → one-time unlock for per-difficulty breakdowns, trend analysis, and insights on the progress page
 - Daily login bonus: 30 gems (automatic)
 - Streak milestones: 7 days = +100 gems, 30 days = +500 gems
 
 **Free user limits (solo only, challenges bypass all):**
-- 100 gems/day earning cap
+- ~180+ gems/day earning potential (more with speed bonuses)
 - 5 hearts/day
 - 3 rounds/day
 - All reset at midnight local time

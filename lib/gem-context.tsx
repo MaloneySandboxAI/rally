@@ -75,8 +75,10 @@ export function GemProvider({ children }: { children: ReactNode }) {
 
 const LAST_LOGIN_KEY = "rally_last_login"
 const STREAK_FREEZE_KEY = "rally_streak_freeze"
+const STATS_DEEP_DIVE_KEY = "rally_stats_deep_dive"
 const DAILY_LOGIN_BONUS = 30
 const STREAK_FREEZE_COST = 150
+const STATS_DEEP_DIVE_COST = 500
 const STREAK_MILESTONES: Record<number, number> = { 7: 100, 30: 500 }
 
 // Award daily login gems (once per day). Returns amount awarded, or 0 if already claimed.
@@ -113,9 +115,23 @@ export function consumeStreakFreeze(): void {
   localStorage.removeItem(STREAK_FREEZE_KEY)
 }
 
+// Stats Deep Dive — one-time unlock to see per-difficulty breakdowns, trends, and insights
+export function buyStatsDeepDive(currentGems: number, spendGems: (amount: number) => void): boolean {
+  if (currentGems < STATS_DEEP_DIVE_COST) return false
+  spendGems(-STATS_DEEP_DIVE_COST)
+  localStorage.setItem(STATS_DEEP_DIVE_KEY, "true")
+  return true
+}
+
+export function hasStatsDeepDive(): boolean {
+  if (typeof window === "undefined") return false
+  return localStorage.getItem(STATS_DEEP_DIVE_KEY) === "true"
+}
+
 export const GEM_ECONOMY = {
   dailyLoginBonus: DAILY_LOGIN_BONUS,
   streakFreezeCost: STREAK_FREEZE_COST,
+  statsDeepDiveCost: STATS_DEEP_DIVE_COST,
   streakMilestones: STREAK_MILESTONES,
   startingBalance: 300,
   referralBonus: 500,

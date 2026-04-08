@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react"
+import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight, Lock } from "lucide-react"
 import { loadStats, getAdaptiveDifficulty, type RallyStats, type CategoryDetail } from "@/lib/stats"
+import { hasStatsDeepDive, GEM_ECONOMY } from "@/lib/gem-context"
 import Link from "next/link"
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -83,8 +84,10 @@ function getTrend(categoryId: string): { label: string; icon: React.ReactNode; c
 export default function StatsPage() {
   const [stats, setStats] = useState<RallyStats | null>(null)
   const [headline, setHeadline] = useState<string | null>(null)
+  const [deepDiveUnlocked, setDeepDiveUnlocked] = useState(false)
 
   useEffect(() => {
+    setDeepDiveUnlocked(hasStatsDeepDive())
     const s = loadStats()
     setStats(s)
 
@@ -153,8 +156,8 @@ export default function StatsPage() {
           </div>
         )}
 
-        {/* Headline improvement stat */}
-        {headline && (
+        {/* Headline improvement stat — deep dive only */}
+        {deepDiveUnlocked && headline && (
           <div className="bg-gradient-to-r from-[#378ADD]/15 to-[#14B8A6]/15 border border-[#378ADD]/30 rounded-2xl px-4 py-3.5">
             <p className="text-white font-bold text-sm">{headline}</p>
           </div>
@@ -223,7 +226,7 @@ export default function StatsPage() {
                     }}>
                       {diffLevel}
                     </span>
-                    {trend && (
+                    {deepDiveUnlocked && trend && (
                       <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: trend.color }}>
                         {trend.icon}
                         {trend.label}
@@ -233,8 +236,8 @@ export default function StatsPage() {
 
                   <AccuracyBar correct={s.correct} total={s.total} color={color} />
 
-                  {/* Per-difficulty breakdown within this category */}
-                  {catDetail && catDetail.total > 0 && (
+                  {/* Per-difficulty breakdown within this category — deep dive only */}
+                  {deepDiveUnlocked && catDetail && catDetail.total > 0 && (
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       {(["easy", "medium", "hard"] as const).map((diff) => {
                         const d = catDetail.byDifficulty?.[diff] ?? { correct: 0, total: 0 }
@@ -270,29 +273,48 @@ export default function StatsPage() {
           </div>
         </section>
 
-        {/* By difficulty */}
-        <section>
-          <p className="text-xs font-bold text-[#85B7EB]/50 uppercase tracking-widest mb-3">by difficulty</p>
-          <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-3 divide-x divide-[#021f3d]">
-              {(["easy", "medium", "hard"] as const).map((diff) => {
-                const s = stats.byDifficulty[diff] ?? { correct: 0, total: 0 }
-                const colors = {
-                  easy: { text: "text-green-400", bar: "#22c55e" },
-                  medium: { text: "text-amber-400", bar: "#f59e0b" },
-                  hard: { text: "text-red-400", bar: "#ef4444" },
-                }
-                return (
-                  <div key={diff} className="p-4 text-center">
-                    <p className={`text-2xl font-extrabold ${colors[diff].text}`}>{pctStr(s.correct, s.total)}</p>
-                    <p className="text-xs text-[#85B7EB]/60 mt-0.5 capitalize">{diff}</p>
-                    <p className="text-xs text-[#85B7EB]/40 mt-0.5">{s.total} qs</p>
-                  </div>
-                )
-              })}
+        {/* By difficulty — deep dive only */}
+        {deepDiveUnlocked ? (
+          <section>
+            <p className="text-xs font-bold text-[#85B7EB]/50 uppercase tracking-widest mb-3">by difficulty</p>
+            <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-3 divide-x divide-[#021f3d]">
+                {(["easy", "medium", "hard"] as const).map((diff) => {
+                  const s = stats.byDifficulty[diff] ?? { correct: 0, total: 0 }
+                  const colors = {
+                    easy: { text: "text-green-400", bar: "#22c55e" },
+                    medium: { text: "text-amber-400", bar: "#f59e0b" },
+                    hard: { text: "text-red-400", bar: "#ef4444" },
+                  }
+                  return (
+                    <div key={diff} className="p-4 text-center">
+                      <p className={`text-2xl font-extrabold ${colors[diff].text}`}>{pctStr(s.correct, s.total)}</p>
+                      <p className="text-xs text-[#85B7EB]/60 mt-0.5 capitalize">{diff}</p>
+                      <p className="text-xs text-[#85B7EB]/40 mt-0.5">{s.total} qs</p>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <section>
+            <Link href="/store" className="block bg-[#0a2d4a] rounded-2xl p-5 border border-purple-500/20 active:scale-[0.98] transition-transform">
+              <div className="flex items-center gap-3 mb-2">
+                <Lock className="w-5 h-5 text-purple-400" />
+                <p className="text-white font-bold text-sm">unlock stats deep dive</p>
+              </div>
+              <p className="text-[#85B7EB]/50 text-xs leading-relaxed mb-3">
+                see per-difficulty breakdowns, trend analysis, and detailed insights for every category.
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Diamond className="w-3.5 h-3.5 text-[#EF9F27] fill-[#EF9F27]" />
+                <span className="text-[#EF9F27] font-bold text-sm">{GEM_ECONOMY.statsDeepDiveCost} gems</span>
+                <span className="text-[#85B7EB]/40 text-xs ml-1">· one-time unlock</span>
+              </div>
+            </Link>
+          </section>
+        )}
 
       </main>
     </div>

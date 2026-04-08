@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Store, Diamond, Heart, Flame, ShieldCheck, ChevronLeft } from "lucide-react"
-import { useGems, buyStreakFreeze, hasStreakFreeze, GEM_ECONOMY } from "@/lib/gem-context"
+import { Store, Diamond, Heart, Flame, ShieldCheck, ChevronLeft, BarChart3 } from "lucide-react"
+import { useGems, buyStreakFreeze, hasStreakFreeze, buyStatsDeepDive, hasStatsDeepDive, GEM_ECONOMY } from "@/lib/gem-context"
 import { getHearts, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { toast } from "sonner"
 
@@ -13,10 +13,12 @@ export default function StorePage() {
   const { totalGems, addGems } = useGems()
   const [hearts, setHearts] = useState(HEARTS_CONFIG.maxHearts)
   const [hasFreezeActive, setHasFreezeActive] = useState(false)
+  const [hasDeepDive, setHasDeepDive] = useState(false)
 
   useEffect(() => {
     setHearts(getHearts())
     setHasFreezeActive(hasStreakFreeze())
+    setHasDeepDive(hasStatsDeepDive())
   }, [])
 
   const handleRefillHearts = () => {
@@ -30,6 +32,20 @@ export default function StorePage() {
       toast.success("hearts refilled to 5!", { duration: 2000 })
     } else {
       toast.error(`not enough gems (need ${HEARTS_CONFIG.refillCost})`, { duration: 2000 })
+    }
+  }
+
+  const handleBuyDeepDive = () => {
+    if (hasDeepDive) {
+      toast("stats deep dive already unlocked!", { duration: 2000 })
+      return
+    }
+    const success = buyStatsDeepDive(totalGems, addGems)
+    if (success) {
+      setHasDeepDive(true)
+      toast.success("stats deep dive unlocked! check your progress page", { duration: 3000 })
+    } else {
+      toast.error(`not enough gems (need ${GEM_ECONOMY.statsDeepDiveCost})`, { duration: 2000 })
     }
   }
 
@@ -73,7 +89,7 @@ export default function StorePage() {
           <div className="space-y-2 text-[#85B7EB]/70 text-xs leading-relaxed">
             <p><span className="text-[#EF9F27] font-bold">gems</span> are earned by answering questions correctly. harder questions = more gems. speed bonuses for fast answers.</p>
             <p><span className="text-red-400 font-bold">hearts</span> are spent when you get an answer wrong in solo play. run out of hearts and you can't play until tomorrow (or refill with gems).</p>
-            <p>free players earn up to <span className="text-white font-semibold">100 gems/day</span> and get <span className="text-white font-semibold">5 hearts</span> + <span className="text-white font-semibold">3 rounds</span> per day.</p>
+            <p>free players earn up to <span className="text-white font-semibold">180+ gems/day</span> (more with speed bonuses) and get <span className="text-white font-semibold">5 hearts</span> + <span className="text-white font-semibold">3 rounds</span> per day.</p>
           </div>
         </div>
 
@@ -123,6 +139,34 @@ export default function StorePage() {
             <div className="flex items-center gap-1 bg-[#EF9F27]/15 rounded-full px-3 py-1.5 shrink-0">
               <Diamond className="w-3.5 h-3.5 text-[#EF9F27] fill-[#EF9F27]" />
               <span className="text-[#EF9F27] font-bold text-sm">{GEM_ECONOMY.streakFreezeCost}</span>
+            </div>
+          )}
+        </button>
+
+        {/* Stats Deep Dive */}
+        <button
+          onClick={handleBuyDeepDive}
+          className="w-full bg-[#0a2d4a] rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+        >
+          <div className="w-14 h-14 rounded-xl bg-purple-500/15 flex items-center justify-center shrink-0">
+            <BarChart3 className="w-7 h-7 text-purple-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-bold text-base">stats deep dive</p>
+            <p className="text-[#85B7EB]/50 text-xs mt-0.5">
+              {hasDeepDive
+                ? "unlocked — view detailed breakdowns on your progress page"
+                : "unlock per-difficulty breakdowns, trend analysis & weak spot insights"}
+            </p>
+          </div>
+          {hasDeepDive ? (
+            <div className="bg-purple-500/15 rounded-full px-3 py-1.5 shrink-0">
+              <span className="text-purple-400 font-bold text-xs">owned</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 bg-[#EF9F27]/15 rounded-full px-3 py-1.5 shrink-0">
+              <Diamond className="w-3.5 h-3.5 text-[#EF9F27] fill-[#EF9F27]" />
+              <span className="text-[#EF9F27] font-bold text-sm">{GEM_ECONOMY.statsDeepDiveCost}</span>
             </div>
           )}
         </button>
