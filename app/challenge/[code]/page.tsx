@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { getChallenge, isChallengeExpired, getChallengeTimeRemaining, type Challenge } from "@/lib/challenges"
 import { Spinner } from "@/components/ui/spinner"
-import { Diamond, Trophy, Swords, ChevronRight, Clock } from "lucide-react"
+import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock } from "lucide-react"
+import Link from "next/link"
 
 const CATEGORIES: Record<string, string> = {
   "Algebra": "Algebra",
@@ -53,7 +54,11 @@ export default function ChallengePage() {
 
   if (error || !challenge) {
     return (
-      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" />
+          home
+        </Link>
         <Swords className="w-12 h-12 text-[#378ADD]/40 mb-3" />
         <h1 className="text-lg font-extrabold text-white mb-1">challenge not found</h1>
         <p className="text-[#85B7EB]/60 text-xs mb-5">{error}</p>
@@ -77,7 +82,11 @@ export default function ChallengePage() {
     const challengerCorrect = challenge.challenger_results?.filter(r => r.isCorrect).length ?? 0
 
     return (
-      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" />
+          home
+        </Link>
         <Trophy className="w-10 h-10 text-[#EF9F27] mb-2" />
         <h1 className="text-lg font-extrabold text-white mb-0.5">challenge complete</h1>
         <p className="text-[#85B7EB]/60 text-xs mb-4">{getCategoryDisplay(challenge.category)}</p>
@@ -130,7 +139,11 @@ export default function ChallengePage() {
   // Check if challenge has expired (48 hours)
   if (challenge.status === "pending" && isChallengeExpired(challenge)) {
     return (
-      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" />
+          home
+        </Link>
         <Clock className="w-12 h-12 text-[#85B7EB]/30 mb-3" />
         <h1 className="text-lg font-extrabold text-white mb-1">challenge expired</h1>
         <p className="text-[#85B7EB]/60 text-xs mb-5 max-w-[260px]">
@@ -150,7 +163,11 @@ export default function ChallengePage() {
   const hasCreatorScore = challenge.creator_score >= 0
   const timeRemaining = getChallengeTimeRemaining(challenge)
   return (
-    <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center">
+    <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+      <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+        <ChevronLeft className="w-4 h-4" />
+        home
+      </Link>
       <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
       <h1 className="text-xl font-extrabold text-white mb-1">you&apos;ve been challenged!</h1>
       <p className="text-[#85B7EB]/60 text-sm mb-1.5">
