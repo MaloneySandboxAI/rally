@@ -11,7 +11,6 @@ import {
   LEVEL_LABELS,
   LEVEL_COLORS,
   MAX_LEVEL,
-  hasSubtopicLevels,
   type SubtopicLevel,
 } from "@/lib/subtopic-levels"
 
@@ -23,12 +22,10 @@ function SkillMapContent() {
 
   const [subtopics, setSubtopics] = useState<{ id: string; label: string; level: SubtopicLevel }[]>([])
   const [avgLevel, setAvgLevel] = useState(1)
-  const [hasDiagnostic, setHasDiagnostic] = useState(false)
 
   useEffect(() => {
     setSubtopics(getCategorySubtopicLevels(category))
     setAvgLevel(getCategoryAverageLevel(category))
-    setHasDiagnostic(hasSubtopicLevels())
   }, [category])
 
   // Progress bar for each subtopic
@@ -79,24 +76,27 @@ function SkillMapContent() {
         </div>
       </header>
 
-      {/* Diagnostic nudge if no levels set */}
-      {!hasDiagnostic && (
-        <div className="mx-4 mb-3">
-          <Link
-            href="/diagnostic"
-            className="flex items-center justify-between bg-[#378ADD]/10 border border-[#378ADD]/25 rounded-xl px-4 py-3 active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-[#378ADD]" />
-              <div>
-                <span className="text-sm font-bold text-white block">take the diagnostic</span>
-                <span className="text-[10px] text-[#85B7EB]/40">sets your starting levels automatically</span>
-              </div>
+      {/* Category-specific diagnostic */}
+      <div className="mx-4 mb-3">
+        <Link
+          href={`/diagnostic?category=${encodeURIComponent(category)}`}
+          className="flex items-center justify-between rounded-xl px-4 py-3 active:scale-[0.98] transition-transform"
+          style={{ backgroundColor: categoryColor + "12", borderWidth: 1, borderColor: categoryColor + "30" }}
+        >
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4" style={{ color: categoryColor }} />
+            <div>
+              <span className="text-sm font-bold text-white block">
+                take {categoryShort.toLowerCase()} diagnostic
+              </span>
+              <span className="text-[10px] text-[#85B7EB]/40">
+                {(SUBTOPIC_MAP[category] || []).length} questions · sets your starting levels
+              </span>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#378ADD]" />
-          </Link>
-        </div>
-      )}
+          </div>
+          <ChevronRight className="w-4 h-4" style={{ color: categoryColor }} />
+        </Link>
+      </div>
 
       {/* Subtopic list */}
       <div className="flex-1 px-4 pb-24 space-y-2">

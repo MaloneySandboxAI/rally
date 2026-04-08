@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { Check, X, ChevronRight, Stethoscope, Target, RotateCcw, Home, BookOpen } from "lucide-react"
+import { useState, useCallback, useEffect, Suspense } from "react"
+import { Check, X, ChevronRight, ChevronLeft, Stethoscope, Target, RotateCcw, Home, BookOpen } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { getDiagnosticQuestions, type Question } from "@/lib/questions"
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import {
@@ -10,6 +11,7 @@ import {
   CATEGORY_COLORS,
   CATEGORY_SHORT,
   saveDiagnosticResult,
+  loadDiagnosticResult,
   scoreDiagnostic,
   type DiagnosticAnswer,
   type SubtopicScore,
@@ -22,7 +24,18 @@ function letterToIndex(letter: string): number {
   return { A: 0, B: 1, C: 2, D: 3 }[letter.toUpperCase()] ?? -1
 }
 
-export default function DiagnosticPage() {
+function DiagnosticContent() {
+  const searchParams = useSearchParams()
+  const categoryFilter = searchParams.get("category") || null
+
+  // Determine which subtopics to test
+  const subtopicsToTest = categoryFilter
+    ? (SUBTOPIC_MAP[categoryFilter] || []).map(s => ({ category: categoryFilter, ...s }))
+    : ALL_SUBTOPICS
+
+  const categoryColor = categoryFilter ? (CATEGORY_COLORS[categoryFilter] || "#378ADD") : "#378ADD"
+  const categoryLabel = categoryFilter ? (CATEGORY_SHORT[categoryFilter] || categoryFilter) : null
+
   const [phase, setPhase] = useState<"intro" | "test" | "results">("intro")
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -36,7 +49,7 @@ export default function DiagnosticPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const qs = await getDiagnosticQuestions(ALL_SUBTOPICS)
+      const qs = await getDiagnosticQuestions(subtopicsToTest)
       if (qs.length === 0) {
         setError("No diagnostic questions available yet. Please run the subtopics migration first.")
         setIsLoading(false)
@@ -52,7 +65,7 @@ export default function DiagnosticPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [subtopicsToTest])
 
   const question = questions[currentIdx]
   const correctIdx = question ? letterToIndex(question.correct) : -1
@@ -76,10 +89,22 @@ export default function DiagnosticPage() {
       setCurrentIdx(prev => prev + 1)
       setSelectedAnswer(null)
     } else {
-      // Save results and show them
+      // For category-specific diagnostics, merge new answers with existing full diagnostic
+      const newAnswers = [...answers]
+      let finalAnswers = newAnswers
+
+      if (categoryFilter) {
+        // Load existing diagnostic and replace only this category's answers
+        const existing = loadDiagnosticResult()
+        if (existing) {
+          const otherCategoryAnswers = existing.answers.filter(a => a.category !== categoryFilter)
+          finalAnswers = [...otherCategoryAnswers, ...newAnswers]
+        }
+      }
+
       const result = {
         date: new Date().toISOString(),
-        answers: [...answers],
+        answers: finalAnswers,
       }
       saveDiagnosticResult(result)
 
@@ -88,40 +113,65 @@ export default function DiagnosticPage() {
       for (const q of questions) {
         questionDifficulties[q.id] = q.difficulty
       }
-      seedFromDiagnostic(answers, questionDifficulties)
+      seedFromDiagnostic(newAnswers, questionDifficulties)
 
       setPhase("results")
     }
   }
 
+  // Back link destination
+  const backHref = categoryFilter ? `/skills?category=${encodeURIComponent(categoryFilter)}` : "/"
+  const backLabel = categoryFilter ? categoryLabel?.toLowerCase() || "skills" : "home"
+
   // Intro screen
   if (phase === "intro") {
     return (
       <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#378ADD]/20 flex items-center justify-center mb-6">
-          <Stethoscope className="w-8 h-8 text-[#378ADD]" />
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+          style={{ backgroundColor: categoryColor + "20" }}
+        >
+          <Stethoscope className="w-8 h-8" style={{ color: categoryColor }} />
         </div>
-        <h1 className="text-2xl font-extrabold text-white mb-2">diagnostic test</h1>
+        <h1 className="text-2xl font-extrabold text-white mb-2">
+          {categoryLabel ? `${categoryLabel.toLowerCase()} diagnostic` : "diagnostic test"}
+        </h1>
         <p className="text-[#85B7EB]/60 text-sm mb-1 max-w-xs">
-          {ALL_SUBTOPICS.length} questions across all SAT topics
+          {subtopicsToTest.length} question{subtopicsToTest.length !== 1 ? "s" : ""}{categoryLabel ? ` across ${categoryLabel} topics` : " across all SAT topics"}
         </p>
         <p className="text-[#85B7EB]/40 text-xs mb-8 max-w-xs">
           No timer, no gems — just find your weak spots so you know what to practice.
         </p>
 
+        {/* Show subtopics being tested */}
         <div className="w-full max-w-xs space-y-2 mb-8">
-          {Object.entries(SUBTOPIC_MAP).map(([category, subtopics]) => (
-            <div key={category} className="flex items-center gap-2 text-left">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: CATEGORY_COLORS[category] }}
-              />
-              <span className="text-xs text-[#85B7EB]/60">
-                <span className="text-white font-semibold">{CATEGORY_SHORT[category]}</span>
-                {" · "}{subtopics.length} topics
-              </span>
+          {categoryFilter ? (
+            // Single category — show subtopics
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {subtopicsToTest.map(s => (
+                <span
+                  key={s.id}
+                  className="text-xs text-[#85B7EB]/60 bg-white/5 rounded-lg px-2.5 py-1"
+                >
+                  {s.label}
+                </span>
+              ))}
             </div>
-          ))}
+          ) : (
+            // Full diagnostic — show categories
+            Object.entries(SUBTOPIC_MAP).map(([category, subtopics]) => (
+              <div key={category} className="flex items-center gap-2 text-left">
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: CATEGORY_COLORS[category] }}
+                />
+                <span className="text-xs text-[#85B7EB]/60">
+                  <span className="text-white font-semibold">{CATEGORY_SHORT[category]}</span>
+                  {" · "}{subtopics.length} topics
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         {error && (
@@ -131,14 +181,15 @@ export default function DiagnosticPage() {
         <button
           onClick={startTest}
           disabled={isLoading}
-          className="bg-[#378ADD] text-white rounded-2xl py-3.5 px-8 font-extrabold text-base active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+          className="text-white rounded-2xl py-3.5 px-8 font-extrabold text-base active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+          style={{ backgroundColor: categoryColor }}
         >
           {isLoading ? <Spinner className="w-5 h-5" /> : <Target className="w-5 h-5" />}
           {isLoading ? "loading..." : "start diagnostic"}
         </button>
 
-        <Link href="/" className="text-[#85B7EB]/40 text-sm mt-4 hover:text-[#85B7EB]/60">
-          back to home
+        <Link href={backHref} className="text-[#85B7EB]/40 text-sm mt-4 hover:text-[#85B7EB]/60">
+          back to {backLabel}
         </Link>
       </div>
     )
@@ -146,7 +197,7 @@ export default function DiagnosticPage() {
 
   // Test screen
   if (phase === "test" && question) {
-    const categoryColor = CATEGORY_COLORS[question.category] || "#378ADD"
+    const qCategoryColor = CATEGORY_COLORS[question.category] || "#378ADD"
     const subtopicLabel = SUBTOPIC_MAP[question.category]?.find(s => s.id === question.subtopic)?.label || question.subtopic
 
     return (
@@ -156,7 +207,7 @@ export default function DiagnosticPage() {
           <div className="flex items-center justify-between mb-2">
             <WorkAreaButton onClick={() => setShowWorkArea(true)} />
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: categoryColor + "30", color: categoryColor }}>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: qCategoryColor + "30", color: qCategoryColor }}>
                 {CATEGORY_SHORT[question.category]}
               </span>
               <span className="text-[10px] text-[#85B7EB]/40">{subtopicLabel}</span>
@@ -171,7 +222,7 @@ export default function DiagnosticPage() {
                 className="h-1 flex-1 rounded-full transition-all duration-300"
                 style={{
                   backgroundColor: i < currentIdx ? (answers[i]?.isCorrect ? "#22c55e" : "#ef4444")
-                    : i === currentIdx ? categoryColor
+                    : i === currentIdx ? qCategoryColor
                     : "#0a2d4a"
                 }}
               />
@@ -264,7 +315,13 @@ export default function DiagnosticPage() {
 
   // Results screen
   if (phase === "results") {
-    return <DiagnosticResults answers={answers} onRetake={startTest} />
+    return (
+      <DiagnosticResults
+        answers={answers}
+        onRetake={startTest}
+        categoryFilter={categoryFilter}
+      />
+    )
   }
 
   // Loading fallback
@@ -275,63 +332,96 @@ export default function DiagnosticPage() {
   )
 }
 
-function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[]; onRetake: () => void }) {
+export default function DiagnosticPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#021f3d] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#378ADD] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <DiagnosticContent />
+    </Suspense>
+  )
+}
+
+function DiagnosticResults({
+  answers,
+  onRetake,
+  categoryFilter,
+}: {
+  answers: DiagnosticAnswer[]
+  onRetake: () => void
+  categoryFilter: string | null
+}) {
   const { total, correct, byCategory, subtopicScores, weakSubtopics } = scoreDiagnostic(answers)
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0
 
+  const categoryLabel = categoryFilter ? (CATEGORY_SHORT[categoryFilter] || categoryFilter) : null
+  const categoryColor = categoryFilter ? (CATEGORY_COLORS[categoryFilter] || "#378ADD") : "#378ADD"
+
+  // For category-specific, only show that category
+  const categoriesToShow = categoryFilter
+    ? { [categoryFilter]: SUBTOPIC_MAP[categoryFilter] || [] }
+    : SUBTOPIC_MAP
+
+  const backHref = categoryFilter ? `/skills?category=${encodeURIComponent(categoryFilter)}` : "/"
+  const backLabel = categoryFilter ? `back to ${categoryLabel?.toLowerCase()}` : "home"
+
   return (
     <div className="min-h-[100dvh] bg-[#021f3d] px-4 py-6 overflow-y-auto pb-24">
+      {/* Back link */}
+      <Link
+        href={backHref}
+        className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1 mb-4"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        {backLabel}
+      </Link>
+
       {/* Score header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-extrabold text-white mb-1">diagnostic results</h1>
+        <h1 className="text-2xl font-extrabold text-white mb-1">
+          {categoryLabel ? `${categoryLabel.toLowerCase()} results` : "diagnostic results"}
+        </h1>
         <div className="flex items-center justify-center gap-3 mt-3">
           <div className="text-4xl font-extrabold text-white">{correct}/{total}</div>
           <div className="text-left">
             <div className="text-sm font-bold" style={{ color: pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444" }}>
               {pct}%
             </div>
-            <div className="text-[10px] text-[#85B7EB]/40">overall accuracy</div>
+            <div className="text-[10px] text-[#85B7EB]/40">accuracy</div>
           </div>
         </div>
       </div>
 
       {/* Seeded levels note */}
-      <div className="bg-[#378ADD]/10 border border-[#378ADD]/25 rounded-xl px-4 py-3 mb-6">
+      <div className="rounded-xl px-4 py-3 mb-6" style={{ backgroundColor: categoryColor + "15", borderColor: categoryColor + "30", borderWidth: 1 }}>
         <p className="text-xs text-[#85B7EB]/70 leading-relaxed">
-          Your starting levels have been set based on these results. Practice each subtopic to level up!
+          {categoryLabel
+            ? `Your ${categoryLabel.toLowerCase()} subtopic levels have been updated. Practice each one to level up!`
+            : "Your starting levels have been set based on these results. Practice each subtopic to level up!"}
         </p>
       </div>
 
-      {/* Category breakdown */}
-      <div className="space-y-2 mb-6">
-        {Object.entries(byCategory).map(([cat, stats]) => {
-          const catPct = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
-          return (
-            <div key={cat} className="bg-[#0a2d4a] rounded-xl px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
-                <span className="text-sm font-bold text-white">{CATEGORY_SHORT[cat]}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#85B7EB]/50">{stats.correct}/{stats.total}</span>
+      {/* Subtopic grid */}
+      {Object.entries(categoriesToShow).map(([category, subtopics]) => {
+        const catScores = subtopicScores.filter(s => s.category === category)
+        if (catScores.length === 0) return null
+        const catStats = byCategory[category]
+        const catPct = catStats ? Math.round((catStats.correct / catStats.total) * 100) : 0
+
+        return (
+          <div key={category} className="mb-5">
+            {!categoryFilter && (
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold" style={{ color: CATEGORY_COLORS[category] }}>
+                  {CATEGORY_SHORT[category]}
+                </h3>
                 <span className="text-xs font-bold" style={{ color: catPct >= 70 ? "#22c55e" : catPct >= 50 ? "#f59e0b" : "#ef4444" }}>
                   {catPct}%
                 </span>
               </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Subtopic grid by category with level badges */}
-      {Object.entries(SUBTOPIC_MAP).map(([category, subtopics]) => {
-        const catScores = subtopicScores.filter(s => s.category === category)
-        if (catScores.length === 0) return null
-        return (
-          <div key={category} className="mb-5">
-            <h3 className="text-xs font-bold mb-2" style={{ color: CATEGORY_COLORS[category] }}>
-              {CATEGORY_SHORT[category]}
-            </h3>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {subtopics.map(sub => {
                 const score = catScores.find(s => s.subtopic === sub.id)
@@ -358,49 +448,70 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
         )
       })}
 
-      {/* CTA: Start practicing */}
-      <div className="mt-6">
-        <h2 className="text-base font-extrabold text-white mb-3 flex items-center gap-2">
-          <Target className="w-4 h-4 text-[#378ADD]" />
-          {weakSubtopics.length > 0 ? "start leveling up" : "keep pushing"}
-        </h2>
-        <p className="text-xs text-[#85B7EB]/50 mb-3">
-          {weakSubtopics.length > 0
-            ? "Your weak spots start at Level 1. Pick a category to practice and level up each subtopic."
-            : "Great start! Pick a category to keep leveling up your subtopics."}
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
-            <Link
-              key={cat}
-              href={`/skills?category=${encodeURIComponent(cat)}`}
-              className="bg-[#0a2d4a] rounded-xl px-4 py-3 active:scale-[0.98] transition-transform flex items-center justify-between"
-              style={{ borderLeft: `3px solid ${color}` }}
-            >
-              <span className="text-sm font-bold text-white">{CATEGORY_SHORT[cat]}</span>
-              <ChevronRight className="w-4 h-4" style={{ color }} />
-            </Link>
-          ))}
-        </div>
-      </div>
-
       {/* Action buttons */}
       <div className="flex gap-2 mt-6">
-        <button
-          onClick={onRetake}
-          className="flex-1 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
-        >
-          <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-          retake
-        </button>
-        <Link
-          href="/"
-          className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
-        >
-          <Home className="w-4 h-4" />
-          home
-        </Link>
+        {categoryFilter ? (
+          // Category-specific: primary CTA goes back to skill map
+          <>
+            <Link
+              href={`/skills?category=${encodeURIComponent(categoryFilter)}`}
+              className="flex-1 text-white rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+              style={{ backgroundColor: categoryColor }}
+            >
+              start practicing
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+            <button
+              onClick={onRetake}
+              className="bg-white/5 text-[#85B7EB]/70 rounded-xl py-3 px-5 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              redo
+            </button>
+          </>
+        ) : (
+          // Full diagnostic: show category links + retake
+          <>
+            <button
+              onClick={onRetake}
+              className="flex-1 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+            >
+              <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
+              retake
+            </button>
+            <Link
+              href="/"
+              className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+            >
+              <Home className="w-4 h-4" />
+              home
+            </Link>
+          </>
+        )}
       </div>
+
+      {/* Full diagnostic: also show category practice links */}
+      {!categoryFilter && (
+        <div className="mt-6">
+          <h2 className="text-base font-extrabold text-white mb-3 flex items-center gap-2">
+            <Target className="w-4 h-4 text-[#378ADD]" />
+            {weakSubtopics.length > 0 ? "start leveling up" : "keep pushing"}
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
+              <Link
+                key={cat}
+                href={`/skills?category=${encodeURIComponent(cat)}`}
+                className="bg-[#0a2d4a] rounded-xl px-4 py-3 active:scale-[0.98] transition-transform flex items-center justify-between"
+                style={{ borderLeft: `3px solid ${color}` }}
+              >
+                <span className="text-sm font-bold text-white">{CATEGORY_SHORT[cat]}</span>
+                <ChevronRight className="w-4 h-4" style={{ color }} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
