@@ -1,18 +1,6 @@
 "use client"
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
-
-const supabaseUrl = "https://rmbzpxvsejbugsgflqsv.supabase.co"
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtYnpweHZzZWpidWdzZ2ZscXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzU2MDEsImV4cCI6MjA5MDgxMTYwMX0.nyDqyCJ0PD42xImxrwY6GbbsfClQMWH_UTHDGvMdfZM"
-
-let supabaseInstance: SupabaseClient | null = null
-
-function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseKey)
-  }
-  return supabaseInstance
-}
+import { createClient } from "@/lib/supabase/client"
 
 // Generate a short, unique share code (6 chars, alphanumeric)
 function generateShareCode(): string {
@@ -85,7 +73,7 @@ export async function createChallenge(params: {
   questionPool: ChallengePool
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const shareCode = generateShareCode()
@@ -123,7 +111,7 @@ export async function updateCreatorResults(params: {
   creatorResults: ChallengeResult[]
 }): Promise<boolean> {
   if (typeof window === "undefined") return false
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   const { error } = await supabase
     .from("challenges")
@@ -147,7 +135,7 @@ export async function updateCreatorResults(params: {
  */
 export async function getChallenge(shareCode: string): Promise<Challenge | null> {
   if (typeof window === "undefined") return null
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   const { data, error } = await supabase
     .from("challenges")
@@ -175,7 +163,7 @@ export async function completeChallenge(params: {
   challengerResults: ChallengeResult[]
 }): Promise<boolean> {
   if (typeof window === "undefined") return false
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   const { error } = await supabase
     .from("challenges")
@@ -212,7 +200,7 @@ export function getChallengeUrl(shareCode: string): string {
  */
 export async function getUserChallenges(userId: string): Promise<Challenge[]> {
   if (typeof window === "undefined") return []
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   const { data, error } = await supabase
     .from("challenges")
@@ -241,7 +229,7 @@ export async function getLeaderboard(): Promise<Array<{
   played: number
 }>> {
   if (typeof window === "undefined") return []
-  const supabase = getSupabase()
+  const supabase = createClient()
 
   // Get all completed challenges
   const { data, error } = await supabase

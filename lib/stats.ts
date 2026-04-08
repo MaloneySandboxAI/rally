@@ -2,7 +2,16 @@
 
 const DIFFICULTY_LEVEL_KEY = "rally_difficulty_level"
 // Default target score used for cross-session difficulty thresholds
-const DEFAULT_TARGET_SCORE = 1000
+const DEFAULT_TARGET_SCORE = 1200
+const TARGET_SCORE_KEY = "rally_target_score"
+
+function getUserTargetScore(): number {
+  if (typeof window === "undefined") return DEFAULT_TARGET_SCORE
+  const stored = localStorage.getItem(TARGET_SCORE_KEY)
+  if (!stored) return DEFAULT_TARGET_SCORE
+  const parsed = parseInt(stored, 10)
+  return isNaN(parsed) ? DEFAULT_TARGET_SCORE : parsed
+}
 
 // Per-round game history for adaptive difficulty (last N games per category)
 const ROUND_HISTORY_KEY = "rally_round_history"
@@ -82,7 +91,7 @@ export function checkAdaptiveDifficultyUnlock(categoryId: string, roundAccuracy:
   addRoundToHistory(categoryId, roundAccuracy)
   const history = getRoundHistory(categoryId)
 
-  const thresholds = getThresholdsForTarget(DEFAULT_TARGET_SCORE)
+  const thresholds = getThresholdsForTarget(getUserTargetScore())
   const currentLevel = getAdaptiveDifficulty(categoryId) || "easy"
 
   if (currentLevel === "hard") return null // already at max

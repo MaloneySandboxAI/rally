@@ -1,10 +1,26 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight, Lock } from "lucide-react"
+import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight, Lock, Crosshair } from "lucide-react"
 import { loadStats, getAdaptiveDifficulty, type RallyStats, type CategoryDetail } from "@/lib/stats"
 import { hasStatsDeepDive, GEM_ECONOMY } from "@/lib/gem-context"
 import Link from "next/link"
+
+function getTargetScoreInfo(): { score: number; label: string } | null {
+  if (typeof window === "undefined") return null
+  const stored = localStorage.getItem("rally_target_score")
+  if (!stored) return null
+  const score = parseInt(stored, 10)
+  if (isNaN(score)) return null
+  let label = "building up"
+  if (score >= 1500) label = "ivy league ready"
+  else if (score >= 1400) label = "top tier"
+  else if (score >= 1300) label = "very competitive"
+  else if (score >= 1200) label = "above average"
+  else if (score >= 1100) label = "solid foundation"
+  else if (score >= 1000) label = "good start"
+  return { score, label }
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   "Algebra": "Algebra",
@@ -85,9 +101,11 @@ export default function StatsPage() {
   const [stats, setStats] = useState<RallyStats | null>(null)
   const [headline, setHeadline] = useState<string | null>(null)
   const [deepDiveUnlocked, setDeepDiveUnlocked] = useState(false)
+  const [targetInfo, setTargetInfo] = useState<{ score: number; label: string } | null>(null)
 
   useEffect(() => {
     setDeepDiveUnlocked(hasStatsDeepDive())
+    setTargetInfo(getTargetScoreInfo())
     const s = loadStats()
     setStats(s)
 
@@ -153,6 +171,19 @@ export default function StatsPage() {
             <Link href="/" className="mt-4 inline-block text-[#378ADD] font-bold text-sm">
               start playing →
             </Link>
+          </div>
+        )}
+
+        {/* Target score context */}
+        {targetInfo && hasPlayed && (
+          <div className="bg-[#0a2d4a] rounded-2xl px-4 py-3.5 flex items-center gap-3">
+            <Crosshair className="w-5 h-5 text-[#F59E0B] shrink-0" />
+            <div className="flex-1">
+              <p className="text-white font-bold text-sm">target: {targetInfo.score}</p>
+              <p className="text-[#85B7EB]/50 text-xs">
+                difficulty unlocks tuned for &ldquo;{targetInfo.label}&rdquo; — {targetInfo.score >= 1400 ? "easier thresholds so you reach hard questions faster" : targetInfo.score >= 1200 ? "balanced progression to build confidence" : "steady ramp-up to build a strong foundation"}
+              </p>
+            </div>
           </div>
         )}
 
