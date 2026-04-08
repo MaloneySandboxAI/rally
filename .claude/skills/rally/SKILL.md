@@ -136,9 +136,29 @@ This caused challengers to get stuck on a spinner after the first question becau
 | `components/rally/feedback-button.tsx` | Feedback UI → Supabase `feedback` table | |
 | `components/rally/streak-banner.tsx` | Streak display + daily login claim | |
 | `components/rally/games-list.tsx` | Active/completed challenge list | |
+| `lib/haptics.ts` | Haptic feedback utility (Web Vibration API, Capacitor-ready) | |
+| `lib/sync.ts` | Server-side state sync layer (localStorage → Supabase migration) | |
+| `capacitor.config.ts` | Capacitor iOS native app configuration | |
+| `supabase/migrations/006_user_state.sql` | User state table for server-side persistence | |
+
+## iOS Migration (Capacitor)
+The app is being prepared for iOS App Store submission via Capacitor:
+- `capacitor.config.ts` — native wrapper config (appId: `com.rallyplaylive.app`)
+- `lib/haptics.ts` — haptic feedback on answer select/confirm/correct/wrong
+- `lib/sync.ts` — state sync layer to migrate localStorage → Supabase `user_state` table
+- Sign in with Apple added to login page (App Store requirement)
+- Migration SQL: `supabase/migrations/006_user_state.sql`
+
+**To enable server sync:** Run the 006 migration in Supabase, then uncomment the sync functions in `lib/sync.ts`.
+
+**To build the iOS app:**
+1. `npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/haptics`
+2. `npx cap add ios && npx cap sync`
+3. `npx cap open ios` → configure signing in Xcode
+4. Update `lib/haptics.ts` to use `@capacitor/haptics` for native haptic engine
 
 ## Auth Flow
-1. Login → Google OAuth or email magic link or guest
+1. Login → Google OAuth, Apple sign-in, email magic link, or guest
 2. OAuth callback redirects to `/setup-profile` (username creation)
 3. Then `/age-verify`
 4. Then home page

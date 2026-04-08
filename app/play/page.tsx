@@ -17,6 +17,7 @@ import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, 
 import { usePremium } from "@/lib/premium-context"
 import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
+import { haptics } from "@/lib/haptics"
 
 /** Get display name from Supabase auth session, falling back gracefully */
 async function getDisplayName(): Promise<string> {
@@ -691,12 +692,14 @@ function PlayPageContent() {
   // Step 1: Select an answer (highlight it, but don't submit yet)
   const handleAnswerSelect = useCallback((answerIndex: number) => {
     if (selectedAnswer !== null) return // already confirmed
+    haptics.light()
     setPendingAnswer(answerIndex)
   }, [selectedAnswer])
 
   // Step 2: Confirm the selected answer (submit it)
   const handleConfirmAnswer = useCallback(() => {
     if (pendingAnswer === null || selectedAnswer !== null) return
+    haptics.medium()
 
     // Stop timer
     setIsTimerActive(false)
@@ -710,6 +713,7 @@ function PlayPageContent() {
     const isSpeedBonus = timeTaken <= speedThreshold
 
     if (pendingAnswer === correctAnswerIndex) {
+      haptics.success()
       setScore(prev => prev + 1)
 
       const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
@@ -748,6 +752,7 @@ function PlayPageContent() {
       }
 
       // Record wrong answer (hearts deducted at end of round, not mid-game)
+      haptics.heavy()
       setAnswerResults(prev => [...prev, {
         questionIndex: currentQuestion,
         isCorrect: false,
