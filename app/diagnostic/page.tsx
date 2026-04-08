@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { Check, X, ChevronRight, Stethoscope, Target, RotateCcw, Home, BookOpen } from "lucide-react"
 import { getDiagnosticQuestions, type Question } from "@/lib/questions"
+import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import {
   ALL_SUBTOPICS,
   SUBTOPIC_MAP,
@@ -28,6 +29,7 @@ export default function DiagnosticPage() {
   const [answers, setAnswers] = useState<DiagnosticAnswer[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showWorkArea, setShowWorkArea] = useState(false)
 
   const startTest = useCallback(async () => {
     setIsLoading(true)
@@ -143,6 +145,7 @@ export default function DiagnosticPage() {
         {/* Header */}
         <header className="flex-shrink-0 bg-[#021f3d] px-4 pt-3 pb-2">
           <div className="flex items-center justify-between mb-2">
+            <WorkAreaButton onClick={() => setShowWorkArea(true)} />
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: categoryColor + "30", color: categoryColor }}>
                 {CATEGORY_SHORT[question.category]}
@@ -243,6 +246,9 @@ export default function DiagnosticPage() {
             </button>
           </div>
         )}
+
+        {/* Work Area (calculator/notepad/draw) */}
+        <WorkArea isOpen={showWorkArea} onClose={() => setShowWorkArea(false)} />
       </div>
     )
   }

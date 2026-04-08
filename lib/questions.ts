@@ -199,6 +199,7 @@ export async function getChallengePool(
 
 /**
  * Fetch one random question per subtopic for the diagnostic test.
+ * Prefers medium/hard questions to properly assess student ability.
  * Returns questions in category order (Algebra → Reading → Grammar → Data & Stats).
  */
 export async function getDiagnosticQuestions(
@@ -215,17 +216,23 @@ export async function getDiagnosticQuestions(
     const batch = subtopics.slice(i, i + batchSize)
     const results = await Promise.all(
       batch.map(async ({ category, id }) => {
-        const { data, error } = await supabase
-          .from("sat_questions")
-          .select("*")
-          .eq("category", category)
-          .eq("subtopic", id)
-          .limit(5)
+        // Try hard first, then medium, then any difficulty
+        for (const diff of ["hard", "medium", null]) {
+          let query = supabase
+            .from("sat_questions")
+            .select("*")
+            .eq("category", category)
+            .eq("subtopic", id)
 
-        if (error || !data || data.length === 0) return null
-        // Pick one randomly
-        const shuffled = [...data].sort(() => Math.random() - 0.5)
-        return shuffled[0] as Question
+          if (diff) query = query.eq("difficulty", diff)
+
+          const { data, error } = await query.limit(5)
+          if (error || !data || data.length === 0) continue
+
+          const shuffled = [...data].sort(() => Math.random() - 0.5)
+          return shuffled[0] as Question
+        }
+        return null
       })
     )
     for (const q of results) {
