@@ -14,6 +14,7 @@ import {
   type DiagnosticAnswer,
   type SubtopicScore,
 } from "@/lib/diagnostic"
+import { seedFromDiagnostic } from "@/lib/subtopic-levels"
 import { Spinner } from "@/components/ui/spinner"
 import Link from "next/link"
 
@@ -81,6 +82,14 @@ export default function DiagnosticPage() {
         answers: [...answers],
       }
       saveDiagnosticResult(result)
+
+      // Seed subtopic levels from diagnostic results
+      const questionDifficulties: Record<number, string> = {}
+      for (const q of questions) {
+        questionDifficulties[q.id] = q.difficulty
+      }
+      seedFromDiagnostic(answers, questionDifficulties)
+
       setPhase("results")
     }
   }
@@ -286,6 +295,13 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
         </div>
       </div>
 
+      {/* Seeded levels note */}
+      <div className="bg-[#378ADD]/10 border border-[#378ADD]/25 rounded-xl px-4 py-3 mb-6">
+        <p className="text-xs text-[#85B7EB]/70 leading-relaxed">
+          Your starting levels have been set based on these results. Practice each subtopic to level up!
+        </p>
+      </div>
+
       {/* Category breakdown */}
       <div className="space-y-2 mb-6">
         {Object.entries(byCategory).map(([cat, stats]) => {
@@ -307,7 +323,7 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
         })}
       </div>
 
-      {/* Subtopic grid by category */}
+      {/* Subtopic grid by category with level badges */}
       {Object.entries(SUBTOPIC_MAP).map(([category, subtopics]) => {
         const catScores = subtopicScores.filter(s => s.category === category)
         if (catScores.length === 0) return null
@@ -320,6 +336,7 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
               {subtopics.map(sub => {
                 const score = catScores.find(s => s.subtopic === sub.id)
                 if (!score) return null
+                const seededLevel = score.isCorrect ? "lv 2–3" : "lv 1"
                 return (
                   <div
                     key={sub.id}
@@ -332,6 +349,7 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
                   >
                     {score.isCorrect ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                     {sub.label}
+                    <span className="opacity-60 ml-0.5">{seededLevel}</span>
                   </div>
                 )
               })}
@@ -340,43 +358,31 @@ function DiagnosticResults({ answers, onRetake }: { answers: DiagnosticAnswer[];
         )
       })}
 
-      {/* Weak spots with drill buttons */}
-      {weakSubtopics.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-base font-extrabold text-white mb-3 flex items-center gap-2">
-            <Target className="w-4 h-4 text-[#EF4444]" />
-            drill your weak spots
-          </h2>
-          <div className="space-y-2">
-            {weakSubtopics.map(ws => (
-              <Link
-                key={`${ws.category}-${ws.subtopic}`}
-                href={`/play?category=${encodeURIComponent(ws.category)}&subtopic=${encodeURIComponent(ws.subtopic)}`}
-                className="flex items-center justify-between bg-[#0a2d4a] border border-[#EF4444]/20 rounded-xl px-4 py-3 active:scale-[0.98] transition-transform"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[ws.category] }} />
-                  <div>
-                    <span className="text-sm font-bold text-white">{ws.label}</span>
-                    <span className="text-[10px] text-[#85B7EB]/40 ml-2">{CATEGORY_SHORT[ws.category]}</span>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-[#378ADD] flex items-center gap-1">
-                  drill <ChevronRight className="w-3 h-3" />
-                </span>
-              </Link>
-            ))}
-          </div>
+      {/* CTA: Start practicing */}
+      <div className="mt-6">
+        <h2 className="text-base font-extrabold text-white mb-3 flex items-center gap-2">
+          <Target className="w-4 h-4 text-[#378ADD]" />
+          {weakSubtopics.length > 0 ? "start leveling up" : "keep pushing"}
+        </h2>
+        <p className="text-xs text-[#85B7EB]/50 mb-3">
+          {weakSubtopics.length > 0
+            ? "Your weak spots start at Level 1. Pick a category to practice and level up each subtopic."
+            : "Great start! Pick a category to keep leveling up your subtopics."}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
+            <Link
+              key={cat}
+              href={`/skills?category=${encodeURIComponent(cat)}`}
+              className="bg-[#0a2d4a] rounded-xl px-4 py-3 active:scale-[0.98] transition-transform flex items-center justify-between"
+              style={{ borderLeft: `3px solid ${color}` }}
+            >
+              <span className="text-sm font-bold text-white">{CATEGORY_SHORT[cat]}</span>
+              <ChevronRight className="w-4 h-4" style={{ color }} />
+            </Link>
+          ))}
         </div>
-      )}
-
-      {weakSubtopics.length === 0 && (
-        <div className="mt-6 text-center bg-green-500/10 border border-green-500/25 rounded-xl p-4">
-          <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
-          <p className="text-sm font-bold text-green-400">Perfect score! No weak spots found.</p>
-          <p className="text-xs text-[#85B7EB]/40 mt-1">Try a harder practice round to challenge yourself.</p>
-        </div>
-      )}
+      </div>
 
       {/* Action buttons */}
       <div className="flex gap-2 mt-6">

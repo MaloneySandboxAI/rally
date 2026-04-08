@@ -17,8 +17,8 @@ export default function RallyHome() {
       <main className="flex-1 px-4 pb-24 pt-2 overflow-y-auto">
         {/* Hero: Pick a category — visible immediately */}
         <section>
-          <h2 className="text-base font-extrabold text-foreground mb-0.5">pick a category</h2>
-          <p className="text-xs text-[#85B7EB]/60 mb-2">10–40 gems per correct answer · 4x in challenges</p>
+          <h2 className="text-base font-extrabold text-foreground mb-0.5">practice</h2>
+          <p className="text-xs text-[#85B7EB]/60 mb-2">pick a category · level up each skill</p>
           <CategoryCards variant="grid" />
         </section>
 

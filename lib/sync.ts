@@ -61,6 +61,8 @@ const KEYS = {
   isPro: "rally_is_pro",
   targetScore: "rally_target_score",
   onboardingComplete: "rally_onboarding_complete",
+  subtopicLevels: "rally_subtopic_levels",
+  diagnostic: "rally_diagnostic",
 } as const
 
 /**
@@ -99,6 +101,8 @@ export async function syncToServer(): Promise<void> {
       streak_freeze: localStorage.getItem(KEYS.streakFreeze) === "true",
       stats_deep_dive: localStorage.getItem(KEYS.statsDeepDive) === "true",
       stats: JSON.parse(localStorage.getItem(KEYS.stats) || "null"),
+      subtopic_levels: JSON.parse(localStorage.getItem(KEYS.subtopicLevels) || "null"),
+      diagnostic: JSON.parse(localStorage.getItem(KEYS.diagnostic) || "null"),
       last_login_date: localStorage.getItem(KEYS.lastLogin),
       updated_at: new Date().toISOString(),
     }
@@ -139,6 +143,8 @@ export async function syncFromServer(): Promise<boolean> {
     localStorage.setItem(KEYS.streakFreeze, String(data.streak_freeze))
     localStorage.setItem(KEYS.statsDeepDive, String(data.stats_deep_dive))
     if (data.stats) localStorage.setItem(KEYS.stats, JSON.stringify(data.stats))
+    if (data.subtopic_levels) localStorage.setItem(KEYS.subtopicLevels, JSON.stringify(data.subtopic_levels))
+    if (data.diagnostic) localStorage.setItem(KEYS.diagnostic, JSON.stringify(data.diagnostic))
     if (data.last_login_date) localStorage.setItem(KEYS.lastLogin, data.last_login_date)
 
     return true

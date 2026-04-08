@@ -18,6 +18,7 @@ import { usePremium } from "@/lib/premium-context"
 import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import { haptics } from "@/lib/haptics"
+import { getSubtopicLevel, pickDifficultyForLevel, adjustSubtopicLevel } from "@/lib/subtopic-levels"
 
 /** Get display name from Supabase auth session, falling back gracefully */
 async function getDisplayName(): Promise<string> {
@@ -512,8 +513,13 @@ function PlayPageContent() {
           return
         }
 
-        // SOLO MODE: adaptive difficulty from Supabase
-        difficultyRef.current = "easy"
+        // SOLO MODE: difficulty based on subtopic level (or easy if no subtopic)
+        if (subtopicParam) {
+          const subLevel = getSubtopicLevel(subtopicParam)
+          difficultyRef.current = pickDifficultyForLevel(subLevel.level)
+        } else {
+          difficultyRef.current = "easy"
+        }
         const excluded = getUsedIdsForCategory(categoryParam)
         let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam)
         if (!question && excluded.length > 0) {
@@ -644,10 +650,15 @@ function PlayPageContent() {
     if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
 
     // Timeout counts as wrong — drop difficulty
-    if (difficultyRef.current === "hard") {
-      difficultyRef.current = "medium"
-    } else if (difficultyRef.current === "medium") {
-      difficultyRef.current = "easy"
+    if (subtopicParam) {
+      const subLevel = getSubtopicLevel(subtopicParam)
+      difficultyRef.current = pickDifficultyForLevel(Math.max(subLevel.level - 1, 1))
+    } else {
+      if (difficultyRef.current === "hard") {
+        difficultyRef.current = "medium"
+      } else if (difficultyRef.current === "medium") {
+        difficultyRef.current = "easy"
+      }
     }
 
     // Record wrong answer due to timeout (hearts deducted at end of round, not mid-game)
@@ -719,10 +730,16 @@ function PlayPageContent() {
       const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
 
       // Adaptive difficulty: bump UP on correct answer
-      if (difficultyRef.current === "easy") {
-        difficultyRef.current = "medium"
-      } else if (difficultyRef.current === "medium") {
-        difficultyRef.current = "hard"
+      // For subtopic mode, re-pick from level (stays in range); for generic, escalate
+      if (subtopicParam) {
+        const subLevel = getSubtopicLevel(subtopicParam)
+        difficultyRef.current = pickDifficultyForLevel(Math.min(subLevel.level + 1, 5))
+      } else {
+        if (difficultyRef.current === "easy") {
+          difficultyRef.current = "medium"
+        } else if (difficultyRef.current === "medium") {
+          difficultyRef.current = "hard"
+        }
       }
 
       // Record correct answer
@@ -745,10 +762,15 @@ function PlayPageContent() {
       setTimeout(() => setShowGemAnimation(false), 1000)
     } else {
       // Adaptive difficulty: drop DOWN on wrong answer
-      if (difficultyRef.current === "hard") {
-        difficultyRef.current = "medium"
-      } else if (difficultyRef.current === "medium") {
-        difficultyRef.current = "easy"
+      if (subtopicParam) {
+        const subLevel = getSubtopicLevel(subtopicParam)
+        difficultyRef.current = pickDifficultyForLevel(Math.max(subLevel.level - 1, 1))
+      } else {
+        if (difficultyRef.current === "hard") {
+          difficultyRef.current = "medium"
+        } else if (difficultyRef.current === "medium") {
+          difficultyRef.current = "easy"
+        }
       }
 
       // Record wrong answer (hearts deducted at end of round, not mid-game)
@@ -874,6 +896,17 @@ function PlayPageContent() {
       })
       if (unlockMessage) {
         toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
+      }
+      // Adjust subtopic level after solo round (not challenges)
+      if (!isChallenge && subtopicParam) {
+        const levelResult = adjustSubtopicLevel({
+          subtopicId: subtopicParam,
+          correct: correctCount,
+          total: TOTAL_QUESTIONS,
+        })
+        if (levelResult.message) {
+          toast.success(levelResult.message, { duration: 4000 })
+        }
       }
       setGemsAwarded(true)
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { getAdaptiveDifficulty } from "@/lib/stats"
+import { getCategoryAverageLevel, LEVEL_COLORS, hasSubtopicLevels } from "@/lib/subtopic-levels"
 
 export const CATEGORIES = [
   {
@@ -33,22 +33,19 @@ interface CategoryCardsProps {
   onCategorySelect?: (categoryId: string) => void
 }
 
-const DIFFICULTY_BADGE: Record<string, { label: string; color: string }> = {
-  easy: { label: "easy", color: "#22c55e" },
-  medium: { label: "medium", color: "#f59e0b" },
-  hard: { label: "hard", color: "#ef4444" },
-}
-
 export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCardsProps) {
-  const [levels, setLevels] = useState<Record<string, string>>({})
+  const [avgLevels, setAvgLevels] = useState<Record<string, number>>({})
+  const [hasLevels, setHasLevels] = useState(false)
 
   useEffect(() => {
-    const loaded: Record<string, string> = {}
+    const loaded: Record<string, number> = {}
     for (const cat of CATEGORIES) {
-      loaded[cat.id] = getAdaptiveDifficulty(cat.id) || "easy"
+      loaded[cat.id] = getCategoryAverageLevel(cat.id)
     }
-    setLevels(loaded)
+    setAvgLevels(loaded)
+    setHasLevels(hasSubtopicLevels())
   }, [])
+
   if (variant === "compact") {
     return (
       <div className="grid grid-cols-2 gap-3">
@@ -62,7 +59,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
             }}
           >
             <span className="text-[#0a1628] font-bold text-sm">{category.name}</span>
-            <span 
+            <span
               className="text-xs font-semibold mt-1 flex items-center gap-0.5"
               style={{ color: category.color }}
             >
@@ -76,31 +73,34 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {CATEGORIES.map((category) => (
-        <Link
-          key={category.id}
-          href={`/play?category=${encodeURIComponent(category.id)}`}
-          className="bg-white rounded-xl py-3 px-3.5 flex items-center justify-between transition-all active:scale-[0.98] hover:shadow-lg"
-          style={{
-            borderLeft: `3px solid ${category.color}`,
-          }}
-        >
-          <div>
-            <span className="text-[#0a1628] font-extrabold text-sm block">{category.name}</span>
-            {levels[category.id] && (
-              <span
-                className="text-[9px] font-bold"
-                style={{
-                  color: DIFFICULTY_BADGE[levels[category.id]]?.color ?? "#22c55e",
-                }}
-              >
-                {DIFFICULTY_BADGE[levels[category.id]]?.label ?? "easy"}
-              </span>
-            )}
-          </div>
-          <ChevronRight className="w-4 h-4 flex-shrink-0" strokeWidth={3} style={{ color: category.color }} />
-        </Link>
-      ))}
+      {CATEGORIES.map((category) => {
+        const avg = avgLevels[category.id] || 1
+        const levelColor = LEVEL_COLORS[Math.round(avg)] || "#85B7EB"
+
+        return (
+          <Link
+            key={category.id}
+            href={`/skills?category=${encodeURIComponent(category.id)}`}
+            className="bg-white rounded-xl py-3 px-3.5 flex items-center justify-between transition-all active:scale-[0.98] hover:shadow-lg"
+            style={{
+              borderLeft: `3px solid ${category.color}`,
+            }}
+          >
+            <div>
+              <span className="text-[#0a1628] font-extrabold text-sm block">{category.name}</span>
+              {hasLevels && (
+                <span
+                  className="text-[9px] font-bold"
+                  style={{ color: levelColor }}
+                >
+                  avg lv {avg.toFixed(1)}
+                </span>
+              )}
+            </div>
+            <ChevronRight className="w-4 h-4 flex-shrink-0" strokeWidth={3} style={{ color: category.color }} />
+          </Link>
+        )
+      })}
     </div>
   )
 }
