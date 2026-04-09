@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import { haptics } from "@/lib/haptics"
 import { getSubtopicLevel, pickDifficultyForLevel, adjustSubtopicLevel } from "@/lib/subtopic-levels"
+import { updateParentSnapshot } from "@/lib/parent-dashboard"
 
 /** Get display name from Supabase auth session, falling back gracefully */
 async function getDisplayName(): Promise<string> {
@@ -908,6 +909,8 @@ function PlayPageContent() {
           toast.success(levelResult.message, { duration: 4000 })
         }
       }
+      // Update parent dashboard snapshot (best-effort, non-blocking)
+      updateParentSnapshot()
       setGemsAwarded(true)
 
       // Show upsell if free user hit the daily gem cap

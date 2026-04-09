@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2 } from "lucide-react"
+import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2, Users, Copy, Check, XCircle, Lock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { usePremium } from "@/lib/premium-context"
+import { createParentToken, getParentToken, revokeParentToken, updateParentSnapshot } from "@/lib/parent-dashboard"
 
 export default function AccountPage() {
   const router = useRouter()
@@ -18,6 +19,10 @@ export default function AccountPage() {
   const [portalLoading, setPortalLoading] = useState(false)
   const { isPremium, subscription } = usePremium()
   const [userId, setUserId] = useState<string | null>(null)
+  const [parentToken, setParentToken] = useState<string | null>(null)
+  const [parentLinkLoading, setParentLinkLoading] = useState(false)
+  const [parentLinkCopied, setParentLinkCopied] = useState(false)
+  const [revoking, setRevoking] = useState(false)
 
   useEffect(() => {
     const guest = localStorage.getItem("rally_is_guest") === "true"
@@ -35,6 +40,8 @@ export default function AccountPage() {
           )
         }
       })
+      // Load parent dashboard token
+      getParentToken().then(t => setParentToken(t))
     }
   }, [])
 
@@ -150,6 +157,107 @@ export default function AccountPage() {
                   <div>
                     <span className="text-white font-semibold text-sm block">Upgrade to Premium</span>
                     <span className="text-[#85B7EB]/40 text-xs">Unlimited gems &middot; Challenge friends</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#85B7EB]/30" />
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Parent dashboard */}
+        {!isGuest && (
+          <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
+            {isPremium ? (
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <Users className="w-5 h-5 text-[#14B8A6]" />
+                  <div>
+                    <span className="text-white font-semibold text-sm block">Parent Progress Report</span>
+                    <span className="text-[#85B7EB]/40 text-xs">
+                      {parentToken ? "Link active — parent can view your progress" : "Share a read-only link with your parent"}
+                    </span>
+                  </div>
+                </div>
+
+                {parentToken ? (
+                  <div className="space-y-2">
+                    {/* Show link + copy button */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-[#021f3d] rounded-lg px-3 py-2 text-xs text-[#85B7EB]/60 truncate font-mono">
+                        {typeof window !== "undefined" ? `${window.location.origin}/parent/${parentToken}` : `.../${parentToken}`}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const url = `${window.location.origin}/parent/${parentToken}`
+                          await navigator.clipboard.writeText(url)
+                          setParentLinkCopied(true)
+                          // Also snapshot progress when they copy the link
+                          updateParentSnapshot()
+                          setTimeout(() => setParentLinkCopied(false), 2000)
+                        }}
+                        className="w-9 h-9 rounded-lg bg-[#378ADD]/20 flex items-center justify-center shrink-0"
+                      >
+                        {parentLinkCopied
+                          ? <Check className="w-4 h-4 text-green-400" />
+                          : <Copy className="w-4 h-4 text-[#378ADD]" />}
+                      </button>
+                    </div>
+                    {/* Revoke button */}
+                    <button
+                      onClick={async () => {
+                        setRevoking(true)
+                        const success = await revokeParentToken()
+                        if (success) setParentToken(null)
+                        setRevoking(false)
+                      }}
+                      disabled={revoking}
+                      className="text-xs text-red-400/60 hover:text-red-400 font-medium flex items-center gap-1"
+                    >
+                      <XCircle className="w-3 h-3" />
+                      {revoking ? "revoking..." : "revoke link"}
+                    </button>
+                    <p className="text-[10px] text-[#85B7EB]/30">
+                      Your parent sees category levels, streaks, and accuracy — never individual questions or who you play with.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      setParentLinkLoading(true)
+                      const token = await createParentToken()
+                      if (token) {
+                        setParentToken(token)
+                        // Snapshot current progress immediately
+                        await updateParentSnapshot()
+                      }
+                      setParentLinkLoading(false)
+                    }}
+                    disabled={parentLinkLoading}
+                    className="w-full bg-[#14B8A6]/15 text-[#14B8A6] rounded-xl py-2.5 text-sm font-bold active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {parentLinkLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
+                    {parentLinkLoading ? "creating..." : "generate parent link"}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/upgrade"
+                className="flex items-center justify-between px-5 py-4 active:bg-[#378ADD]/10 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-[#85B7EB]/40" />
+                  <div>
+                    <span className="text-white font-semibold text-sm block flex items-center gap-1.5">
+                      Parent Progress Report
+                      <Lock className="w-3 h-3 text-[#85B7EB]/30" />
+                    </span>
+                    <span className="text-[#85B7EB]/40 text-xs">Premium feature — share progress with a parent</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#85B7EB]/30" />
