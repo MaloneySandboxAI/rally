@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Flame } from "lucide-react"
+import { BookOpen } from "lucide-react"
 import { claimDailyLogin, checkStreakMilestone } from "@/lib/gem-context"
 import { useGems } from "@/lib/gem-context"
 
@@ -56,7 +56,7 @@ export function StreakBanner() {
   if (!isHydrated) {
     return (
       <div className="bg-[#0a2d4a] rounded-2xl px-4 py-3 flex items-center gap-2.5">
-        <Flame className="w-5 h-5 text-[#EF9F27]" />
+        <BookOpen className="w-5 h-5 text-[#EF9F27]" />
         <div>
           <span className="text-sm font-extrabold text-[#EF9F27]">--</span>
           <span className="text-[10px] text-[#85B7EB]/50 ml-1">day streak</span>

@@ -146,22 +146,23 @@ export const GEM_ECONOMY = {
 }
 
 // Mark that a round was completed (for streak tracking)
-export function markRoundCompleted() {
-  if (typeof window === "undefined") return
-  
+// Returns { newStreak, isNewDay } so callers can show celebrations
+export function markRoundCompleted(): { newStreak: number; isNewDay: boolean } {
+  if (typeof window === "undefined") return { newStreak: 0, isNewDay: false }
+
   const today = new Date().toISOString().split("T")[0]
   const lastPlayed = localStorage.getItem("rally_last_played")
   const currentStreak = parseInt(localStorage.getItem("rally_streak") || "0", 10)
-  
+
   if (lastPlayed === today) {
     // Already played today, no change
-    return
+    return { newStreak: currentStreak, isNewDay: false }
   }
-  
+
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayStr = yesterday.toISOString().split("T")[0]
-  
+
   let newStreak: number
   if (lastPlayed === yesterdayStr) {
     // Played yesterday, increment streak
@@ -174,10 +175,11 @@ export function markRoundCompleted() {
     // More than 1 day gap, reset to 1 (today counts as day 1)
     newStreak = 1
   }
-  
+
   localStorage.setItem("rally_last_played", today)
   localStorage.setItem("rally_streak", newStreak.toString())
   syncToServer()
+  return { newStreak, isNewDay: true }
 }
 
 export function useGems() {

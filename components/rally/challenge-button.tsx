@@ -153,24 +153,27 @@ export function ChallengeButton() {
     <>
       <button
         onClick={handleClick}
-        className="bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-2.5 font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
+        className="w-full bg-primary text-primary-foreground rounded-2xl px-4 py-3.5 flex items-center justify-between font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
         aria-label="Challenge a friend"
       >
-        {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
-          <Lock className="w-5 h-5 shrink-0" strokeWidth={3} />
-        ) : (
-          <Swords className="w-5 h-5 shrink-0" strokeWidth={2.5} />
-        )}
-        <div className="min-w-0">
-          <div className="text-sm font-extrabold leading-tight">challenge</div>
-          <p className="text-[10px] font-semibold text-white/60 truncate leading-tight">
-            {!isLoggedIn
-              ? "sign in"
-              : !isPremium && freeChallengesLeft <= 0
-              ? "upgrade"
-              : "4x gems"}
-          </p>
+        <div className="flex items-center gap-2.5">
+          {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
+            <Lock className="w-5 h-5 shrink-0" strokeWidth={3} />
+          ) : (
+            <Swords className="w-5 h-5 shrink-0" strokeWidth={2.5} />
+          )}
+          <div className="min-w-0 text-left">
+            <div className="text-sm font-extrabold leading-tight">challenge a friend</div>
+            <p className="text-[10px] font-semibold text-white/60 truncate leading-tight">
+              {!isLoggedIn
+                ? "sign in to challenge"
+                : !isPremium && freeChallengesLeft <= 0
+                ? "upgrade for more challenges"
+                : "earn 4x gems in head-to-head"}
+            </p>
+          </div>
         </div>
+        <ChevronRight className="w-4 h-4 text-white/60 shrink-0" />
       </button>
 
       {/* Bottom Sheet */}

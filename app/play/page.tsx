@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react"
-import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2, Flame, TrendingUp } from "lucide-react"
+import { Check, X, RotateCcw, ChevronRight, Diamond, Zap, Sparkles, Heart, BookOpen, ChevronDown, Swords, Copy, Share2, TrendingUp } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/gem-context"
 import { completeReferralIfPending } from "@/lib/referrals"
@@ -17,6 +17,7 @@ import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, 
 import { usePremium } from "@/lib/premium-context"
 import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
+import { StreakCelebration } from "@/components/rally/streak-celebration"
 import { haptics } from "@/lib/haptics"
 import { getSubtopicLevel, pickDifficultyForLevel, adjustSubtopicLevel } from "@/lib/subtopic-levels"
 import { updateParentSnapshot } from "@/lib/parent-dashboard"
@@ -594,6 +595,7 @@ function PlayPageContent() {
   const [showSpeedBonus, setShowSpeedBonus] = useState(false)
   const [gemsAwarded, setGemsAwarded] = useState(false)
   const [gemMilestone, setGemMilestone] = useState<number | null>(null)
+  const [streakCelebration, setStreakCelebration] = useState<number | null>(null)
   const [showWorkArea, setShowWorkArea] = useState(false)
   
   // Timer state — totalTime is per-question based on difficulty
@@ -823,6 +825,7 @@ function PlayPageContent() {
     setShowSpeedBonus(false)
     setGemsAwarded(false)
     setGemMilestone(null)
+    setStreakCelebration(null)
     setAnswerResults([])
     setCurrentQuestionSpeedBonus(false)
     setSessionQuestions([])
@@ -870,7 +873,10 @@ function PlayPageContent() {
       if (milestone) {
         setGemMilestone(milestone)
       }
-      markRoundCompleted()
+      const streakResult = markRoundCompleted()
+      if (streakResult.isNewDay) {
+        setStreakCelebration(streakResult.newStreak)
+      }
       // Complete referral bonus if this is the referred user's first round
       completeReferralIfPending(addGems).then(({ completed, referrerName }) => {
         if (completed) {
@@ -1085,6 +1091,12 @@ function PlayPageContent() {
           <GemMilestoneCelebration
             milestone={gemMilestone}
             onDismiss={() => setGemMilestone(null)}
+          />
+        )}
+        {streakCelebration && (
+          <StreakCelebration
+            streak={streakCelebration}
+            onDismiss={() => setStreakCelebration(null)}
           />
         )}
       </>
@@ -1516,7 +1528,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
           if (streak > 0) {
             return (
               <div className="flex items-center gap-2 bg-[#EF9F27]/10 border border-[#EF9F27]/25 rounded-xl px-3.5 py-2.5">
-                <Flame className="w-5 h-5 text-[#EF9F27]" />
+                <BookOpen className="w-5 h-5 text-[#EF9F27]" />
                 <span className="text-sm font-bold text-[#EF9F27]">Day {streak} streak</span>
                 {streak >= 7 && <span className="text-xs text-[#EF9F27]/60 ml-auto">keep it going!</span>}
               </div>
