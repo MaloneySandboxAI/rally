@@ -270,8 +270,8 @@ export async function getLeaderboard(): Promise<Array<{
     .slice(0, 50)
 }
 
-/** Challenge expiry duration in hours */
-export const CHALLENGE_EXPIRY_HOURS = 48
+/** Challenge expiry duration in hours (7 days) */
+export const CHALLENGE_EXPIRY_HOURS = 168
 
 /**
  * Check if a challenge has expired (48 hours after creation).
@@ -292,8 +292,72 @@ export function getChallengeTimeRemaining(challenge: Challenge): { hours: number
   const now = new Date()
   const diff = expiresAt.getTime() - now.getTime()
   if (diff <= 0) return null
+  const totalHours = Math.floor(diff / (1000 * 60 * 60))
   return {
-    hours: Math.floor(diff / (1000 * 60 * 60)),
+    hours: totalHours,
     minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
   }
+}
+
+/**
+ * Format time remaining as a human-readable string.
+ * Shows days if > 24h, otherwise hours/minutes.
+ */
+export function formatTimeRemaining(challenge: Challenge): string | null {
+  const remaining = getChallengeTimeRemaining(challenge)
+  if (!remaining) return null
+  if (remaining.hours >= 24) {
+    const days = Math.floor(remaining.hours / 24)
+    return `${days}d left`
+  }
+  return `${remaining.hours}h ${remaining.minutes}m left`
+}
+
+/**
+ * Cancel a pending challenge. Only the creator can cancel.
+ * Deletes the row from the database.
+ */
+export async function cancelChallenge(shareCode: string, userId: string): Promise<boolean> {
+  if (typeof window === "undefined") return false
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("challenges")
+    .delete()
+    .eq("share_code", shareCode)
+    .eq("creator_id", userId)
+    .eq("status", "pending")
+
+  if (error) {
+    console.error("[rally] Error canceling challenge:", error)
+    return false
+  }
+  return true
+}
+
+/**
+ * Clear all completed challenges for a user (both as creator and challenger).
+ * Deletes completed rows where the user participated.
+ */
+export async function clearCompletedChallenges(userId: string): Promise<number> {
+  if (typeof window === "undefined") return 0
+  const supabase = createClient()
+
+  // Delete completed challenges where user is creator
+  const { data: d1 } = await supabase
+    .from("challenges")
+    .delete()
+    .eq("creator_id", userId)
+    .eq("status", "completed")
+    .select("id")
+
+  // Delete completed challenges where user is challenger
+  const { data: d2 } = await supabase
+    .from("challenges")
+    .delete()
+    .eq("challenger_id", userId)
+    .eq("status", "completed")
+    .select("id")
+
+  return (d1?.length || 0) + (d2?.length || 0)
 }

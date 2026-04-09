@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Flame } from "lucide-react"
 import { claimDailyLogin, checkStreakMilestone } from "@/lib/gem-context"
 import { useGems } from "@/lib/gem-context"
 
@@ -20,7 +21,6 @@ function getValidStreak(): number {
 
 export function StreakBanner() {
   const { addGems } = useGems()
-  // Lazy initializer reads localStorage only on first render
   const [streak, setStreak] = useState<number>(() => {
     if (typeof window === "undefined") return 0
     return getValidStreak()
@@ -29,16 +29,15 @@ export function StreakBanner() {
   const [bonusMessage, setBonusMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    // Re-sync after hydration in case SSR returned 0
     const currentStreak = getValidStreak()
     setStreak(currentStreak)
     setIsHydrated(true)
 
-    // Daily login bonus — awarded once per day on first visit
+    // Daily login bonus
     const dailyGems = claimDailyLogin()
     if (dailyGems > 0) {
       addGems(dailyGems)
-      setBonusMessage(`+${dailyGems} daily login gems`)
+      setBonusMessage(`+${dailyGems} daily gems`)
     }
 
     // Streak milestone bonus
@@ -48,52 +47,41 @@ export function StreakBanner() {
       if (!localStorage.getItem(milestoneKey)) {
         addGems(milestoneGems)
         localStorage.setItem(milestoneKey, "true")
-        setBonusMessage(`+${milestoneGems} gems for ${currentStreak}-day streak!`)
+        setBonusMessage(`+${milestoneGems} streak bonus!`)
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Show a motivational message based on streak status
-  const getMessage = () => {
-    if (streak === 0) {
-      return "start your streak · play today"
-    }
-    return "keep it going · play today"
-  }
-
   if (!isHydrated) {
     return (
-      <div className="bg-[#0a2d4a] rounded-2xl px-5 py-4 flex items-center gap-3 border-l-4 border-[#EF9F27] shadow-[inset_0_0_20px_rgba(239,159,39,0.15)]">
-        <span className="text-[24px]" role="img" aria-label="fire">🔥</span>
-        <div className="flex flex-col">
-          <span className="text-base font-extrabold text-[#EF9F27]">
-            -- day streak
-          </span>
-          <span className="text-xs text-[#85B7EB]">
-            loading...
-          </span>
+      <div className="bg-[#0a2d4a] rounded-2xl px-4 py-3 flex items-center gap-2.5">
+        <Flame className="w-5 h-5 text-[#EF9F27]" />
+        <div>
+          <span className="text-sm font-extrabold text-[#EF9F27]">--</span>
+          <span className="text-[10px] text-[#85B7EB]/50 ml-1">day streak</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="bg-[#0a2d4a] rounded-2xl px-5 py-4 flex items-center gap-3 border-l-4 border-[#EF9F27] shadow-[inset_0_0_20px_rgba(239,159,39,0.15)]">
-        <span className="text-[24px]" role="img" aria-label="fire">{"\uD83D\uDD25"}</span>
-        <div className="flex flex-col">
-          <span className="text-base font-extrabold text-[#EF9F27]">
-            {streak} day streak
-          </span>
-          <span className="text-xs text-[#85B7EB]">
-            {getMessage()}
-          </span>
+    <div className="flex flex-col gap-1.5">
+      <div className="bg-[#0a2d4a] rounded-2xl px-4 py-3 flex items-center gap-2.5 border-l-3 border-[#EF9F27]">
+        <Flame className="w-5 h-5 text-[#EF9F27] shrink-0" />
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-extrabold text-[#EF9F27]">{streak}</span>
+            <span className="text-xs text-[#85B7EB]/60 font-semibold">day streak</span>
+          </div>
+          <p className="text-[10px] text-[#85B7EB]/40 truncate">
+            {streak === 0 ? "play today to start" : "keep it going!"}
+          </p>
         </div>
       </div>
       {bonusMessage && (
-        <div className="bg-[#EF9F27]/10 border border-[#EF9F27]/30 rounded-xl px-4 py-2 text-center animate-in fade-in slide-in-from-top-2 duration-300">
-          <span className="text-sm font-bold text-[#EF9F27]">{bonusMessage}</span>
+        <div className="bg-[#EF9F27]/10 border border-[#EF9F27]/30 rounded-lg px-3 py-1.5 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="text-xs font-bold text-[#EF9F27]">{bonusMessage}</span>
         </div>
       )}
     </div>

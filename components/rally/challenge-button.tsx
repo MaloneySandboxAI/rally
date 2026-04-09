@@ -153,27 +153,24 @@ export function ChallengeButton() {
     <>
       <button
         onClick={handleClick}
-        className="relative w-full bg-primary text-primary-foreground rounded-xl py-3 px-5 flex flex-col items-center justify-center gap-0.5 font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
+        className="bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-2.5 font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
         aria-label="Challenge a friend"
       >
-        <div className="flex items-center gap-2 text-base">
-          {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
-            <Lock className="w-4 h-4" strokeWidth={3} />
-          ) : (
-            <Plus className="w-4 h-4" strokeWidth={3} />
-          )}
-          challenge a friend
+        {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
+          <Lock className="w-5 h-5 shrink-0" strokeWidth={3} />
+        ) : (
+          <Swords className="w-5 h-5 shrink-0" strokeWidth={2.5} />
+        )}
+        <div className="min-w-0">
+          <div className="text-sm font-extrabold leading-tight">challenge</div>
+          <p className="text-[10px] font-semibold text-white/60 truncate leading-tight">
+            {!isLoggedIn
+              ? "sign in"
+              : !isPremium && freeChallengesLeft <= 0
+              ? "upgrade"
+              : "4x gems"}
+          </p>
         </div>
-
-        <span className="text-[11px] font-semibold text-white/70">
-          {!isLoggedIn
-            ? "sign in to challenge friends"
-            : !isPremium && freeChallengesLeft <= 0
-            ? "daily challenge used \u2014 upgrade for unlimited"
-            : !isPremium
-            ? `${freeChallengesLeft} free challenge today \u00b7 4x gems`
-            : "4x gems \u00b7 unlimited challenges"}
-        </span>
       </button>
 
       {/* Bottom Sheet */}
