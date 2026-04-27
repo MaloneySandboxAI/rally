@@ -2,7 +2,7 @@
 -- Subtopics: cell-structure, genetics, evolution, ecology
 -- Balanced answer positions: 5 A, 5 B, 5 C, 5 D correct
 
-INSERT INTO questions (category, difficulty, subtopic, question, option_a, option_b, option_c, option_d, correct, explanation) VALUES
+INSERT INTO sat_questions (category, difficulty, subtopic, question, option_a, option_b, option_c, option_d, correct, explanation) VALUES
 
 -- ============================================================
 -- CELL STRUCTURE & FUNCTION (5 questions)

@@ -12,7 +12,8 @@ import {
 } from "@/lib/subtopic-levels"
 import { loadStats } from "@/lib/stats"
 
-const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics", "AP Biology"]
+const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics"]
+const AP_CATEGORIES = ["AP Biology"]
 
 /**
  * Visual category level rings for the home screen.
@@ -41,74 +42,149 @@ export function CategoryRings() {
     setHasLevels(hasSubtopicLevels())
   }, [])
 
+  function renderRings(cats: string[]) {
+    return cats.map(cat => {
+      const color = CATEGORY_COLORS[cat] || "#378ADD"
+      const short = CATEGORY_SHORT[cat] || cat
+      const avg = levels[cat] || 1
+      const pct = accuracy[cat]
+      const progress = avg / MAX_LEVEL // 0–1
+      const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
+      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+
+      return (
+        <Link
+          key={cat}
+          href={`/skills?category=${encodeURIComponent(cat)}`}
+          className="bg-[#0a2d4a] rounded-2xl p-4 flex flex-col items-center active:scale-[0.97] transition-transform"
+        >
+          {/* Ring */}
+          <div className="relative w-16 h-16 mb-2">
+            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+              {/* Background ring */}
+              <circle
+                cx="32" cy="32" r="26"
+                fill="none"
+                stroke={color + "20"}
+                strokeWidth="5"
+              />
+              {/* Progress ring */}
+              <circle
+                cx="32" cy="32" r="26"
+                fill="none"
+                stroke={color}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={`${progress * 163.36} ${163.36}`}
+                className="transition-all duration-500"
+              />
+            </svg>
+            {/* Level number in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-extrabold text-white">
+                {hasLevels ? avg.toFixed(1) : "—"}
+              </span>
+            </div>
+          </div>
+
+          {/* Label */}
+          <span className="text-sm font-bold text-white text-center">{short}</span>
+          {hasLevels ? (
+            <span className="text-[10px] text-center mt-0.5" style={{ color }}>
+              {levelLabel}
+            </span>
+          ) : (
+            <span className="text-[10px] text-[#85B7EB]/40 text-center mt-0.5">
+              {subtopicCount} skills
+            </span>
+          )}
+          {pct !== null && (
+            <span
+              className="text-[9px] font-bold mt-0.5"
+              style={{ color: pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444" }}
+            >
+              {pct}% acc
+            </span>
+          )}
+        </Link>
+      )
+    })
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3">
-      {CATEGORIES.map(cat => {
-        const color = CATEGORY_COLORS[cat] || "#378ADD"
-        const short = CATEGORY_SHORT[cat] || cat
-        const avg = levels[cat] || 1
-        const pct = accuracy[cat]
-        const progress = avg / MAX_LEVEL // 0–1
-        const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
-        const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+      {renderRings(CATEGORIES)}
+    </div>
+  )
+}
 
-        return (
-          <Link
-            key={cat}
-            href={`/skills?category=${encodeURIComponent(cat)}`}
-            className="bg-[#0a2d4a] rounded-2xl p-4 flex flex-col items-center active:scale-[0.97] transition-transform"
-          >
-            {/* Ring */}
-            <div className="relative w-16 h-16 mb-2">
-              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                {/* Background ring */}
-                <circle
-                  cx="32" cy="32" r="26"
-                  fill="none"
-                  stroke={color + "20"}
-                  strokeWidth="5"
-                />
-                {/* Progress ring */}
-                <circle
-                  cx="32" cy="32" r="26"
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray={`${progress * 163.36} ${163.36}`}
-                  className="transition-all duration-500"
-                />
-              </svg>
-              {/* Level number in center */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-extrabold text-white">
-                  {hasLevels ? avg.toFixed(1) : "—"}
-                </span>
-              </div>
+/**
+ * Separate section for AP course rings, displayed at the bottom of the home screen.
+ */
+export function APCategoryRings() {
+  const [levels, setLevels] = useState<Record<string, number>>({})
+  const [accuracy, setAccuracy] = useState<Record<string, number | null>>({})
+  const [hasLevels, setHasLevels] = useState(false)
+
+  useEffect(() => {
+    const lvls: Record<string, number> = {}
+    const acc: Record<string, number | null> = {}
+    const stats = loadStats()
+
+    for (const cat of AP_CATEGORIES) {
+      lvls[cat] = getCategoryAverageLevel(cat)
+      const catStats = stats.byCategory[cat]
+      acc[cat] = catStats && catStats.total >= 5
+        ? Math.round((catStats.correct / catStats.total) * 100)
+        : null
+    }
+    setLevels(lvls)
+    setAccuracy(acc)
+    setHasLevels(hasSubtopicLevels())
+  }, [])
+
+  function renderRings(cats: string[]) {
+    return cats.map(cat => {
+      const color = CATEGORY_COLORS[cat] || "#22C55E"
+      const short = CATEGORY_SHORT[cat] || cat
+      const avg = levels[cat] || 1
+      const pct = accuracy[cat]
+      const progress = avg / MAX_LEVEL
+      const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
+      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+
+      return (
+        <Link
+          key={cat}
+          href={`/skills?category=${encodeURIComponent(cat)}`}
+          className="bg-[#0a2d4a] rounded-2xl p-4 flex flex-col items-center active:scale-[0.97] transition-transform"
+        >
+          <div className="relative w-16 h-16 mb-2">
+            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke={color + "20"} strokeWidth="5" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${progress * 163.36} ${163.36}`} className="transition-all duration-500" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-extrabold text-white">{hasLevels ? avg.toFixed(1) : "—"}</span>
             </div>
+          </div>
+          <span className="text-sm font-bold text-white text-center">{short}</span>
+          {hasLevels ? (
+            <span className="text-[10px] text-center mt-0.5" style={{ color }}>{levelLabel}</span>
+          ) : (
+            <span className="text-[10px] text-[#85B7EB]/40 text-center mt-0.5">{subtopicCount} skills</span>
+          )}
+          {pct !== null && (
+            <span className="text-[9px] font-bold mt-0.5" style={{ color: pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444" }}>{pct}% acc</span>
+          )}
+        </Link>
+      )
+    })
+  }
 
-            {/* Label */}
-            <span className="text-sm font-bold text-white text-center">{short}</span>
-            {hasLevels ? (
-              <span className="text-[10px] text-center mt-0.5" style={{ color }}>
-                {levelLabel}
-              </span>
-            ) : (
-              <span className="text-[10px] text-[#85B7EB]/40 text-center mt-0.5">
-                {subtopicCount} skills
-              </span>
-            )}
-            {pct !== null && (
-              <span
-                className="text-[9px] font-bold mt-0.5"
-                style={{ color: pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444" }}
-              >
-                {pct}% acc
-              </span>
-            )}
-          </Link>
-        )
-      })}
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {renderRings(AP_CATEGORIES)}
     </div>
   )
 }
