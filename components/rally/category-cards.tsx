@@ -26,6 +26,11 @@ export const CATEGORIES = [
     name: "Data & Stats",
     color: "#F97316", // coral/orange
   },
+  {
+    id: "AP Biology",
+    name: "AP Bio",
+    color: "#22C55E", // green
+  },
 ]
 
 interface CategoryCardsProps {

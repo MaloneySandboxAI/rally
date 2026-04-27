@@ -29,6 +29,12 @@ export const SUBTOPIC_MAP: Record<string, { id: string; label: string }[]> = {
     { id: "mean-median-mode", label: "Mean, Median & Mode" },
     { id: "scatterplots", label: "Scatterplots" },
   ],
+  "AP Biology": [
+    { id: "cell-structure", label: "Cell Structure & Function" },
+    { id: "genetics", label: "Genetics & Heredity" },
+    { id: "evolution", label: "Evolution & Natural Selection" },
+    { id: "ecology", label: "Ecology & Ecosystems" },
+  ],
 }
 
 export const ALL_SUBTOPICS = Object.entries(SUBTOPIC_MAP).flatMap(
@@ -40,6 +46,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "Reading Comprehension": "#14B8A6",
   "Grammar": "#A855F7",
   "Data & Statistics": "#F97316",
+  "AP Biology": "#22C55E",
 }
 
 export const CATEGORY_SHORT: Record<string, string> = {
@@ -47,6 +54,7 @@ export const CATEGORY_SHORT: Record<string, string> = {
   "Reading Comprehension": "Reading",
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
+  "AP Biology": "AP Bio",
 }
 
 export interface DiagnosticAnswer {

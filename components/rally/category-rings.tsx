@@ -12,7 +12,7 @@ import {
 } from "@/lib/subtopic-levels"
 import { loadStats } from "@/lib/stats"
 
-const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics"]
+const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics", "AP Biology"]
 
 /**
  * Visual category level rings for the home screen.

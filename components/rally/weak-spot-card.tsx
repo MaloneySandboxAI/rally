@@ -10,9 +10,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   "Reading Comprehension": "Reading",
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
+  "AP Biology": "AP Bio",
 }
 
-const ALL_CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics"]
+const ALL_CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics", "AP Biology"]
 
 /**
  * Home screen card that recommends drilling the user's weakest category.

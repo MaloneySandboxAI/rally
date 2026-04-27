@@ -49,6 +49,7 @@ const CATEGORIES = [
   { id: "Reading Comprehension", name: "Reading", color: "#14B8A6", isMath: false },
   { id: "Grammar", name: "Grammar", color: "#A855F7", isMath: false },
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316", isMath: true },
+  { id: "AP Biology", name: "AP Bio", color: "#22C55E", isMath: false },
 ]
 
 // Timer by difficulty (seconds), per category type

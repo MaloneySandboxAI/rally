@@ -14,6 +14,7 @@ const CATEGORIES = [
   { id: "Reading Comprehension", name: "Reading", color: "#14B8A6" },
   { id: "Grammar", name: "Grammar", color: "#A855F7" },
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316" },
+  { id: "AP Biology", name: "AP Bio", color: "#22C55E" },
 ]
 
 export function ChallengeButton() {

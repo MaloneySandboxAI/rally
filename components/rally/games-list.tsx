@@ -19,6 +19,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Reading Comprehension": "#14B8A6",
   "Grammar": "#A855F7",
   "Data & Statistics": "#F97316",
+  "AP Biology": "#22C55E",
 }
 
 const CATEGORY_SHORT: Record<string, string> = {
@@ -26,6 +27,7 @@ const CATEGORY_SHORT: Record<string, string> = {
   "Reading Comprehension": "Reading",
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
+  "AP Biology": "AP Bio",
 }
 
 export function GamesList() {
