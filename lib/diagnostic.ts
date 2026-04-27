@@ -35,6 +35,24 @@ export const SUBTOPIC_MAP: Record<string, { id: string; label: string }[]> = {
     { id: "evolution", label: "Evolution & Natural Selection" },
     { id: "ecology", label: "Ecology & Ecosystems" },
   ],
+  "AP Pre Calculus": [
+    { id: "polynomial-rational", label: "Polynomial & Rational Functions" },
+    { id: "exponential-logarithmic", label: "Exponential & Logarithmic Functions" },
+    { id: "trigonometric", label: "Trigonometric Functions" },
+    { id: "polar-parametric", label: "Polar & Parametric Functions" },
+  ],
+  "AP US History": [
+    { id: "colonial-founding", label: "Colonial Era & Founding" },
+    { id: "civil-war-reconstruction", label: "Civil War & Reconstruction" },
+    { id: "industrialization-progressive", label: "Industrialization & Progressive Era" },
+    { id: "modern-america", label: "Modern America (1945–Present)" },
+  ],
+  "AP English Language": [
+    { id: "rhetorical-analysis", label: "Rhetorical Analysis" },
+    { id: "argument-evidence", label: "Argument & Evidence" },
+    { id: "synthesis", label: "Synthesis" },
+    { id: "style-tone", label: "Style & Tone" },
+  ],
 }
 
 export const ALL_SUBTOPICS = Object.entries(SUBTOPIC_MAP).flatMap(
@@ -47,6 +65,9 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "Grammar": "#A855F7",
   "Data & Statistics": "#F97316",
   "AP Biology": "#22C55E",
+  "AP Pre Calculus": "#EC4899",
+  "AP US History": "#F59E0B",
+  "AP English Language": "#6366F1",
 }
 
 export const CATEGORY_SHORT: Record<string, string> = {
@@ -55,6 +76,9 @@ export const CATEGORY_SHORT: Record<string, string> = {
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
   "AP Biology": "AP Bio",
+  "AP Pre Calculus": "AP Pre Calc",
+  "AP US History": "APUSH",
+  "AP English Language": "AP English",
 }
 
 export interface DiagnosticAnswer {

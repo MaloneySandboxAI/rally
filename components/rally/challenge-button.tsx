@@ -15,6 +15,9 @@ const CATEGORIES = [
   { id: "Grammar", name: "Grammar", color: "#A855F7" },
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316" },
   { id: "AP Biology", name: "AP Bio", color: "#22C55E" },
+  { id: "AP Pre Calculus", name: "AP Pre Calc", color: "#EC4899" },
+  { id: "AP US History", name: "APUSH", color: "#F59E0B" },
+  { id: "AP English Language", name: "AP English", color: "#6366F1" },
 ]
 
 export function ChallengeButton() {

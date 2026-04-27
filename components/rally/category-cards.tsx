@@ -31,6 +31,21 @@ export const CATEGORIES = [
     name: "AP Bio",
     color: "#22C55E", // green
   },
+  {
+    id: "AP Pre Calculus",
+    name: "AP Pre Calc",
+    color: "#EC4899", // pink
+  },
+  {
+    id: "AP US History",
+    name: "APUSH",
+    color: "#F59E0B", // amber
+  },
+  {
+    id: "AP English Language",
+    name: "AP English",
+    color: "#6366F1", // indigo
+  },
 ]
 
 interface CategoryCardsProps {

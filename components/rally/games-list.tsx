@@ -20,6 +20,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Grammar": "#A855F7",
   "Data & Statistics": "#F97316",
   "AP Biology": "#22C55E",
+  "AP Pre Calculus": "#EC4899",
+  "AP US History": "#F59E0B",
+  "AP English Language": "#6366F1",
 }
 
 const CATEGORY_SHORT: Record<string, string> = {
@@ -28,6 +31,9 @@ const CATEGORY_SHORT: Record<string, string> = {
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
   "AP Biology": "AP Bio",
+  "AP Pre Calculus": "AP Pre Calc",
+  "AP US History": "APUSH",
+  "AP English Language": "AP English",
 }
 
 export function GamesList() {

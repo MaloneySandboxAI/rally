@@ -28,6 +28,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
   "AP Biology": "AP Bio",
+  "AP Pre Calculus": "AP Pre Calc",
+  "AP US History": "APUSH",
+  "AP English Language": "AP English",
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -36,9 +39,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Grammar": "#A855F7",
   "Data & Statistics": "#F97316",
   "AP Biology": "#22C55E",
+  "AP Pre Calculus": "#EC4899",
+  "AP US History": "#F59E0B",
+  "AP English Language": "#6366F1",
 }
 
-const ALL_CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics", "AP Biology"]
+const ALL_CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics", "AP Biology", "AP Pre Calculus", "AP US History", "AP English Language"]
 
 function pct(correct: number, total: number): number {
   if (total === 0) return 0

@@ -13,7 +13,7 @@ import {
 import { loadStats } from "@/lib/stats"
 
 const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics"]
-const AP_CATEGORIES = ["AP Biology"]
+const AP_CATEGORIES = ["AP Biology", "AP Pre Calculus", "AP US History", "AP English Language"]
 
 /**
  * Visual category level rings for the home screen.
