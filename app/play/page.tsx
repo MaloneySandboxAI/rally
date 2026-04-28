@@ -1036,7 +1036,7 @@ function PlayPageContent() {
             </button>
           )}
           <a
-            href="/"
+            href="/home"
             className="bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-3 px-6 font-bold text-center"
           >
             back to home
@@ -1647,7 +1647,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
             play again
           </button>
           <a
-            href="/"
+            href="/home"
             className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 flex items-center justify-center gap-1.5 font-bold text-sm active:scale-[0.98]"
           >
             home

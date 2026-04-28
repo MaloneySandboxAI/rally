@@ -12,7 +12,7 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { id: "games", label: "games", href: "/", icon: Gamepad2 },
+  { id: "games", label: "games", href: "/home", icon: Gamepad2 },
   { id: "stats", label: "stats", href: "/stats", icon: BarChart3 },
   { id: "ranks", label: "ranks", href: "/ranks", icon: Trophy },
   { id: "ap", label: "AP Tests", href: "/ap", icon: GraduationCap },
@@ -27,7 +27,7 @@ export function BottomNav() {
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+          const isActive = pathname === item.href || (item.id !== "games" && pathname.startsWith(item.href))
           
           return (
             <Link

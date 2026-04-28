@@ -14,7 +14,7 @@ export default function AgeVerifyPage() {
     // If already verified, go home
     const verified = localStorage.getItem("rally_age_verified")
     if (verified === "true") {
-      router.replace("/")
+      router.replace("/home")
       return
     }
     setLoading(false)
@@ -44,7 +44,7 @@ export default function AgeVerifyPage() {
 
     // Age verified — store flag and continue
     localStorage.setItem("rally_age_verified", "true")
-    router.replace("/")
+    router.replace("/home")
   }
 
   if (loading) return null

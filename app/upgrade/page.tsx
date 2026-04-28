@@ -67,7 +67,7 @@ function UpgradeContent() {
     <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col">
       {/* Header */}
       <header className="px-5 pt-6 pb-2">
-        <Link href="/" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+        <Link href="/home" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           back
         </Link>

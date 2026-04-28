@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { initSync } from "@/lib/sync"
 
 // Pages that are always accessible without auth
-const PUBLIC_PATHS = ["/login", "/age-verify", "/setup-profile", "/privacy", "/terms", "/join"]
+const PUBLIC_PATHS = ["/", "/login", "/age-verify", "/setup-profile", "/privacy", "/terms", "/join"]
 const PUBLIC_PREFIXES = ["/challenge/", "/upgrade"]
 
 export function AuthGate({ children }: { children: React.ReactNode }) {

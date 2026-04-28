@@ -480,7 +480,7 @@ function DiagnosticResults({
               retake
             </button>
             <Link
-              href="/"
+              href="/home"
               className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 font-bold text-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
             >
               <Home className="w-4 h-4" />

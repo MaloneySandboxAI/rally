@@ -25,9 +25,32 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Rally - SAT Prep Game',
-  description: 'SAT prep meets Words with Friends. Challenge your friends and ace the SAT.',
+  title: 'Rally - SAT & AP Prep Game',
+  description: 'Challenge your teen to a head-to-head SAT & AP prep game. Adaptive questions, real-time scoring, and a gem economy that makes studying actually fun.',
   generator: 'v0.app',
+  metadataBase: new URL('https://rallyplaylive.com'),
+  openGraph: {
+    title: 'Rally - SAT & AP Prep That Hits Differently',
+    description: 'Challenge your teen to a head-to-head prep game. 1,000+ questions across SAT & AP subjects. Free to play.',
+    url: 'https://rallyplaylive.com',
+    siteName: 'Rally',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Rally - SAT & AP prep game with categories for Algebra, Reading, Grammar, Data & Stats, and AP exams',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Rally - SAT & AP Prep That Hits Differently',
+    description: 'Challenge your teen to a head-to-head prep game. Free to play.',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: [
       {

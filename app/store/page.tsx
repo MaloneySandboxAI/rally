@@ -66,7 +66,7 @@ export default function StorePage() {
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
-        <Link href="/" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1 mb-3">
+        <Link href="/home" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1 mb-3">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>

@@ -47,7 +47,7 @@ export default function UpgradeSuccessPage() {
         {/* Quick actions */}
         <div className="space-y-3 w-full max-w-xs mx-auto mb-8">
           <Link
-            href="/"
+            href="/home"
             className="flex items-center justify-between bg-[#0a2d4a] rounded-xl px-4 py-3.5 active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-3">

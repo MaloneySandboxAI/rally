@@ -161,7 +161,7 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
-        <Link href="/" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors block mb-3">
+        <Link href="/home" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors block mb-3">
           ← home
         </Link>
         <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export default function StatsPage() {
           <div className="bg-[#0a2d4a] rounded-2xl p-6 text-center">
             <p className="text-[#85B7EB] font-medium">No games played yet.</p>
             <p className="text-[#85B7EB]/60 text-sm mt-1">Complete a round to see your progress here.</p>
-            <Link href="/" className="mt-4 inline-block text-[#378ADD] font-bold text-sm">
+            <Link href="/home" className="mt-4 inline-block text-[#378ADD] font-bold text-sm">
               start playing →
             </Link>
           </div>

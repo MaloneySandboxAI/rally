@@ -51,7 +51,7 @@ function SkillMapContent() {
       <header className="flex-shrink-0 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <Link
-            href="/"
+            href="/home"
             className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1"
           >
             <ChevronLeft className="w-4 h-4" />

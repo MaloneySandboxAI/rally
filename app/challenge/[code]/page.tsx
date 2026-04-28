@@ -55,14 +55,14 @@ export default function ChallengePage() {
   if (error || !challenge) {
     return (
       <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
-        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+        <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>
         <Swords className="w-12 h-12 text-[#378ADD]/40 mb-3" />
         <h1 className="text-lg font-extrabold text-white mb-1">challenge not found</h1>
         <p className="text-[#85B7EB]/60 text-xs mb-5">{error}</p>
-        <a href="/" className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold text-sm">
+        <a href="/home" className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold text-sm">
           play solo instead
         </a>
       </div>
@@ -83,7 +83,7 @@ export default function ChallengePage() {
 
     return (
       <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
-        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+        <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>
@@ -127,7 +127,7 @@ export default function ChallengePage() {
         </p>
 
         <a
-          href="/"
+          href="/home"
           className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold flex items-center gap-2 text-sm"
         >
           play more <ChevronRight className="w-4 h-4" strokeWidth={3} />
@@ -140,7 +140,7 @@ export default function ChallengePage() {
   if (challenge.status === "pending" && isChallengeExpired(challenge)) {
     return (
       <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
-        <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+        <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>
@@ -150,7 +150,7 @@ export default function ChallengePage() {
           This challenge from {challenge.creator_name} has expired. Challenges last 48 hours.
         </p>
         <a
-          href="/"
+          href="/home"
           className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold flex items-center gap-2 text-sm"
         >
           create a new challenge <ChevronRight className="w-4 h-4" strokeWidth={3} />
@@ -164,7 +164,7 @@ export default function ChallengePage() {
   const timeRemaining = getChallengeTimeRemaining(challenge)
   return (
     <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
-      <Link href="/" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+      <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         home
       </Link>
@@ -197,7 +197,7 @@ export default function ChallengePage() {
       </button>
 
       <a
-        href="/"
+        href="/home"
         className="text-[#85B7EB]/50 text-sm font-medium mt-3"
       >
         or play solo instead

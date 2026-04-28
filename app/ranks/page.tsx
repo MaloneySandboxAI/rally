@@ -35,7 +35,7 @@ export default function RanksPage() {
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
       <header className="sticky top-0 z-10 bg-[#021f3d] px-5 pt-6 pb-4 border-b border-[#0a2d4a]">
-        <Link href="/" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors block mb-3">
+        <Link href="/home" className="text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors block mb-3">
           ← home
         </Link>
         <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ export default function RanksPage() {
               challenge a friend to start climbing the leaderboard — gems earned in head-to-head count here
             </p>
             <Link
-              href="/"
+              href="/home"
               className="mt-2 bg-[#378ADD] text-white rounded-xl py-3 px-8 font-bold text-sm"
             >
               start a challenge

@@ -50,7 +50,7 @@ function JoinContent() {
       </button>
 
       <button
-        onClick={() => router.push("/")}
+        onClick={() => router.push("/home")}
         className="mt-4 text-[#85B7EB]/40 text-sm font-medium hover:text-[#85B7EB]/60 transition-colors"
       >
         already have an account? sign in
