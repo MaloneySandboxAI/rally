@@ -34,6 +34,10 @@ export const SUBTOPIC_MAP: Record<string, { id: string; label: string }[]> = {
     { id: "genetics", label: "Genetics & Heredity" },
     { id: "evolution", label: "Evolution & Natural Selection" },
     { id: "ecology", label: "Ecology & Ecosystems" },
+    { id: "molecular-biology", label: "Molecular Biology" },
+    { id: "energy-metabolism", label: "Energy & Metabolism" },
+    { id: "animal-physiology", label: "Animal Physiology" },
+    { id: "diversity-of-life", label: "Diversity of Life" },
   ],
   "AP Pre Calculus": [
     { id: "polynomial-rational", label: "Polynomial & Rational Functions" },
