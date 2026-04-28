@@ -53,7 +53,7 @@ export default function LandingPage() {
           href="/login"
           className="inline-flex items-center gap-2 bg-[#378ADD] text-white rounded-2xl py-4 px-8 font-extrabold text-lg shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.97] hover:brightness-110"
         >
-          Start playing free
+          Try it now
           <ChevronRight className="w-5 h-5" />
         </Link>
         <p className="text-[#85B7EB]/40 text-sm mt-3">No credit card needed</p>
@@ -183,7 +183,7 @@ export default function LandingPage() {
             href="/login"
             className="inline-flex items-center gap-2 bg-[#378ADD] text-white rounded-2xl py-3.5 px-7 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 transition-all active:scale-[0.97] hover:brightness-110"
           >
-            Start playing free
+            Try it now
             <ChevronRight className="w-5 h-5" />
           </Link>
         </div>

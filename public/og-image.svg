@@ -51,5 +51,5 @@
 
   <!-- Free badge -->
   <rect x="510" y="555" width="180" height="40" rx="20" fill="#378ADD"/>
-  <text x="600" y="581" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="800" fill="white">Start playing free</text>
+  <text x="600" y="581" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="800" fill="white">Try it now</text>
 </svg>
