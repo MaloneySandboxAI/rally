@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Rally - SAT & AP Prep Game',
-  description: 'Challenge your teen to a head-to-head SAT & AP prep game. Adaptive questions, real-time scoring, and a gem economy that makes studying actually fun.',
+  description: 'Challenge your friends to a head-to-head SAT & AP prep game. Adaptive questions, real-time scoring, and a gem economy that makes studying actually fun.',
   generator: 'v0.app',
   metadataBase: new URL('https://rallyplaylive.com'),
   openGraph: {
