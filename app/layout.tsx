@@ -36,10 +36,10 @@ export const metadata: Metadata = {
     siteName: 'Rally',
     images: [
       {
-        url: '/og-image.png',
+        url: 'https://rallyplaylive.com/og-rally-v2.png',
         width: 1200,
         height: 630,
-        alt: 'Rally - SAT & AP prep game with categories for Algebra, Reading, Grammar, Data & Stats, and AP exams',
+        alt: 'Rally - SAT & AP Prep Game',
       },
     ],
     locale: 'en_US',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Rally - SAT & AP Prep That Hits Differently',
     description: 'Challenge your friends to a head-to-head prep game. Free to play.',
-    images: ['/og-image.png'],
+    images: ['https://rallyplaylive.com/og-rally-v2.png'],
   },
   icons: {
     icon: [
