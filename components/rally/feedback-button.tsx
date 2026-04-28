@@ -57,13 +57,14 @@ export function FeedbackButton() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Feedback Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-[88px] right-4 z-40 flex flex-col items-center justify-center w-11 h-11 rounded-full bg-[#021f3d]/80 border-2 border-[#378ADD] backdrop-blur-sm shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-[88px] right-4 z-40 flex items-center gap-1.5 bg-[#378ADD] text-white rounded-full pl-3 pr-3.5 py-2 shadow-lg shadow-[#378ADD]/30 transition-transform hover:scale-105 active:scale-95"
         aria-label="Send feedback"
       >
-        <Send className="w-5 h-5 text-[#378ADD]" />
+        <Send className="w-4 h-4" />
+        <span className="text-xs font-bold">Feedback</span>
       </button>
 
       {/* Backdrop */}

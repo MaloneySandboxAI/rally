@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://rallyplaylive.com'),
   openGraph: {
     title: 'Rally - SAT & AP Prep That Hits Differently',
-    description: 'Challenge your teen to a head-to-head prep game. 1,000+ questions across SAT & AP subjects. Free to play.',
+    description: 'Challenge your friends to a head-to-head prep game. 1,000+ questions across SAT & AP subjects. Free to play.',
     url: 'https://rallyplaylive.com',
     siteName: 'Rally',
     images: [
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Rally - SAT & AP Prep That Hits Differently',
-    description: 'Challenge your teen to a head-to-head prep game. Free to play.',
+    description: 'Challenge your friends to a head-to-head prep game. Free to play.',
     images: ['/og-image.png'],
   },
   icons: {

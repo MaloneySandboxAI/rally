@@ -44,8 +44,8 @@ export default function LandingPage() {
           <span className="text-[#378ADD]">hits differently</span>
         </p>
         <p className="text-base text-[#85B7EB]/70 max-w-md mx-auto mb-8 leading-relaxed">
-          Challenge your teen to a head-to-head SAT prep game. Adaptive questions,
-          real-time scoring, and a gem economy that makes studying actually fun.
+          Challenge your friends to a head-to-head SAT & AP prep game. Adaptive
+          questions, real-time scoring, and a gem economy that makes studying actually fun.
         </p>
 
         {/* CTA */}
@@ -107,7 +107,7 @@ export default function LandingPage() {
           <div className="bg-[#378ADD]/20 border border-[#378ADD]/30 rounded-xl p-3 flex items-center gap-3">
             <Swords className="w-5 h-5 text-[#378ADD] shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white">Mom challenged you!</div>
+              <div className="text-xs font-bold text-white">Jake challenged you!</div>
               <div className="text-[10px] text-[#85B7EB]/60">Algebra · tap to play</div>
             </div>
             <div className="bg-[#378ADD] rounded-lg px-2.5 py-1 text-[10px] font-extrabold text-white">GO</div>
@@ -123,7 +123,7 @@ export default function LandingPage() {
               <Swords className="w-5 h-5 text-[#378ADD]" />
             </div>
             <div>
-              <h3 className="font-extrabold text-white text-base mb-1">Challenge your teen</h3>
+              <h3 className="font-extrabold text-white text-base mb-1">Challenge your friends</h3>
               <p className="text-sm text-[#85B7EB]/60 leading-relaxed">
                 Send a challenge link and go head-to-head on SAT questions. Earn 4x gems in
                 challenge mode. Nothing motivates like a little friendly competition.
@@ -177,7 +177,7 @@ export default function LandingPage() {
         <div className="bg-[#0a2d4a] rounded-2xl p-8 border border-[#1a4a6e]">
           <p className="text-xl font-extrabold text-white mb-2">Ready to rally?</p>
           <p className="text-sm text-[#85B7EB]/60 mb-6">
-            Challenge your teen tonight. It takes 30 seconds to start.
+            Challenge a friend. It takes 30 seconds to start.
           </p>
           <Link
             href="/login"
