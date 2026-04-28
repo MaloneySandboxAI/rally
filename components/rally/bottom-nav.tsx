@@ -1,6 +1,6 @@
 "use client"
 
-import { Gamepad2, BarChart3, Trophy, Store } from "lucide-react"
+import { Gamepad2, BarChart3, Trophy, Store, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { id: "games", label: "games", href: "/", icon: Gamepad2 },
   { id: "stats", label: "stats", href: "/stats", icon: BarChart3 },
   { id: "ranks", label: "ranks", href: "/ranks", icon: Trophy },
+  { id: "ap", label: "AP Tests", href: "/ap", icon: GraduationCap },
   { id: "store", label: "store", href: "/store", icon: Store },
 ]
 

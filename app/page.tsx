@@ -3,7 +3,7 @@ import { SatCountdown } from "@/components/rally/sat-countdown"
 import { GamesList } from "@/components/rally/games-list"
 import { ChallengeButton } from "@/components/rally/challenge-button"
 import { BottomNav } from "@/components/rally/bottom-nav"
-import { CategoryRings, APCategoryRings } from "@/components/rally/category-rings"
+import { CategoryRings } from "@/components/rally/category-rings"
 import { ReferralBanner } from "@/components/rally/referral-banner"
 import { DiagnosticCard } from "@/components/rally/diagnostic-card"
 
@@ -36,13 +36,6 @@ export default function RallyHome() {
           <SatCountdown />
           <ReferralBanner />
         </div>
-
-        {/* AP Courses — separate section below SAT content */}
-        <section className="mt-6">
-          <h2 className="text-base font-extrabold text-foreground mb-0.5">AP courses</h2>
-          <p className="text-xs text-[#85B7EB]/60 mb-2.5">practice for AP exams</p>
-          <APCategoryRings />
-        </section>
       </main>
 
       <BottomNav />
