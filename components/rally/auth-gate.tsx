@@ -9,13 +9,17 @@ import { initSync } from "@/lib/sync"
 const PUBLIC_PATHS = ["/", "/login", "/age-verify", "/setup-profile", "/privacy", "/terms", "/join"]
 const PUBLIC_PREFIXES = ["/challenge/", "/upgrade"]
 
+function isPublic(path: string) {
+  return PUBLIC_PATHS.includes(path) || PUBLIC_PREFIXES.some(p => path.startsWith(p))
+}
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
     // Skip auth check on public pages
-    if (PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) return
+    if (isPublic(pathname)) return
 
     const supabase = createClient()
 
@@ -38,11 +42,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Only redirect on explicit SIGNED_OUT events — not on INITIAL_SESSION
+    // or TOKEN_REFRESHED, which can briefly have a null session during
+    // OAuth flows and cause login loops.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_OUT") return
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
-      if (!session && !isGuest && !PUBLIC_PATHS.includes(pathname) && !PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
-        const returnTo = pathname + window.location.search
-        router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
+      if (!session && !isGuest && !isPublic(pathname)) {
+        router.replace("/login")
       }
     })
 
