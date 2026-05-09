@@ -5,6 +5,7 @@ import { Check, X, ChevronRight, ChevronLeft, Stethoscope, Target, RotateCcw, Ho
 import { useSearchParams } from "next/navigation"
 import { getDiagnosticQuestions, type Question } from "@/lib/questions"
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
+import { MathText } from "@/components/rally/math-text"
 import {
   ALL_SUBTOPICS,
   SUBTOPIC_MAP,
@@ -232,7 +233,7 @@ function DiagnosticContent() {
 
         {/* Question */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          <p className="text-white font-bold text-base leading-relaxed mb-6">{question.question}</p>
+          <p className="text-white font-bold text-base leading-relaxed mb-6"><MathText text={question.question} /></p>
 
           <div className="space-y-2.5">
             {options.map((option, idx) => {
@@ -272,7 +273,7 @@ function DiagnosticContent() {
                        hasAnswered && isSelected ? <X className="w-4 h-4 text-red-500" /> :
                        String.fromCharCode(65 + idx)}
                     </span>
-                    <span className="text-sm">{option}</span>
+                    <span className="text-sm"><MathText text={option} /></span>
                   </div>
                 </button>
               )
@@ -286,7 +287,7 @@ function DiagnosticContent() {
                 <BookOpen className="w-4 h-4 text-[#378ADD]" />
                 <span className="text-xs font-bold text-[#378ADD]">explanation</span>
               </div>
-              <p className="text-sm text-[#85B7EB]/70 leading-relaxed">{question.explanation}</p>
+              <p className="text-sm text-[#85B7EB]/70 leading-relaxed"><MathText text={question.explanation} /></p>
             </div>
           )}
         </div>

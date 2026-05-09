@@ -21,6 +21,7 @@ import { StreakCelebration } from "@/components/rally/streak-celebration"
 import { haptics } from "@/lib/haptics"
 import { getSubtopicLevel, pickDifficultyForLevel, adjustSubtopicLevel } from "@/lib/subtopic-levels"
 import { updateParentSnapshot } from "@/lib/parent-dashboard"
+import { MathText } from "@/components/rally/math-text"
 
 /** Get display name from Supabase auth session, falling back gracefully */
 async function getDisplayName(): Promise<string> {
@@ -1152,7 +1153,7 @@ function PlayPageContent() {
         {/* Question Text */}
         <div className="mb-2 flex-shrink-0">
           <h2 className="text-base font-extrabold text-white text-center leading-snug px-1 max-w-xl mx-auto">
-            {question?.question}
+            {question?.question && <MathText text={question.question} />}
           </h2>
         </div>
 
@@ -1302,7 +1303,7 @@ function AnswerOption({
         </div>
 
         {/* Answer Text */}
-        <span className="text-sm font-bold flex-1 text-left leading-snug">{option}</span>
+        <span className="text-sm font-bold flex-1 text-left leading-snug"><MathText text={option} /></span>
 
         {/* Check/X Icon */}
         {showAsCorrect && <Check className="w-5 h-5 flex-shrink-0" strokeWidth={3} />}
@@ -1684,13 +1685,13 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                       {q.difficulty}
                     </span>
                     {/* Question */}
-                    <p className="text-white font-semibold text-sm mt-2 mb-3 leading-relaxed">{q.question}</p>
+                    <p className="text-white font-semibold text-sm mt-2 mb-3 leading-relaxed"><MathText text={q.question} /></p>
                     {/* Your answer */}
                     {item.chosenAnswerIndex !== null ? (
                       <div className="flex items-center gap-2 bg-red-500/15 border border-red-500/30 rounded-xl px-3 py-2 mb-2">
                         <X className="w-4 h-4 text-red-400 flex-shrink-0" strokeWidth={3} />
                         <span className="text-red-400 text-sm font-semibold">
-                          your answer: {String.fromCharCode(65 + item.chosenAnswerIndex)}) {options[item.chosenAnswerIndex]}
+                          your answer: {String.fromCharCode(65 + item.chosenAnswerIndex)}) <MathText text={options[item.chosenAnswerIndex]} />
                         </span>
                       </div>
                     ) : (
@@ -1702,10 +1703,10 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                     {/* Correct answer */}
                     <div className="flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-xl px-3 py-2 mb-3">
                       <Check className="w-4 h-4 text-green-400 flex-shrink-0" strokeWidth={3} />
-                      <span className="text-green-400 text-sm font-semibold">{q.correct}) {options[correctIdx]}</span>
+                      <span className="text-green-400 text-sm font-semibold">{q.correct}) <MathText text={options[correctIdx]} /></span>
                     </div>
                     {/* Short explanation */}
-                    <p className="text-[#85B7EB]/80 text-sm leading-relaxed">{q.explanation}</p>
+                    <p className="text-[#85B7EB]/80 text-sm leading-relaxed"><MathText text={q.explanation} /></p>
 
                     {/* Learn more toggle */}
                     <button
@@ -1723,19 +1724,19 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
                         {/* How to approach this type of problem */}
                         <div className="bg-[#378ADD]/10 border border-[#378ADD]/20 rounded-xl px-3 py-2.5">
                           <p className="text-xs font-bold text-[#378ADD] uppercase tracking-wide mb-1">{detailed.concept}</p>
-                          <p className="text-[#85B7EB] text-sm leading-relaxed">{detailed.approach}</p>
+                          <p className="text-[#85B7EB] text-sm leading-relaxed"><MathText text={detailed.approach} /></p>
                         </div>
 
                         {/* Common mistake */}
                         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
                           <p className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">where students go wrong</p>
-                          <p className="text-red-300/80 text-sm leading-relaxed">{detailed.commonMistake}</p>
+                          <p className="text-red-300/80 text-sm leading-relaxed"><MathText text={detailed.commonMistake} /></p>
                         </div>
 
                         {/* Takeaway */}
                         <div className="bg-[#EF9F27]/10 border border-[#EF9F27]/20 rounded-xl px-3 py-2.5">
                           <p className="text-xs font-bold text-[#EF9F27] uppercase tracking-wide mb-1">remember this</p>
-                          <p className="text-[#EF9F27]/80 text-sm leading-relaxed">{detailed.takeaway}</p>
+                          <p className="text-[#EF9F27]/80 text-sm leading-relaxed"><MathText text={detailed.takeaway} /></p>
                         </div>
 
                         {/* Still don't get it? AI prompt copier */}
