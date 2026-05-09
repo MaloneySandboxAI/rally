@@ -23,21 +23,24 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
     const supabase = createClient()
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Use getUser() instead of getSession() — getUser() validates the
+    // JWT against the Supabase auth server, which is more reliable on
+    // Safari where cookie handling can be flaky.
+    supabase.auth.getUser().then(({ data: { user } }) => {
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
-      if (!session && !isGuest) {
+      if (!user && !isGuest) {
         // Preserve current URL so user returns here after login
         const returnTo = pathname + window.location.search
         router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
         return
       }
       // Restore server state on load (logged-in users only)
-      if (session) {
+      if (user) {
         initSync()
       }
       // Enforce age verification for authenticated/guest users
       const ageVerified = localStorage.getItem("rally_age_verified") === "true"
-      if (!ageVerified && (session || isGuest)) {
+      if (!ageVerified && (user || isGuest)) {
         router.replace("/age-verify")
       }
     })
@@ -45,10 +48,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     // Only redirect on explicit SIGNED_OUT events — not on INITIAL_SESSION
     // or TOKEN_REFRESHED, which can briefly have a null session during
     // OAuth flows and cause login loops.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_OUT") return
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
-      if (!session && !isGuest && !isPublic(pathname)) {
+      if (!isGuest && !isPublic(pathname)) {
         router.replace("/login")
       }
     })

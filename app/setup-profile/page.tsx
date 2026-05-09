@@ -38,7 +38,7 @@ function SetupProfileContent() {
         .from("users")
         .select("username")
         .eq("id", session.user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data?.username) {
             setExistingUsername(data.username)
@@ -48,6 +48,8 @@ function SetupProfileContent() {
               : "/age-verify"
             router.push(ageUrl)
           }
+          // If no row exists, user stays on this page to set up their profile
+          // The upsert in handleSave will create the row
         })
     })
   }, [router, supabase])
@@ -103,11 +105,13 @@ function SetupProfileContent() {
       return
     }
 
-    // Save username to users table
+    // Save username to users table (upsert in case row doesn't exist yet)
     const { error: dbError } = await supabase
       .from("users")
-      .update({ username: username.toLowerCase() })
-      .eq("id", session.user.id)
+      .upsert(
+        { id: session.user.id, username: username.toLowerCase(), subscription_status: "free" },
+        { onConflict: "id" }
+      )
 
     if (dbError) {
       if (dbError.code === "23505") {

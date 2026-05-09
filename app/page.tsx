@@ -13,9 +13,9 @@ export default function LandingPage() {
   // If already logged in, skip straight to the app
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
-      if (session || isGuest) {
+      if (user || isGuest) {
         router.replace("/home")
       } else {
         setChecking(false)

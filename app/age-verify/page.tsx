@@ -24,8 +24,9 @@ function AgeVerifyContent() {
   function getDestination(): string {
     // Check URL param first, then localStorage (set by guest flow)
     const dest = returnTo || localStorage.getItem("rally_returnTo")
-    if (dest) {
-      localStorage.removeItem("rally_returnTo") // clean up
+    localStorage.removeItem("rally_returnTo") // clean up
+    // Only use dest if it's a valid absolute path (starts with /)
+    if (dest && dest.startsWith("/")) {
       return dest
     }
     return "/home"

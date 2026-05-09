@@ -40,15 +40,15 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
       setCheckedAuth(true)
-      if (session?.user) {
-        setUserId(session.user.id)
+      if (user) {
+        setUserId(user.id)
         setUserName(
-          session.user.user_metadata?.display_name ||
-          session.user.user_metadata?.full_name ||
-          session.user.email?.split("@")[0] ||
+          user.user_metadata?.display_name ||
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
           "challenger"
         )
       }
@@ -60,7 +60,7 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const handleClick = () => {
     if (!checkedAuth) return
     if (!isLoggedIn) {
-      window.location.href = "/login?returnTo=challenge"
+      window.location.href = "/login?returnTo=%2Fhome"
       return
     }
     if (!isPremium && freeChallengesLeft <= 0) {
