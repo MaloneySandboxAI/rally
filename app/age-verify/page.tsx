@@ -1,10 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export default function AgeVerifyPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#021f3d]" />}>
+      <AgeVerifyContent />
+    </Suspense>
+  )
+}
+
+function AgeVerifyContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo")

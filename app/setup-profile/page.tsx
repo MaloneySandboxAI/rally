@@ -1,12 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { User2, Check, AlertCircle, Loader2 } from "lucide-react"
 import { processPendingReferral } from "@/lib/referrals"
 
 export default function SetupProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#021f3d]" />}>
+      <SetupProfileContent />
+    </Suspense>
+  )
+}
+
+function SetupProfileContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo")
