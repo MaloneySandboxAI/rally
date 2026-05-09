@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { getChallenge, isChallengeExpired, getChallengeTimeRemaining, type Challenge } from "@/lib/challenges"
+import { createClient } from "@/lib/supabase/client"
 import { Spinner } from "@/components/ui/spinner"
 import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock } from "lucide-react"
 import Link from "next/link"
@@ -12,6 +13,10 @@ const CATEGORIES: Record<string, string> = {
   "Reading Comprehension": "Reading",
   "Grammar": "Grammar",
   "Data & Statistics": "Data & Stats",
+  "AP Biology": "AP Bio",
+  "AP Pre Calculus": "AP Pre Calc",
+  "AP US History": "APUSH",
+  "AP English Language": "AP English",
 }
 
 function getCategoryDisplay(id: string): string {
@@ -26,6 +31,7 @@ export default function ChallengePage() {
   const [challenge, setChallenge] = useState<Challenge | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isOwnChallenge, setIsOwnChallenge] = useState(false)
 
   useEffect(() => {
     if (!code) return
@@ -36,6 +42,12 @@ export default function ChallengePage() {
         setError("Challenge not found — the link may be expired or invalid.")
       } else {
         setChallenge(c)
+        // Check if the current user is the creator (prevent self-challenge)
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && c.creator_id === user.id) {
+          setIsOwnChallenge(true)
+        }
       }
       setLoading(false)
     }
@@ -159,7 +171,54 @@ export default function ChallengePage() {
     )
   }
 
-  // Challenge pending — show accept screen
+  // If creator is viewing their own pending challenge, show status
+  if (isOwnChallenge && challenge.status === "pending") {
+    const hasPlayed = challenge.creator_score >= 0
+    const timeRemaining = getChallengeTimeRemaining(challenge)
+    return (
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+        <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" />
+          home
+        </Link>
+        <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
+        <h1 className="text-xl font-extrabold text-white mb-1">your challenge</h1>
+        <p className="text-[#85B7EB]/60 text-sm mb-1.5">
+          {getCategoryDisplay(challenge.category)}
+        </p>
+        {hasPlayed ? (
+          <>
+            <div className="flex items-center justify-center gap-1.5 mb-2">
+              <Diamond className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
+              <span className="text-2xl font-extrabold text-white">{challenge.creator_score}</span>
+              <span className="text-sm text-[#85B7EB]/60">gems</span>
+            </div>
+            <p className="text-[#85B7EB]/40 text-xs mb-4">
+              waiting for your friend to play
+            </p>
+          </>
+        ) : (
+          <p className="text-[#85B7EB]/40 text-xs mb-4">
+            share the link and play your round
+          </p>
+        )}
+        {timeRemaining && (
+          <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mb-4">
+            <Clock className="w-3.5 h-3.5" />
+            <span>expires in {timeRemaining.hours}h {timeRemaining.minutes}m</span>
+          </div>
+        )}
+        <a
+          href="/home"
+          className="bg-[#378ADD] text-white rounded-xl py-3.5 px-6 font-bold flex items-center gap-2 text-sm"
+        >
+          back to home <ChevronRight className="w-4 h-4" strokeWidth={3} />
+        </a>
+      </div>
+    )
+  }
+
+  // Challenge pending — show accept screen for the challenger
   const hasCreatorScore = challenge.creator_score >= 0
   const timeRemaining = getChallengeTimeRemaining(challenge)
   return (
@@ -169,15 +228,17 @@ export default function ChallengePage() {
         home
       </Link>
       <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
-      <h1 className="text-xl font-extrabold text-white mb-1">you&apos;ve been challenged!</h1>
+      <h1 className="text-xl font-extrabold text-white mb-1">
+        {challenge.creator_name} challenged you!
+      </h1>
       <p className="text-[#85B7EB]/60 text-sm mb-1.5">
         {hasCreatorScore
-          ? <>{challenge.creator_name} earned <Diamond className="w-3 h-3 text-[#F59E0B] fill-[#F59E0B] inline" /> {challenge.creator_score} gems in {getCategoryDisplay(challenge.category)}</>
-          : `${challenge.creator_name} challenged you in ${getCategoryDisplay(challenge.category)}`
+          ? <>{challenge.creator_name} scored <Diamond className="w-3 h-3 text-[#F59E0B] fill-[#F59E0B] inline" /> {challenge.creator_score} gems in {getCategoryDisplay(challenge.category)} — can you beat that?</>
+          : `head-to-head in ${getCategoryDisplay(challenge.category)}`
         }
       </p>
       <p className="text-[#85B7EB]/40 text-xs mb-2">
-        play 5 questions at your level · most gems wins
+        5 questions · adaptive difficulty · most gems wins
       </p>
       {timeRemaining && (
         <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mb-4">

@@ -136,13 +136,18 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const handleShareLink = async () => {
     if (!shareUrl) return
     try {
+      const shareText = `Think you can beat me? I challenged you to a ${selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || "" : ""} quiz on Rally. Tap the link to play!`
       if (navigator.share) {
-        await navigator.share({ title: "Rally Challenge", url: shareUrl })
+        await navigator.share({
+          title: `${userName} challenged you on Rally!`,
+          text: shareText,
+          url: shareUrl,
+        })
         setLinkShared(true)
       } else {
         // Desktop fallback: open mailto with the link
-        const subject = encodeURIComponent("Rally SAT Challenge")
-        const body = encodeURIComponent(`Think you can beat me? Take my challenge:\n${shareUrl}`)
+        const subject = encodeURIComponent(`${userName} challenged you on Rally!`)
+        const body = encodeURIComponent(`${shareText}\n\n${shareUrl}`)
         window.open(`mailto:?subject=${subject}&body=${body}`, "_blank")
         setLinkShared(true)
       }
