@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -8,6 +7,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code")
   const token_hash = searchParams.get("token_hash")
   const type = searchParams.get("type")
+  const returnTo = searchParams.get("returnTo")
 
   // Handle PKCE code exchange (used by OAuth providers)
   if (code) {
@@ -35,8 +35,11 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // Redirect to age verification — page will check if already verified
-      return NextResponse.redirect(`${origin}/setup-profile`)
+      // Redirect to setup-profile, preserving returnTo if present
+      const dest = returnTo
+        ? `${origin}/setup-profile?returnTo=${encodeURIComponent(returnTo)}`
+        : `${origin}/setup-profile`
+      return NextResponse.redirect(dest)
     }
   }
 
@@ -69,7 +72,10 @@ export async function GET(request: Request) {
       type: type as "email" | "recovery" | "invite" | "magiclink" | "signup" | "email_change",
     })
     if (!error) {
-      return NextResponse.redirect(`${origin}/setup-profile`)
+      const dest = returnTo
+        ? `${origin}/setup-profile?returnTo=${encodeURIComponent(returnTo)}`
+        : `${origin}/setup-profile`
+      return NextResponse.redirect(dest)
     }
   }
 

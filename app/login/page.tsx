@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Mail } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [email, setEmail] = useState("")
   const [emailSent, setEmailSent] = useState(false)
@@ -15,12 +17,19 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
+  // Build callback URL with returnTo preserved
+  function getCallbackUrl() {
+    const base = `${window.location.origin}/auth/callback`
+    if (returnTo) return `${base}?returnTo=${encodeURIComponent(returnTo)}`
+    return base
+  }
+
   async function handleGoogleSignIn() {
     setLoading(true)
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: getCallbackUrl() },
     })
     if (error) {
       setError(error.message)
@@ -33,10 +42,10 @@ export default function LoginPage() {
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "apple",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: getCallbackUrl() },
     })
     if (error) {
-      setError(error.message)
+      setError("Apple Sign-In is not available yet. Please use Google or email.")
       setLoading(false)
     }
   }
@@ -47,7 +56,7 @@ export default function LoginPage() {
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: getCallbackUrl() },
     })
     setLoading(false)
     if (error) {
@@ -59,6 +68,8 @@ export default function LoginPage() {
 
   function handleGuestPlay() {
     localStorage.setItem("rally_is_guest", "true")
+    // If there's a returnTo (e.g. from a challenge link), go there after age verify
+    if (returnTo) localStorage.setItem("rally_returnTo", returnTo)
     router.push("/age-verify")
   }
 
@@ -89,16 +100,17 @@ export default function LoginPage() {
           Continue with Google
         </button>
 
-        {/* Apple */}
+        {/* Apple — coming soon, not yet configured in Supabase */}
         <button
-          onClick={handleAppleSignIn}
+          onClick={() => setError("Apple Sign-In coming soon! Please use Google or email for now.")}
           disabled={loading}
-          className="w-full bg-black text-white rounded-2xl py-4 px-5 flex items-center justify-center gap-3 font-bold text-base shadow-lg transition-all active:scale-[0.98] hover:brightness-125 disabled:opacity-60 border border-white/10"
+          className="w-full bg-black/50 text-white/60 rounded-2xl py-4 px-5 flex items-center justify-center gap-3 font-bold text-base shadow-lg transition-all active:scale-[0.98] border border-white/10"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
           </svg>
           Continue with Apple
+          <span className="text-xs font-medium text-white/30 ml-1">soon</span>
         </button>
 
         {/* Email */}

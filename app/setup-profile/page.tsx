@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { User2, Check, AlertCircle, Loader2 } from "lucide-react"
 import { processPendingReferral } from "@/lib/referrals"
 
 export default function SetupProfilePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
   const supabase = createClient()
   const [username, setUsername] = useState("")
   const [checking, setChecking] = useState(false)
@@ -32,8 +34,11 @@ export default function SetupProfilePage() {
         .then(({ data }) => {
           if (data?.username) {
             setExistingUsername(data.username)
-            // Already has username, skip to age verify
-            router.push("/age-verify")
+            // Already has username, skip to age verify (preserve returnTo)
+            const ageUrl = returnTo
+              ? `/age-verify?returnTo=${encodeURIComponent(returnTo)}`
+              : "/age-verify"
+            router.push(ageUrl)
           }
         })
     })
@@ -114,13 +119,19 @@ export default function SetupProfilePage() {
     // Process any pending referral (from /join?ref=CODE link)
     await processPendingReferral()
 
-    router.push("/age-verify")
+    const ageUrl = returnTo
+      ? `/age-verify?returnTo=${encodeURIComponent(returnTo)}`
+      : "/age-verify"
+    router.push(ageUrl)
   }
 
   async function handleSkip() {
     // Still process referral even if they skip username
     await processPendingReferral()
-    router.push("/age-verify")
+    const ageUrl = returnTo
+      ? `/age-verify?returnTo=${encodeURIComponent(returnTo)}`
+      : "/age-verify"
+    router.push(ageUrl)
   }
 
   if (existingUsername) return null // redirecting

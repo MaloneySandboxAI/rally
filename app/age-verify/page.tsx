@@ -1,23 +1,37 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export default function AgeVerifyPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
   const [birthYear, setBirthYear] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Determine where to go after verification
+  function getDestination(): string {
+    // Check URL param first, then localStorage (set by guest flow)
+    const dest = returnTo || localStorage.getItem("rally_returnTo")
+    if (dest) {
+      localStorage.removeItem("rally_returnTo") // clean up
+      return dest
+    }
+    return "/home"
+  }
+
   useEffect(() => {
-    // If already verified, go home
+    // If already verified, go to destination
     const verified = localStorage.getItem("rally_age_verified")
     if (verified === "true") {
-      router.replace("/home")
+      router.replace(getDestination())
       return
     }
     setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   function handleVerify() {
@@ -42,9 +56,9 @@ export default function AgeVerifyPage() {
       return
     }
 
-    // Age verified — store flag and continue
+    // Age verified — store flag and continue to destination
     localStorage.setItem("rally_age_verified", "true")
-    router.replace("/home")
+    router.replace(getDestination())
   }
 
   if (loading) return null

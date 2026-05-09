@@ -22,7 +22,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
       if (!session && !isGuest) {
-        router.replace("/login")
+        // Preserve current URL so user returns here after login
+        const returnTo = pathname + window.location.search
+        router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
         return
       }
       // Restore server state on load (logged-in users only)
@@ -39,7 +41,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const isGuest = localStorage.getItem("rally_is_guest") === "true"
       if (!session && !isGuest && !PUBLIC_PATHS.includes(pathname) && !PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
-        router.replace("/login")
+        const returnTo = pathname + window.location.search
+        router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
       }
     })
 
