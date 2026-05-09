@@ -111,7 +111,7 @@ export default function APTestsPage() {
 
         {/* Challenge button for AP categories */}
         <div>
-          <ChallengeButton />
+          <ChallengeButton mode="ap" />
         </div>
       </main>
 

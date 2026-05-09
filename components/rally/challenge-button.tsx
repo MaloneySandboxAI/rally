@@ -9,18 +9,22 @@ import { usePremium } from "@/lib/premium-context"
 import { getFreeChallengesRemaining, useDailyChallenge } from "@/lib/access"
 import { toast } from "sonner"
 
-const CATEGORIES = [
+const SAT_CATEGORIES = [
   { id: "Algebra", name: "Algebra", color: "#378ADD" },
   { id: "Reading Comprehension", name: "Reading", color: "#14B8A6" },
   { id: "Grammar", name: "Grammar", color: "#A855F7" },
   { id: "Data & Statistics", name: "Data & Stats", color: "#F97316" },
+]
+
+const AP_CATEGORIES = [
   { id: "AP Biology", name: "AP Bio", color: "#22C55E" },
   { id: "AP Pre Calculus", name: "AP Pre Calc", color: "#EC4899" },
   { id: "AP US History", name: "APUSH", color: "#F59E0B" },
   { id: "AP English Language", name: "AP English", color: "#6366F1" },
 ]
 
-export function ChallengeButton() {
+export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
+  const categories = mode === "ap" ? AP_CATEGORIES : SAT_CATEGORIES
   const { isPremium } = usePremium()
   const [showPicker, setShowPicker] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -209,7 +213,7 @@ export function ChallengeButton() {
                   pick a category, share the link, then play your round
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat.id)}
