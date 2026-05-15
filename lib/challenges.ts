@@ -336,6 +336,36 @@ export async function cancelChallenge(shareCode: string, userId: string): Promis
 }
 
 /**
+ * Check if a pending challenge is stale (older than 7 days with no response).
+ */
+export function isChallengeStale(challenge: Challenge): boolean {
+  if (challenge.status !== "pending") return false
+  const created = new Date(challenge.created_at)
+  const staleAfter = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
+  return new Date() > staleAfter
+}
+
+/**
+ * Delete all stale pending challenges created by a user (7+ days, no response).
+ */
+export async function deleteExpiredChallenges(userId: string): Promise<number> {
+  if (typeof window === "undefined") return 0
+  const supabase = createClient()
+
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data } = await supabase
+    .from("challenges")
+    .delete()
+    .eq("creator_id", userId)
+    .eq("status", "pending")
+    .lt("created_at", cutoff)
+    .select("id")
+
+  return data?.length || 0
+}
+
+/**
  * Clear all completed challenges for a user (both as creator and challenger).
  * Deletes completed rows where the user participated.
  */

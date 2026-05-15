@@ -6,8 +6,10 @@ import {
   getUserChallenges,
   formatTimeRemaining,
   isChallengeExpired,
+  isChallengeStale,
   cancelChallenge,
   clearCompletedChallenges,
+  deleteExpiredChallenges,
   type Challenge,
 } from "@/lib/challenges"
 import { EmptyGamesState } from "./empty-games-state"
@@ -42,6 +44,7 @@ export function GamesList() {
   const [loading, setLoading] = useState(true)
   const [cancelingCode, setCancelingCode] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
+  const [clearingExpired, setClearingExpired] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -49,7 +52,12 @@ export function GamesList() {
       if (session?.user) {
         setUserId(session.user.id)
         getUserChallenges(session.user.id).then((data) => {
-          setChallenges(data.filter(c => !isChallengeExpired(c)))
+          // Keep: active challenges + stale pending ones the user created (so they can delete them)
+          setChallenges(data.filter(c => {
+            if (!isChallengeExpired(c)) return true
+            // Show expired challenges the user created that are still pending (stale)
+            return c.status === "pending" && c.creator_id === session.user.id
+          }))
           setLoading(false)
         })
       } else {
@@ -76,6 +84,14 @@ export function GamesList() {
     setClearing(false)
   }
 
+  const handleClearExpired = async () => {
+    if (!userId) return
+    setClearingExpired(true)
+    await deleteExpiredChallenges(userId)
+    setChallenges(prev => prev.filter(c => !isChallengeStale(c) || c.creator_id !== userId))
+    setClearingExpired(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
@@ -89,6 +105,7 @@ export function GamesList() {
   }
 
   const completedCount = challenges.filter(c => c.status === "completed").length
+  const expiredCount = challenges.filter(c => isChallengeStale(c) && c.creator_id === userId).length
 
   return (
     <div className="flex flex-col gap-2">
@@ -98,13 +115,16 @@ export function GamesList() {
         const color = CATEGORY_COLORS[c.category] || "#378ADD"
         const catLabel = CATEGORY_SHORT[c.category] || c.category
         const timeLeftStr = formatTimeRemaining(c)
+        const stale = isChallengeStale(c) && isCreator
 
         // Determine state
         const creatorPlayed = c.creator_score >= 0
         const challengerPlayed = c.status === "completed"
 
-        let status: "waiting" | "your_turn" | "completed"
-        if (challengerPlayed) {
+        let status: "waiting" | "your_turn" | "completed" | "expired"
+        if (stale) {
+          status = "expired"
+        } else if (challengerPlayed) {
           status = "completed"
         } else if (isCreator && !creatorPlayed) {
           status = "your_turn"
@@ -114,8 +134,8 @@ export function GamesList() {
           status = "waiting"
         }
 
-        // Can cancel: creator of a pending challenge that hasn't been accepted
-        const canCancel = isCreator && status === "waiting" && !c.challenger_id
+        // Can cancel/delete: creator of a pending challenge that hasn't been accepted, or expired
+        const canCancel = isCreator && (status === "waiting" || status === "expired") && !c.challenger_id
 
         // Result for completed games
         let resultLabel = ""
@@ -132,7 +152,7 @@ export function GamesList() {
           <div key={c.id} className="relative">
             <Link
               href={`/challenge/${c.share_code}`}
-              className="bg-[#0a2d4a] rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.99] transition-all"
+              className={`bg-[#0a2d4a] rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.99] transition-all ${status === "expired" ? "opacity-50" : ""}`}
               style={{ borderLeft: `3px solid ${color}` }}
             >
               {/* Icon */}
@@ -154,13 +174,22 @@ export function GamesList() {
                   {status === "waiting" && (
                     <span className="text-[10px] font-bold bg-[#0a2d4a] border border-[#85B7EB]/20 text-[#85B7EB]/60 px-2 py-0.5 rounded-full">waiting</span>
                   )}
+                  {status === "expired" && (
+                    <span className="text-[10px] font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full">expired</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-[#85B7EB]/50">{catLabel}</span>
                   {status === "completed" && (
                     <span className="text-xs font-bold" style={{ color: resultColor }}>{resultLabel}</span>
                   )}
-                  {status !== "completed" && timeLeftStr && (
+                  {status === "expired" && (
+                    <span className="text-[10px] text-red-400/60 flex items-center gap-0.5">
+                      <Clock className="w-3 h-3" />
+                      no response
+                    </span>
+                  )}
+                  {status !== "completed" && status !== "expired" && timeLeftStr && (
                     <span className="text-[10px] text-[#85B7EB]/40 flex items-center gap-0.5">
                       <Clock className="w-3 h-3" />
                       {timeLeftStr}
@@ -204,6 +233,18 @@ export function GamesList() {
           </div>
         )
       })}
+
+      {/* Clear expired challenges */}
+      {expiredCount > 0 && (
+        <button
+          onClick={handleClearExpired}
+          disabled={clearingExpired}
+          className="mt-1 flex items-center justify-center gap-1.5 text-xs text-red-400/50 hover:text-red-400/70 font-medium py-2 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+          {clearingExpired ? "deleting..." : `delete ${expiredCount} expired challenge${expiredCount > 1 ? "s" : ""}`}
+        </button>
+      )}
 
       {/* Clear completed games */}
       {completedCount > 0 && (
