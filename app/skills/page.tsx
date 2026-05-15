@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Lock, Sparkles, TrendingUp } from "lucide-react"
+import { ChevronLeft, ChevronRight, Lock, Sparkles, TrendingUp, Clock, Infinity as InfinityIcon, X } from "lucide-react"
 import { SUBTOPIC_MAP, CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/diagnostic"
 import {
   getCategorySubtopicLevels,
@@ -13,6 +13,88 @@ import {
   MAX_LEVEL,
   type SubtopicLevel,
 } from "@/lib/subtopic-levels"
+import { haptics } from "@/lib/haptics"
+
+/** Bottom sheet for choosing timed (5-question round) vs untimed (endless practice) */
+function ModeSelectSheet({
+  category,
+  subtopicId,
+  categoryColor,
+  onClose,
+}: {
+  category: string
+  subtopicId: string
+  categoryColor: string
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const base = `/play?category=${encodeURIComponent(category)}&subtopic=${encodeURIComponent(subtopicId)}`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Sheet */}
+      <div className="relative w-full max-w-md bg-[#0a2d4a] rounded-t-3xl px-5 pt-5 pb-8 animate-in slide-in-from-bottom duration-300">
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#021f3d] flex items-center justify-center"
+        >
+          <X className="w-4 h-4 text-[#85B7EB]/50" />
+        </button>
+
+        <h3 className="text-lg font-extrabold text-white mb-1">choose your mode</h3>
+        <p className="text-xs text-[#85B7EB]/50 mb-4">how do you want to practice?</p>
+
+        <div className="space-y-2.5">
+          {/* Timed */}
+          <button
+            onClick={() => {
+              haptics.medium()
+              router.push(base)
+            }}
+            className="w-full bg-[#021f3d] rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10 text-left"
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: categoryColor + "20" }}
+            >
+              <Clock className="w-5 h-5" style={{ color: categoryColor }} />
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-bold text-white block">timed round</span>
+              <span className="text-[11px] text-[#85B7EB]/50">5 questions · timer · earn gems</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[#85B7EB]/30 shrink-0" />
+          </button>
+
+          {/* Untimed */}
+          <button
+            onClick={() => {
+              haptics.medium()
+              router.push(base + "&untimed=true")
+            }}
+            className="w-full bg-[#021f3d] rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10 text-left"
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "#A855F720" }}
+            >
+              <InfinityIcon className="w-5 h-5 text-[#A855F7]" />
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-bold text-white block">untimed practice</span>
+              <span className="text-[11px] text-[#85B7EB]/50">no timer · go at your own pace · review explanations</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[#85B7EB]/30 shrink-0" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SkillMapContent() {
   const searchParams = useSearchParams()
@@ -22,6 +104,7 @@ function SkillMapContent() {
 
   const [subtopics, setSubtopics] = useState<{ id: string; label: string; level: SubtopicLevel }[]>([])
   const [avgLevel, setAvgLevel] = useState(1)
+  const [modeSelectSubtopic, setModeSelectSubtopic] = useState<string | null>(null)
 
   useEffect(() => {
     setSubtopics(getCategorySubtopicLevels(category))
@@ -109,10 +192,10 @@ function SkillMapContent() {
             : null
 
           return (
-            <Link
+            <button
               key={sub.id}
-              href={`/play?category=${encodeURIComponent(category)}&subtopic=${encodeURIComponent(sub.id)}`}
-              className="block bg-[#0a2d4a] rounded-xl px-4 py-3.5 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10"
+              onClick={() => setModeSelectSubtopic(sub.id)}
+              className="block w-full text-left bg-[#0a2d4a] rounded-xl px-4 py-3.5 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-white">{sub.label}</span>
@@ -137,10 +220,20 @@ function SkillMapContent() {
                   {sub.level.totalCorrect}/{sub.level.totalAnswered} lifetime · level {levelNum < MAX_LEVEL ? `up at ${4}/5 correct` : "maxed!"}
                 </p>
               )}
-            </Link>
+            </button>
           )
         })}
       </div>
+
+      {/* Mode selection bottom sheet */}
+      {modeSelectSubtopic && (
+        <ModeSelectSheet
+          category={category}
+          subtopicId={modeSelectSubtopic}
+          categoryColor={categoryColor}
+          onClose={() => setModeSelectSubtopic(null)}
+        />
+      )}
     </div>
   )
 }

@@ -381,6 +381,7 @@ function PlayPageContent() {
   const isCreatorChallenge = !!creatorChallengeCode // creator playing their own challenge (pre-play flow)
   const categoryParam = searchParams.get("category") || "Algebra"
   const subtopicParam = searchParams.get("subtopic") || null
+  const isUntimed = searchParams.get("untimed") === "true" && !isChallenge // untimed practice mode (solo only)
   const { totalGems, addGems } = useGems()
   const { isPremium, dailyGemsCapped, dailyGemsRemaining, recordGemsEarned } = usePremium()
 
@@ -431,8 +432,8 @@ function PlayPageContent() {
   // Mark component as mounted (client-side only)
   useEffect(() => {
     setIsMounted(true)
-    // Check hearts/round limits for solo play (challenges are always allowed)
-    if (!isChallenge) {
+    // Check hearts/round limits for solo play (challenges + untimed are always allowed)
+    if (!isChallenge && !isUntimed) {
       setHearts(getHearts())
       const check = canPlaySolo()
       if (!check.allowed) {
@@ -633,10 +634,11 @@ function PlayPageContent() {
     { letter: "D", text: question.option_d },
   ] : []
 
-  // Timer effect
+  // Timer effect (disabled in untimed mode)
   useEffect(() => {
+    if (isUntimed) return // no timer in untimed practice
     if (!isQuestionsReady || !isTimerActive || selectedAnswer !== null) return
-    
+
     timerRef.current = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
@@ -647,14 +649,15 @@ function PlayPageContent() {
         return prev - 1
       })
     }, 1000)
-    
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isQuestionsReady, isTimerActive, selectedAnswer, currentQuestion])
+  }, [isQuestionsReady, isTimerActive, selectedAnswer, currentQuestion, isUntimed])
   
   // Handle time up in a separate effect to avoid stale closure
   useEffect(() => {
+    if (isUntimed) return // no timeout in untimed practice
     if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
 
     // Timeout counts as wrong — drop difficulty
@@ -729,13 +732,13 @@ function PlayPageContent() {
     // Calculate time taken — speed threshold is half of this question's difficulty time
     const timeTaken = (Date.now() - questionStartTimeRef.current) / 1000
     const speedThreshold = getSpeedThreshold(question?.difficulty || "medium", isMathCategory)
-    const isSpeedBonus = timeTaken <= speedThreshold
+    const isSpeedBonus = !isUntimed && timeTaken <= speedThreshold // no speed bonus in untimed
 
     if (pendingAnswer === correctAnswerIndex) {
       haptics.success()
       setScore(prev => prev + 1)
 
-      const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
+      const gemsForThis = isUntimed ? 0 : gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
 
       // Adaptive difficulty: bump UP on correct answer
       // For subtopic mode, re-pick from level (stays in range); for generic, escalate
@@ -795,7 +798,13 @@ function PlayPageContent() {
   }, [pendingAnswer, selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
 
   const handleNextQuestion = useCallback(async () => {
-    if (currentQuestion < TOTAL_QUESTIONS - 1) {
+    if (isUntimed) {
+      // Untimed: always fetch next, endless play
+      await fetchNextQuestion()
+      setCurrentQuestion(prev => prev + 1)
+      setPendingAnswer(null)
+      setSelectedAnswer(null)
+    } else if (currentQuestion < TOTAL_QUESTIONS - 1) {
       // fetchNextQuestion handles both modes: draws from pool in challenge, fetches from Supabase in solo
       await fetchNextQuestion()
       setCurrentQuestion(prev => prev + 1)
@@ -804,11 +813,21 @@ function PlayPageContent() {
     } else {
       setShowResults(true)
     }
-  }, [currentQuestion, fetchNextQuestion])
+  }, [currentQuestion, fetchNextQuestion, isUntimed])
+
+  // Untimed mode: done practicing — go to results
+  const handleDonePracticing = useCallback(() => {
+    if (answerResults.length === 0) {
+      // No questions answered yet, just go home
+      window.location.href = "/home"
+      return
+    }
+    setShowResults(true)
+  }, [answerResults])
 
   const handlePlayAgain = useCallback(() => {
-    // Re-check hearts/round limits before allowing another round
-    if (!isChallenge) {
+    // Re-check hearts/round limits before allowing another round (skip for untimed)
+    if (!isChallenge && !isUntimed) {
       const currentHearts = getHearts()
       setHearts(currentHearts)
       const check = canPlaySolo()
@@ -846,6 +865,34 @@ function PlayPageContent() {
         .filter(r => r.isCorrect)
         .reduce((sum, r) => sum + r.gemsEarned, 0)
       const correctCount = answerResults.filter(r => r.isCorrect).length
+      const totalAnswered = answerResults.length
+
+      // Untimed mode: no gems, no hearts, but still save stats & adjust levels
+      if (isUntimed) {
+        const unlockMessage = saveRoundStats({
+          categoryId: categoryParam,
+          correct: correctCount,
+          total: totalAnswered,
+          gemsEarned: 0,
+          answerResults,
+        })
+        if (unlockMessage) {
+          toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
+        }
+        if (subtopicParam && totalAnswered >= 3) {
+          const levelResult = adjustSubtopicLevel({
+            subtopicId: subtopicParam,
+            correct: correctCount,
+            total: totalAnswered,
+          })
+          if (levelResult.message) {
+            toast.success(levelResult.message, { duration: 4000 })
+          }
+        }
+        updateParentSnapshot()
+        setGemsAwarded(true)
+        return
+      }
 
       // Challenge outcome bonus (win/loss/tie) — compare gems, not correct count
       let outcomeBonus = 0
@@ -1091,6 +1138,7 @@ function PlayPageContent() {
           answerResults={answerResults}
           sessionQuestions={sessionQuestions}
           creatorScore={creatorScore}
+          isUntimed={isUntimed}
         />
         {gemMilestone && (
           <GemMilestoneCelebration
@@ -1112,7 +1160,7 @@ function PlayPageContent() {
   return (
     <div className="h-[100dvh] bg-[#021f3d] flex flex-col overflow-hidden">
       {/* Speed Bonus Animation */}
-      {showSpeedBonus && <SpeedBonusAnimation />}
+      {showSpeedBonus && !isUntimed && <SpeedBonusAnimation />}
 
       {/* Header — compact */}
       <header className="flex-shrink-0 bg-[#021f3d] px-4 pt-3 pb-2">
@@ -1127,29 +1175,52 @@ function PlayPageContent() {
             )}
           </div>
           <div className="flex items-center gap-2.5">
-            {!isChallenge && (
-              <div className="flex items-center gap-1">
-                <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" />
-                <span className="text-xs font-bold text-red-400">{hearts}</span>
-              </div>
+            {isUntimed ? (
+              /* Untimed: show question count + done button */
+              <>
+                <span className="text-xs font-bold text-[#A855F7]">#{currentQuestion + 1}</span>
+                <button
+                  onClick={handleDonePracticing}
+                  className="text-xs font-bold text-[#85B7EB]/60 bg-[#0a2d4a] px-3 py-1.5 rounded-full hover:text-[#85B7EB] transition-colors"
+                >
+                  done
+                </button>
+              </>
+            ) : (
+              /* Timed: hearts + timer */
+              <>
+                {!isChallenge && (
+                  <div className="flex items-center gap-1">
+                    <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" />
+                    <span className="text-xs font-bold text-red-400">{hearts}</span>
+                  </div>
+                )}
+                <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
+              </>
             )}
-            <CountdownTimer timeRemaining={timeRemaining} totalTime={totalTime} />
           </div>
         </div>
-        <div className="flex gap-1.5">
-          {Array.from({ length: TOTAL_QUESTIONS }).map((_, index) => (
-            <div
-              key={index}
-              className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                index <= currentQuestion ? "bg-[#378ADD]" : "bg-[#0a2d4a]"
-              }`}
-            />
-          ))}
-        </div>
+        {isUntimed ? (
+          /* Untimed: no progress bar, just a subtle label */
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="text-[10px] text-[#A855F7]/60 font-medium">untimed practice</span>
+          </div>
+        ) : (
+          <div className="flex gap-1.5">
+            {Array.from({ length: TOTAL_QUESTIONS }).map((_, index) => (
+              <div
+                key={index}
+                className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                  index <= currentQuestion ? "bg-[#378ADD]" : "bg-[#0a2d4a]"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </header>
 
-      {/* Question Content — fills remaining space, no scroll */}
-      <main className="flex-1 flex flex-col px-4 pt-2 pb-3 min-h-0">
+      {/* Question Content — fills remaining space, scrollable in untimed mode for long explanations */}
+      <main className={`flex-1 flex flex-col px-4 pt-2 pb-3 min-h-0 ${isUntimed && hasAnswered ? "overflow-y-auto" : ""}`}>
         {/* Question Text */}
         <div className="mb-2 flex-shrink-0">
           <h2 className="text-base font-extrabold text-white text-center leading-snug px-1 max-w-xl mx-auto">
@@ -1170,10 +1241,11 @@ function PlayPageContent() {
               correctAnswer={correctAnswerIndex}
               explanation={question.explanation}
               onSelect={handleAnswerSelect}
-              showGemAnimation={showGemAnimation && index === correctAnswerIndex}
+              showGemAnimation={showGemAnimation && index === correctAnswerIndex && !isUntimed}
               gemAmount={currentQuestionSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect}
-              isSpeedBonus={currentQuestionSpeedBonus}
+              isSpeedBonus={currentQuestionSpeedBonus && !isUntimed}
               isTimeout={isTimeout}
+              isUntimed={isUntimed}
             />
           ))}
         </div>
@@ -1194,7 +1266,7 @@ function PlayPageContent() {
               onClick={handleNextQuestion}
               className="w-full bg-[#378ADD] text-white rounded-xl py-3 px-5 flex items-center justify-center gap-2 font-extrabold text-sm shadow-lg shadow-[#378ADD]/30 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-4 duration-300"
             >
-              {currentQuestion < TOTAL_QUESTIONS - 1 ? "next question" : "see results"}
+              {isUntimed ? "next question" : (currentQuestion < TOTAL_QUESTIONS - 1 ? "next question" : "see results")}
               <ChevronRight className="w-4 h-4" strokeWidth={3} />
             </button>
           )}
@@ -1237,6 +1309,7 @@ interface AnswerOptionProps {
   gemAmount: number
   isSpeedBonus: boolean
   isTimeout: boolean
+  isUntimed?: boolean
 }
 
 function AnswerOption({
@@ -1252,6 +1325,7 @@ function AnswerOption({
   gemAmount,
   isSpeedBonus,
   isTimeout,
+  isUntimed,
 }: AnswerOptionProps) {
   const isPending = pendingAnswer === index && selectedAnswer === null
   const isSelected = selectedAnswer === index
@@ -1315,9 +1389,14 @@ function AnswerOption({
         <FloatingGemIndicator amount={gemAmount} isSpeedBonus={isSpeedBonus} />
       )}
 
-      {/* Brief explanation inline — only for correct answer after confirm */}
+      {/* Explanation inline — for correct answer after confirm, or for wrong answer in untimed mode */}
       {showAsCorrect && (
-        <p className="mt-1 px-4 text-xs text-[#85B7EB] italic leading-snug animate-in fade-in slide-in-from-top-2 duration-300 line-clamp-2">
+        <p className={`mt-1 px-4 text-xs text-[#85B7EB] italic leading-snug animate-in fade-in slide-in-from-top-2 duration-300 ${isUntimed ? "" : "line-clamp-2"}`}>
+          {explanation}
+        </p>
+      )}
+      {isUntimed && showAsWrong && (
+        <p className="mt-1 px-4 text-xs text-red-300/70 italic leading-snug animate-in fade-in slide-in-from-top-2 duration-300">
           {explanation}
         </p>
       )}
@@ -1337,6 +1416,7 @@ interface ResultsScreenProps {
   answerResults: AnswerResult[]
   sessionQuestions: Question[]
   creatorScore: number | null
+  isUntimed?: boolean
 }
 
 function getEncouragementMessage(score: number, isChallenge: boolean): string {
@@ -1352,7 +1432,7 @@ function getEncouragementMessage(score: number, isChallenge: boolean): string {
   return "Tough round. Keep practicing!"
 }
 
-function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore }: ResultsScreenProps) {
+function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore, isUntimed }: ResultsScreenProps) {
   const { totalGems } = useGems() // Use context — stays in sync with parent's addGems call
   const [isGuest, setIsGuest] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -1459,11 +1539,11 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
       {/* Score + Answer Pips — compact top section */}
       <div className="text-center mb-3">
         {/* Answer circles with difficulty color-coded borders */}
-        <div className="flex items-center justify-center gap-2.5 mb-3">
-          {answerResults.map((result, index) => {
+        <div className={`flex items-center justify-center gap-2.5 mb-3 ${isUntimed ? "flex-wrap gap-1.5" : ""}`}>
+          {(isUntimed && answerResults.length > 10 ? answerResults.slice(-10) : answerResults).map((result, index) => {
             const diffColor = result.difficulty === "hard" ? "#EF4444" : result.difficulty === "medium" ? "#F59E0B" : "#22C55E"
             return (
-              <div key={index} className="flex flex-col items-center gap-1">
+              <div key={index} className={`flex flex-col items-center gap-1 ${isUntimed ? "scale-75" : ""}`}>
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center ${
                     result.isCorrect ? "bg-green-500" : "bg-red-500"
@@ -1479,14 +1559,19 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
               </div>
             )
           })}
+          {isUntimed && answerResults.length > 10 && (
+            <span className="text-xs text-[#85B7EB]/40">+{answerResults.length - 10} more</span>
+          )}
         </div>
 
         <h1 className="text-4xl font-extrabold text-white leading-none">
-          {correctCount}/{TOTAL_QUESTIONS}
+          {correctCount}/{answerResults.length}
         </h1>
-        <p className="text-[#85B7EB] text-base font-semibold mt-0.5">{categoryName}</p>
+        <p className="text-[#85B7EB] text-base font-semibold mt-0.5">{categoryName}{isUntimed ? " — practice" : ""}</p>
         <p className="text-[#85B7EB]/70 text-sm mt-1.5 max-w-[280px] mx-auto leading-snug">
-          {getEncouragementMessage(correctCount, isChallenge || isCreatorChallenge)}
+          {isUntimed
+            ? (correctCount === answerResults.length ? "Perfect practice session!" : `${correctCount} correct out of ${answerResults.length} questions`)
+            : getEncouragementMessage(correctCount, isChallenge || isCreatorChallenge)}
         </p>
       </div>
 
@@ -1505,8 +1590,8 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
         </div>
       )}
 
-      {/* Gems Earned — merged with difficulty stats */}
-      <div className="w-full max-w-sm mb-3 bg-gradient-to-r from-[#F59E0B]/15 to-[#F97316]/15 border border-[#F59E0B]/30 rounded-xl p-3.5">
+      {/* Gems Earned — merged with difficulty stats (hidden in untimed mode) */}
+      {!isUntimed && <div className="w-full max-w-sm mb-3 bg-gradient-to-r from-[#F59E0B]/15 to-[#F97316]/15 border border-[#F59E0B]/30 rounded-xl p-3.5">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <Diamond className="w-5 h-5 text-[#F59E0B] fill-[#F59E0B]" />
@@ -1523,7 +1608,7 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Streak + Difficulty Reached + Weak Spot Nudge */}
       <div className="w-full max-w-sm mb-3 space-y-2">
@@ -1638,20 +1723,20 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
           </a>
         ) : null}
 
-        {/* Play again + category picker row */}
+        {/* Play again + home row */}
         <div className="flex gap-2">
           <button
             onClick={onPlayAgain}
             className="flex-1 bg-transparent border-2 border-[#378ADD] text-[#378ADD] rounded-xl py-3 flex items-center justify-center gap-1.5 font-bold text-sm active:scale-[0.98]"
           >
             <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-            play again
+            {isUntimed ? "practice more" : "play again"}
           </button>
           <a
-            href="/home"
+            href={isUntimed ? `/skills?category=${encodeURIComponent(categoryId)}` : "/home"}
             className="flex-1 bg-[#0a2d4a] text-[#85B7EB] rounded-xl py-3 flex items-center justify-center gap-1.5 font-bold text-sm active:scale-[0.98]"
           >
-            home
+            {isUntimed ? "back to skills" : "home"}
           </a>
         </div>
       </div>
