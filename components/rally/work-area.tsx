@@ -27,14 +27,21 @@ export function WorkArea({ isOpen, onClose, questionText, questionKey }: WorkAre
   // Lifted notepad state so it survives tab switches
   const [notepadText, setNotepadText] = useState("")
 
-  // Clear notepad whenever the question changes (so it doesn't bleed across questions)
+  // Whenever the question changes, pre-populate the notepad with the problem text
+  // so it's ready the moment the user opens the WorkArea. If there's no question
+  // text (e.g. on the diagnostic intro), just clear instead.
   useEffect(() => {
-    setNotepadText("")
+    if (questionText && questionText.trim()) {
+      const cleaned = questionText.trim()
+      setNotepadText(`${cleaned}\n\n— — — — — — — —\n`)
+    } else {
+      setNotepadText("")
+    }
     setDidCopyToNotes(false)
-  }, [questionKey])
+  }, [questionKey, questionText])
 
-  // Insert the current question into the notepad with a blank work area below it,
-  // and switch to the notepad tab so the user can start solving immediately.
+  // Manual re-insert — useful if the user clears the notepad mid-question and
+  // wants the problem back. Prepends, doesn't overwrite.
   const copyQuestionToNotes = useCallback(() => {
     if (!questionText) return
     const cleaned = questionText.trim()
