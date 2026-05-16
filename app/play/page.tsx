@@ -7,6 +7,7 @@ import { useGems, GEM_VALUES, gemsForAnswer, markRoundCompleted } from "@/lib/ge
 import { completeReferralIfPending } from "@/lib/referrals"
 // ChallengeWaitlistSheet removed — challenges are now created before playing
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
+import { ShareCreatorScoreButton } from "@/components/rally/share-creator-score-button"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
@@ -1445,6 +1446,13 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [copiedPromptIdx, setCopiedPromptIdx] = useState<number | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [displayName, setDisplayName] = useState<string>("you")
+
+  // Fetch the user's display name once — used on the creator-just-finished share card.
+  useEffect(() => {
+    if (!isCreatorChallenge) return
+    getDisplayName().then(setDisplayName).catch(() => {})
+  }, [isCreatorChallenge])
 
   const toggleExpanded = (idx: number) => {
     setExpandedCards(prev => {
@@ -1702,19 +1710,25 @@ function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, 
       <div className="w-full max-w-sm space-y-2.5 mb-3">
         {/* Challenge section — top priority */}
         {isCreatorChallenge && creatorChallengeCode ? (
-          /* Creator just finished — waiting for friend's results */
+          /* Creator just finished — share their score to make the friend play */
           <div className="bg-[#0a2d4a] border border-[#378ADD]/40 rounded-xl p-4">
-            <div className="flex items-center justify-center gap-2 mb-1.5">
+            <div className="flex items-center justify-center gap-2 mb-1">
               <Swords className="w-4 h-4 text-[#378ADD]" />
               <p className="text-white font-bold text-sm">score locked in!</p>
             </div>
-            <p className="text-[#85B7EB]/60 text-xs text-center mb-3">waiting for your friend to play — results will appear when they finish</p>
+            <p className="text-[#85B7EB]/60 text-xs text-center mb-3">share your score and make them play</p>
+            <ShareCreatorScoreButton
+              creatorName={displayName}
+              creatorGems={answerGems}
+              creatorCorrect={correctCount}
+              category={categoryId}
+              shareCode={creatorChallengeCode}
+            />
             <a
               href={`/challenge/${creatorChallengeCode}`}
-              className="w-full bg-[#378ADD] text-white rounded-lg py-3 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="block text-center text-[#85B7EB]/70 hover:text-[#85B7EB] text-xs font-bold mt-3 transition-colors"
             >
-              <Swords className="w-4 h-4" />
-              show results
+              or wait for results →
             </a>
           </div>
         ) : challengeCode ? (

@@ -159,45 +159,69 @@ export default function ChallengePage() {
   if (isOwnChallenge && challenge.status === "pending") {
     const hasPlayed = challenge.creator_score >= 0
     const timeRemaining = getChallengeTimeRemaining(challenge)
+    const creatorCorrect = challenge.creator_results?.filter(r => r.isCorrect).length ?? 0
     return (
-      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-start px-5 pt-14 pb-8 text-center relative">
         <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>
-        <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
-        <h1 className="text-xl font-extrabold text-white mb-1">your challenge</h1>
-        <p className="text-[#85B7EB]/60 text-sm mb-1.5">
-          {getCategoryDisplay(challenge.category)}
-        </p>
+
         {hasPlayed ? (
+          /* Creator has played — show big share card + button so they can taunt their friend */
           <>
-            <div className="flex items-center justify-center gap-1.5 mb-2">
-              <Diamond className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
-              <span className="text-2xl font-extrabold text-white">{challenge.creator_score}</span>
-              <span className="text-sm text-[#85B7EB]/60">gems</span>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Swords className="w-4 h-4 text-[#378ADD]" />
+              <p className="text-[10px] font-extrabold tracking-widest text-[#378ADD] uppercase">your round is locked in</p>
             </div>
-            <p className="text-[#85B7EB]/40 text-xs mb-4">
-              waiting for your friend to play
-            </p>
+            <p className="text-[#85B7EB]/60 text-xs mb-4">share to make them play</p>
+
+            <ShareCreatorScoreButton
+              creatorName={challenge.creator_name}
+              creatorGems={challenge.creator_score}
+              creatorCorrect={creatorCorrect}
+              category={challenge.category}
+              shareCode={challenge.share_code}
+            />
+
+            {timeRemaining && (
+              <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mt-4 mb-2">
+                <Clock className="w-3.5 h-3.5" />
+                <span>expires in {timeRemaining.hours}h {timeRemaining.minutes}m</span>
+              </div>
+            )}
+            <a
+              href="/home"
+              className="text-[#85B7EB]/70 hover:text-[#85B7EB] text-sm font-bold flex items-center gap-1 mt-2 transition-colors"
+            >
+              back to home <ChevronRight className="w-4 h-4" strokeWidth={3} />
+            </a>
           </>
         ) : (
-          <p className="text-[#85B7EB]/40 text-xs mb-4">
-            share the link and play your round
-          </p>
-        )}
-        {timeRemaining && (
-          <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mb-4">
-            <Clock className="w-3.5 h-3.5" />
-            <span>expires in {timeRemaining.hours}h {timeRemaining.minutes}m</span>
+          /* Creator hasn't played yet — original simple "share link, play round" message */
+          <div className="flex-1 flex flex-col items-center justify-center w-full">
+            <Swords className="w-12 h-12 text-[#378ADD] mb-3" />
+            <h1 className="text-xl font-extrabold text-white mb-1">your challenge</h1>
+            <p className="text-[#85B7EB]/60 text-sm mb-1.5">
+              {getCategoryDisplay(challenge.category)}
+            </p>
+            <p className="text-[#85B7EB]/40 text-xs mb-4">
+              share the link and play your round
+            </p>
+            {timeRemaining && (
+              <div className="flex items-center gap-1.5 text-[#EF9F27]/70 text-xs mb-4">
+                <Clock className="w-3.5 h-3.5" />
+                <span>expires in {timeRemaining.hours}h {timeRemaining.minutes}m</span>
+              </div>
+            )}
+            <a
+              href="/home"
+              className="bg-[#378ADD] text-white rounded-xl py-3.5 px-6 font-bold flex items-center gap-2 text-sm"
+            >
+              back to home <ChevronRight className="w-4 h-4" strokeWidth={3} />
+            </a>
           </div>
         )}
-        <a
-          href="/home"
-          className="bg-[#378ADD] text-white rounded-xl py-3.5 px-6 font-bold flex items-center gap-2 text-sm"
-        >
-          back to home <ChevronRight className="w-4 h-4" strokeWidth={3} />
-        </a>
       </div>
     )
   }
