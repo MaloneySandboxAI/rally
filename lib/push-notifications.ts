@@ -30,7 +30,7 @@ export async function subscribeToPush(): Promise<boolean> {
     await navigator.serviceWorker.ready
 
     const subscription = await registration.pushManager.subscribe({
-      userApplicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      userVisibleOnly: true,
       applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     })
 

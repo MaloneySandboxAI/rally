@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BookOpen } from "lucide-react"
+import { BookOpen, Flame } from "lucide-react"
 import { claimDailyLogin, checkStreakMilestone } from "@/lib/gem-context"
 import { useGems } from "@/lib/gem-context"
 

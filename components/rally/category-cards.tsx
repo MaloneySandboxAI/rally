@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { getCategoryAverageLevel, LEVEL_COLORS, hasSubtopicLevels } from "@/lib/subtopic-levels"
-import { ALL_ALL_CATEGORIES } from "@/lib/categories"
+import { ALL_CATEGORIES } from "@/lib/categories"
 
 interface CategoryCardsProps {
   variant?: "grid" | "compact"
