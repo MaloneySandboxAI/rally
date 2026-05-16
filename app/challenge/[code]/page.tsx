@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Spinner } from "@/components/ui/spinner"
 import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock } from "lucide-react"
 import Link from "next/link"
+import { ShareChallengeResultButton } from "@/components/rally/share-challenge-result-button"
 
 const CATEGORIES: Record<string, string> = {
   "Algebra": "Algebra",
@@ -85,62 +86,44 @@ export default function ChallengePage() {
   if (challenge.status === "completed") {
     const creatorGems = challenge.creator_score ?? 0
     const challengerGems = challenge.challenger_score ?? 0
-    const creatorWon = creatorGems > challengerGems
-    const challengerWon = challengerGems > creatorGems
-    const tied = creatorGems === challengerGems
 
-    // Count correct answers from results for display
+    // Count correct answers from results for the card
     const creatorCorrect = challenge.creator_results?.filter(r => r.isCorrect).length ?? 0
     const challengerCorrect = challenge.challenger_results?.filter(r => r.isCorrect).length ?? 0
 
     return (
-      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
+      <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-start px-5 pt-14 pb-8 text-center relative">
         <Link href="/home" className="absolute top-6 left-5 text-[#85B7EB]/50 text-sm font-medium hover:text-[#85B7EB] transition-colors inline-flex items-center gap-1">
           <ChevronLeft className="w-4 h-4" />
           home
         </Link>
-        <Trophy className="w-10 h-10 text-[#EF9F27] mb-2" />
-        <h1 className="text-lg font-extrabold text-white mb-0.5">challenge complete</h1>
+
+        <div className="flex items-center gap-1.5 mb-1">
+          <Trophy className="w-4 h-4 text-[#EF9F27]" />
+          <p className="text-[10px] font-extrabold tracking-widest text-[#EF9F27] uppercase">challenge complete</p>
+        </div>
         <p className="text-[#85B7EB]/60 text-xs mb-4">{getCategoryDisplay(challenge.category)}</p>
 
-        <div className="w-full max-w-sm bg-[#0a2d4a] rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <p className="text-xs font-bold text-[#85B7EB]/60 mb-0.5">{challenge.creator_name}</p>
-              <div className="flex items-center justify-center gap-1">
-                <Diamond className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
-                <p className={`text-2xl font-extrabold ${creatorWon ? "text-[#EF9F27]" : "text-white"}`}>
-                  {creatorGems}
-                </p>
-              </div>
-              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{creatorCorrect}/5 correct</p>
-              {creatorWon && <p className="text-[10px] font-bold text-[#EF9F27] mt-0.5">winner</p>}
-            </div>
-            <div className="px-2">
-              <span className="text-[#85B7EB]/30 font-extrabold text-sm">vs</span>
-            </div>
-            <div className="text-center flex-1">
-              <p className="text-xs font-bold text-[#85B7EB]/60 mb-0.5">{challenge.challenger_name || "friend"}</p>
-              <div className="flex items-center justify-center gap-1">
-                <Diamond className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
-                <p className={`text-2xl font-extrabold ${challengerWon ? "text-[#EF9F27]" : "text-white"}`}>
-                  {challengerGems}
-                </p>
-              </div>
-              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{challengerCorrect}/5 correct</p>
-              {challengerWon && <p className="text-[10px] font-bold text-[#EF9F27] mt-0.5">winner</p>}
-            </div>
-          </div>
-          {tied && <p className="text-center text-sm font-bold text-[#85B7EB] mt-2">it&apos;s a tie!</p>}
-        </div>
+        {/* Share card + share button — the centerpiece. The card screenshots well
+            and the share button fires the native share sheet on iOS/Android. */}
+        <ShareChallengeResultButton
+          creatorName={challenge.creator_name}
+          challengerName={challenge.challenger_name || "friend"}
+          creatorGems={creatorGems}
+          challengerGems={challengerGems}
+          creatorCorrect={creatorCorrect}
+          challengerCorrect={challengerCorrect}
+          category={challenge.category}
+          shareCode={challenge.share_code}
+        />
 
-        <p className="text-[#85B7EB]/40 text-[10px] mb-4 max-w-[260px]">
+        <p className="text-[#85B7EB]/40 text-[10px] mt-4 mb-3 max-w-[280px]">
           harder questions = more gems per answer, so difficulty matters
         </p>
 
         <a
           href="/home"
-          className="bg-[#378ADD] text-white rounded-xl py-3 px-6 font-bold flex items-center gap-2 text-sm"
+          className="text-[#85B7EB]/70 hover:text-[#85B7EB] text-sm font-bold flex items-center gap-1 transition-colors"
         >
           play more <ChevronRight className="w-4 h-4" strokeWidth={3} />
         </a>
