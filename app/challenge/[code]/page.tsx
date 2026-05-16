@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock } from "lucide-react"
 import Link from "next/link"
 import { ShareChallengeResultButton } from "@/components/rally/share-challenge-result-button"
+import { ShareCreatorScoreButton } from "@/components/rally/share-creator-score-button"
 
 const CATEGORIES: Record<string, string> = {
   "Algebra": "Algebra",
