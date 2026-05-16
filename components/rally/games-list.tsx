@@ -15,28 +15,8 @@ import {
 import { EmptyGamesState } from "./empty-games-state"
 import { Swords, Clock, Trophy, ChevronRight, Diamond, X, Trash2 } from "lucide-react"
 import Link from "next/link"
-
-const CATEGORY_COLORS: Record<string, string> = {
-  "Algebra": "#378ADD",
-  "Reading Comprehension": "#14B8A6",
-  "Grammar": "#A855F7",
-  "Data & Statistics": "#F97316",
-  "AP Biology": "#22C55E",
-  "AP Pre Calculus": "#EC4899",
-  "AP US History": "#F59E0B",
-  "AP English Language": "#6366F1",
-}
-
-const CATEGORY_SHORT: Record<string, string> = {
-  "Algebra": "Algebra",
-  "Reading Comprehension": "Reading",
-  "Grammar": "Grammar",
-  "Data & Statistics": "Data & Stats",
-  "AP Biology": "AP Bio",
-  "AP Pre Calculus": "AP Pre Calc",
-  "AP US History": "APUSH",
-  "AP English Language": "AP English",
-}
+import { CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/categories"
+import { getH2HRecord } from "@/lib/head-to-head"
 
 export function GamesList() {
   const [challenges, setChallenges] = useState<Challenge[]>([])
@@ -45,20 +25,35 @@ export function GamesList() {
   const [cancelingCode, setCancelingCode] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
   const [clearingExpired, setClearingExpired] = useState(false)
+  const [h2hRecords, setH2hRecords] = useState<Record<string, { myWins: number; theirWins: number }>>({})
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUserId(session.user.id)
-        getUserChallenges(session.user.id).then((data) => {
-          // Keep: active challenges + stale pending ones the user created (so they can delete them)
-          setChallenges(data.filter(c => {
+        const uid = session.user.id
+        setUserId(uid)
+        getUserChallenges(uid).then((data) => {
+          const filtered = data.filter(c => {
             if (!isChallengeExpired(c)) return true
-            // Show expired challenges the user created that are still pending (stale)
-            return c.status === "pending" && c.creator_id === session.user.id
-          }))
+            return c.status === "pending" && c.creator_id === uid
+          })
+          setChallenges(filtered)
           setLoading(false)
+
+          // Fetch h2h records for completed challenges
+          const seen = new Set<string>()
+          for (const c of filtered) {
+            if (c.status !== "completed") continue
+            const opponentId = c.creator_id === uid ? c.challenger_id : c.creator_id
+            if (!opponentId || seen.has(opponentId + c.category)) continue
+            seen.add(opponentId + c.category)
+            getH2HRecord(uid, opponentId, c.category).then(r => {
+              if (r) {
+                setH2hRecords(prev => ({ ...prev, [opponentId + c.category]: { myWins: r.myWins, theirWins: r.theirWins } }))
+              }
+            })
+          }
         })
       } else {
         setLoading(false)
@@ -183,6 +178,12 @@ export function GamesList() {
                   {status === "completed" && (
                     <span className="text-xs font-bold" style={{ color: resultColor }}>{resultLabel}</span>
                   )}
+                  {status === "completed" && (() => {
+                    const opId = isCreator ? c.challenger_id : c.creator_id
+                    const rec = opId ? h2hRecords[opId + c.category] : null
+                    if (!rec || (rec.myWins === 0 && rec.theirWins === 0)) return null
+                    return <span className="text-[10px] font-bold text-[#85B7EB]/40">{rec.myWins}-{rec.theirWins}</span>
+                  })()}
                   {status === "expired" && (
                     <span className="text-[10px] text-red-400/60 flex items-center gap-0.5">
                       <Clock className="w-3 h-3" />

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CATEGORY_COLORS, CATEGORY_SHORT, SUBTOPIC_MAP } from "@/lib/diagnostic"
+import { CATEGORY_COLORS, CATEGORY_SHORT, SAT_CATEGORY_IDS, AP_CATEGORY_IDS } from "@/lib/categories"
+import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import {
   getCategoryAverageLevel,
   getCategorySubtopicLevels,
@@ -11,9 +12,6 @@ import {
   LEVEL_LABELS,
 } from "@/lib/subtopic-levels"
 import { loadStats } from "@/lib/stats"
-
-const CATEGORIES = ["Algebra", "Reading Comprehension", "Grammar", "Data & Statistics"]
-const AP_CATEGORIES = ["AP Biology", "AP Pre Calculus", "AP US History", "AP English Language"]
 
 /**
  * Visual category level rings for the home screen.
@@ -30,7 +28,7 @@ export function CategoryRings() {
     const acc: Record<string, number | null> = {}
     const stats = loadStats()
 
-    for (const cat of CATEGORIES) {
+    for (const cat of SAT_CATEGORY_IDS) {
       lvls[cat] = getCategoryAverageLevel(cat)
       const catStats = stats.byCategory[cat]
       acc[cat] = catStats && catStats.total >= 5
@@ -113,7 +111,7 @@ export function CategoryRings() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {renderRings(CATEGORIES)}
+      {renderRings(SAT_CATEGORY_IDS)}
     </div>
   )
 }
@@ -131,7 +129,7 @@ export function APCategoryRings() {
     const acc: Record<string, number | null> = {}
     const stats = loadStats()
 
-    for (const cat of AP_CATEGORIES) {
+    for (const cat of AP_CATEGORY_IDS) {
       lvls[cat] = getCategoryAverageLevel(cat)
       const catStats = stats.byCategory[cat]
       acc[cat] = catStats && catStats.total >= 5
@@ -184,7 +182,7 @@ export function APCategoryRings() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {renderRings(AP_CATEGORIES)}
+      {renderRings(AP_CATEGORY_IDS)}
     </div>
   )
 }

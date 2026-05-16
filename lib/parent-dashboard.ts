@@ -20,16 +20,11 @@ import { createClient } from "@/lib/supabase/client"
 
 const PARENT_TOKEN_KEY = "rally_parent_token"
 
-/**
- * Generate a random 12-character alphanumeric token
- */
 function generateToken(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-  let token = ""
-  for (let i = 0; i < 12; i++) {
-    token += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return token
+  const randomBytes = new Uint8Array(24)
+  crypto.getRandomValues(randomBytes)
+  return Array.from(randomBytes, b => chars[b % chars.length]).join("")
 }
 
 /**

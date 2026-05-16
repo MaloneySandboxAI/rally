@@ -7,7 +7,7 @@ import { initSync } from "@/lib/sync"
 
 // Pages that are always accessible without auth
 const PUBLIC_PATHS = ["/", "/login", "/age-verify", "/setup-profile", "/privacy", "/terms", "/join"]
-const PUBLIC_PREFIXES = ["/challenge/", "/upgrade"]
+const PUBLIC_PREFIXES = ["/challenge/", "/group/", "/upgrade"]
 
 function isPublic(path: string) {
   return PUBLIC_PATHS.includes(path) || PUBLIC_PREFIXES.some(p => path.startsWith(p))

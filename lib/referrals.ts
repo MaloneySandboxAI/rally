@@ -118,7 +118,6 @@ export async function completeReferralIfPending(
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return { completed: false }
 
-  // Check if this user has a pending referral
   const { data: referral } = await supabase
     .from("referrals")
     .select("id, referrer_id, status")
@@ -128,29 +127,16 @@ export async function completeReferralIfPending(
 
   if (!referral) return { completed: false }
 
-  // Award gems to the referred user (me)
   addGems(GEM_ECONOMY.referralBonus)
 
-  // Mark referral as completed
   await supabase
     .from("referrals")
     .update({
       status: "completed",
-      gems_awarded: true,
+      referred_gems_awarded: true,
       completed_at: new Date().toISOString(),
     })
     .eq("id", referral.id)
-
-  // Award gems to the referrer via a direct gems update
-  // We need to read their current balance, add 500, and write back
-  // Since gems are in localStorage on the referrer's device, we track it in Supabase
-  // and they'll see it next time they load the app
-  // For now, store the pending reward in a simple approach: insert a row
-  // Actually — gems are client-side (localStorage). Best approach:
-  // Store the bonus in Supabase so the referrer picks it up on next load.
-  await supabase.from("referrals").update({
-    gems_awarded: true,
-  }).eq("id", referral.id)
 
   // Get referrer's username for the toast
   const { data: referrer } = await supabase
@@ -162,34 +148,24 @@ export async function completeReferralIfPending(
   return { completed: true, referrerName: referrer?.username }
 }
 
-// Check if there's unclaimed referral bonus for the current user (as referrer)
-// Returns total unclaimed bonus gems
+// Check unclaimed referral bonuses for the current user (as referrer)
 export async function checkUnclaimedReferralBonuses(): Promise<number> {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return 0
 
-  const { data: completedReferrals } = await supabase
+  const { data } = await supabase
     .from("referrals")
     .select("id")
     .eq("referrer_id", session.user.id)
     .eq("status", "completed")
-    .eq("gems_awarded", true)
+    .eq("referred_gems_awarded", true)
+    .eq("referrer_gems_awarded", false)
 
-  // Each completed referral = 500 gems for the referrer
-  // We use a separate localStorage key to track which ones they've claimed
-  if (!completedReferrals || completedReferrals.length === 0) return 0
-
-  const claimedKey = "rally_claimed_referral_ids"
-  const claimed = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem(claimedKey) || "[]")
-    : []
-
-  const unclaimed = completedReferrals.filter(r => !claimed.includes(r.id))
-  return unclaimed.length * GEM_ECONOMY.referralBonus
+  return (data?.length || 0) * GEM_ECONOMY.referralBonus
 }
 
-// Claim referral bonuses for the referrer
+// Claim referral bonuses atomically via RPC (safe across tabs)
 export async function claimReferralBonuses(
   addGems: (amount: number) => void
 ): Promise<number> {
@@ -197,32 +173,14 @@ export async function claimReferralBonuses(
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return 0
 
-  const { data: completedReferrals } = await supabase
-    .from("referrals")
-    .select("id")
-    .eq("referrer_id", session.user.id)
-    .eq("status", "completed")
-    .eq("gems_awarded", true)
+  const { data: claimedCount, error } = await supabase.rpc("claim_referral_bonuses", {
+    p_referrer_id: session.user.id,
+  })
 
-  if (!completedReferrals || completedReferrals.length === 0) return 0
+  if (error || !claimedCount || claimedCount === 0) return 0
 
-  const claimedKey = "rally_claimed_referral_ids"
-  const claimed: number[] = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem(claimedKey) || "[]")
-    : []
-
-  const unclaimed = completedReferrals.filter(r => !claimed.includes(r.id))
-  if (unclaimed.length === 0) return 0
-
-  const bonus = unclaimed.length * GEM_ECONOMY.referralBonus
+  const bonus = claimedCount * GEM_ECONOMY.referralBonus
   addGems(bonus)
-
-  // Mark as claimed locally
-  const newClaimed = [...claimed, ...unclaimed.map(r => r.id)]
-  if (typeof window !== "undefined") {
-    localStorage.setItem(claimedKey, JSON.stringify(newClaimed))
-  }
-
   return bonus
 }
 

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CATEGORY_COLORS, CATEGORY_SHORT, SUBTOPIC_MAP } from "@/lib/diagnostic"
+import { CATEGORY_COLORS, CATEGORY_SHORT, AP_CATEGORY_IDS } from "@/lib/categories"
+import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import {
   getCategoryAverageLevel,
   hasSubtopicLevels,
@@ -12,8 +13,6 @@ import {
 import { loadStats } from "@/lib/stats"
 import { BottomNav } from "@/components/rally/bottom-nav"
 import { ChallengeButton } from "@/components/rally/challenge-button"
-
-const AP_CATEGORIES = ["AP Biology", "AP Pre Calculus", "AP US History", "AP English Language"]
 
 export default function APTestsPage() {
   const [levels, setLevels] = useState<Record<string, number>>({})
@@ -25,7 +24,7 @@ export default function APTestsPage() {
     const acc: Record<string, number | null> = {}
     const stats = loadStats()
 
-    for (const cat of AP_CATEGORIES) {
+    for (const cat of AP_CATEGORY_IDS) {
       lvls[cat] = getCategoryAverageLevel(cat)
       const catStats = stats.byCategory[cat]
       acc[cat] = catStats && catStats.total >= 5
@@ -50,7 +49,7 @@ export default function APTestsPage() {
       <main className="px-5 py-6 space-y-6 max-w-lg mx-auto">
         {/* Category rings grid */}
         <div className="grid grid-cols-2 gap-3">
-          {AP_CATEGORIES.map(cat => {
+          {AP_CATEGORY_IDS.map(cat => {
             const color = CATEGORY_COLORS[cat] || "#22C55E"
             const short = CATEGORY_SHORT[cat] || cat
             const avg = levels[cat] || 1

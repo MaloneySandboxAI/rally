@@ -2,14 +2,11 @@
 
 import { createClient } from "@/lib/supabase/client"
 
-// Generate a short, unique share code (6 chars, alphanumeric)
 function generateShareCode(): string {
-  const chars = "abcdefghjkmnpqrstuvwxyz23456789" // no confusing chars (0/O, 1/l, i)
-  let code = ""
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return code
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789"
+  const randomBytes = new Uint8Array(6)
+  crypto.getRandomValues(randomBytes)
+  return Array.from(randomBytes, b => chars[b % chars.length]).join("")
 }
 
 export interface ChallengeResult {
@@ -71,6 +68,8 @@ export async function createChallenge(params: {
   creatorName: string
   creatorId?: string
   questionPool: ChallengePool
+  targetChallengerId?: string
+  targetChallengerName?: string
 }): Promise<string | null> {
   if (typeof window === "undefined") return null
   const supabase = createClient()
@@ -81,11 +80,13 @@ export async function createChallenge(params: {
     const { error } = await supabase.from("challenges").insert({
       share_code: shareCode,
       category: params.category,
-      question_ids: poolToFlat(params.questionPool), // [5 easy, 5 medium, 5 hard]
+      question_ids: poolToFlat(params.questionPool),
       creator_id: params.creatorId || null,
       creator_name: params.creatorName,
-      creator_score: -1, // sentinel: hasn't played yet
+      creator_score: -1,
       creator_results: null,
+      challenger_id: params.targetChallengerId || null,
+      challenger_name: params.targetChallengerName || null,
       status: "pending",
     })
 
@@ -189,9 +190,10 @@ export async function completeChallenge(params: {
 /**
  * Build the full share URL for a challenge.
  */
-export function getChallengeUrl(shareCode: string): string {
+export function getChallengeUrl(shareCode: string, refCode?: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://rallyplaylive.com"
-  return `${origin}/challenge/${shareCode}`
+  const base = `${origin}/challenge/${shareCode}`
+  return refCode ? `${base}?ref=${refCode}` : base
 }
 
 /**

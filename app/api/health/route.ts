@@ -5,18 +5,18 @@ import { NextResponse } from "next/server"
 // Also useful for uptime monitoring
 export async function GET() {
   const supabase = createClient(
-    "https://rmbzpxvsejbugsgflqsv.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtYnpweHZzZWpidWdzZ2ZscXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzU2MDEsImV4cCI6MjA5MDgxMTYwMX0.nyDqyCJ0PD42xImxrwY6GbbsfClQMWH_UTHDGvMdfZM"
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
   try {
-    // Simple query to keep Supabase active
     const { count, error } = await supabase
       .from("waitlist")
       .select("*", { count: "exact", head: true })
 
     if (error) {
-      return NextResponse.json({ status: "error", error: error.message }, { status: 500 })
+      console.error("[health] Supabase error:", error.message)
+      return NextResponse.json({ status: "error" }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -26,6 +26,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     })
   } catch (err) {
-    return NextResponse.json({ status: "error", error: String(err) }, { status: 500 })
+    console.error("[health] Unexpected error:", err)
+    return NextResponse.json({ status: "error" }, { status: 500 })
   }
 }

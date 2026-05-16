@@ -4,49 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { getCategoryAverageLevel, LEVEL_COLORS, hasSubtopicLevels } from "@/lib/subtopic-levels"
-
-export const CATEGORIES = [
-  {
-    id: "Algebra",
-    name: "Algebra",
-    color: "#378ADD", // electric blue
-  },
-  {
-    id: "Reading Comprehension",
-    name: "Reading",
-    color: "#14B8A6", // teal
-  },
-  {
-    id: "Grammar",
-    name: "Grammar",
-    color: "#A855F7", // purple
-  },
-  {
-    id: "Data & Statistics",
-    name: "Data & Stats",
-    color: "#F97316", // coral/orange
-  },
-  {
-    id: "AP Biology",
-    name: "AP Bio",
-    color: "#22C55E", // green
-  },
-  {
-    id: "AP Pre Calculus",
-    name: "AP Pre Calc",
-    color: "#EC4899", // pink
-  },
-  {
-    id: "AP US History",
-    name: "APUSH",
-    color: "#F59E0B", // amber
-  },
-  {
-    id: "AP English Language",
-    name: "AP English",
-    color: "#6366F1", // indigo
-  },
-]
+import { ALL_ALL_CATEGORIES } from "@/lib/categories"
 
 interface CategoryCardsProps {
   variant?: "grid" | "compact"
@@ -59,7 +17,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
 
   useEffect(() => {
     const loaded: Record<string, number> = {}
-    for (const cat of CATEGORIES) {
+    for (const cat of ALL_CATEGORIES) {
       loaded[cat.id] = getCategoryAverageLevel(cat.id)
     }
     setAvgLevels(loaded)
@@ -69,7 +27,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
   if (variant === "compact") {
     return (
       <div className="grid grid-cols-2 gap-3">
-        {CATEGORIES.map((category) => (
+        {ALL_CATEGORIES.map((category) => (
           <button
             key={category.id}
             onClick={() => onCategorySelect?.(category.id)}
@@ -93,7 +51,7 @@ export function CategoryCards({ variant = "grid", onCategorySelect }: CategoryCa
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {CATEGORIES.map((category) => {
+      {ALL_CATEGORIES.map((category) => {
         const avg = avgLevels[category.id] || 1
         const levelColor = LEVEL_COLORS[Math.round(avg)] || "#85B7EB"
 

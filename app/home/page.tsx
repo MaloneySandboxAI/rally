@@ -6,6 +6,8 @@ import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryRings } from "@/components/rally/category-rings"
 import { ReferralBanner } from "@/components/rally/referral-banner"
 import { DiagnosticCard } from "@/components/rally/diagnostic-card"
+import { PushPrompt } from "@/components/rally/push-prompt"
+import { WeeklyRecapCard } from "@/components/rally/weekly-recap-card"
 
 export default function RallyHome() {
   return (
@@ -19,6 +21,16 @@ export default function RallyHome() {
           <p className="text-xs text-[#85B7EB]/60 mb-2.5">tap a category to practice &amp; level up</p>
           <CategoryRings />
         </section>
+
+        {/* Weekly challenge recap */}
+        <div className="mb-3">
+          <WeeklyRecapCard />
+        </div>
+
+        {/* Push notification prompt — shown once, above challenges */}
+        <div className="mb-2">
+          <PushPrompt />
+        </div>
 
         {/* Challenge — full width */}
         <div className="mb-3">

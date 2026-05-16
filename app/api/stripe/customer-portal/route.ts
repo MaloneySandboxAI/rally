@@ -1,5 +1,7 @@
 import Stripe from "stripe"
 import { createServerClient } from "@/lib/supabase/server"
+import { createServerClient as createAuthClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -10,6 +12,23 @@ export async function POST(req: Request) {
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 })
+    }
+
+    // Verify the authenticated user matches the requested userId
+    const cookieStore = await cookies()
+    const authClient = createAuthClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data: { user: authUser } } = await authClient.auth.getUser()
+    if (!authUser || authUser.id !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const supabase = createServerClient()

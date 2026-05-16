@@ -1,27 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Swords, ChevronRight, LogIn, Loader2, Share2, Lock } from "lucide-react"
+import { Plus, Swords, ChevronRight, LogIn, Loader2, Share2, Lock, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
 import { usePremium } from "@/lib/premium-context"
 import { getFreeChallengesRemaining, useDailyChallenge } from "@/lib/access"
 import { toast } from "sonner"
-
-const SAT_CATEGORIES = [
-  { id: "Algebra", name: "Algebra", color: "#378ADD" },
-  { id: "Reading Comprehension", name: "Reading", color: "#14B8A6" },
-  { id: "Grammar", name: "Grammar", color: "#A855F7" },
-  { id: "Data & Statistics", name: "Data & Stats", color: "#F97316" },
-]
-
-const AP_CATEGORIES = [
-  { id: "AP Biology", name: "AP Bio", color: "#22C55E" },
-  { id: "AP Pre Calculus", name: "AP Pre Calc", color: "#EC4899" },
-  { id: "AP US History", name: "APUSH", color: "#F59E0B" },
-  { id: "AP English Language", name: "AP English", color: "#6366F1" },
-]
+import { SAT_CATEGORIES, AP_CATEGORIES } from "@/lib/categories"
+import { fetchMyReferralCode } from "@/lib/referrals"
+import { RecentOpponents } from "./recent-opponents"
+import { type RecentOpponent } from "@/lib/recent-opponents"
+import { createGroupChallenge, getGroupChallengeUrl } from "@/lib/group-challenges"
 
 export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const categories = mode === "ap" ? AP_CATEGORIES : SAT_CATEGORIES
@@ -33,10 +24,12 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const [userId, setUserId] = useState<string | null>(null)
 
   // Challenge creation state
+  const [challengeMode, setChallengeMode] = useState<"1v1" | "group">("1v1")
   const [isCreating, setIsCreating] = useState(false)
   const [shareCode, setShareCode] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedOpponent, setSelectedOpponent] = useState<RecentOpponent | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -73,6 +66,8 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
       setShareUrl(null)
       setLinkShared(false)
       setSelectedCategory(null)
+      setSelectedOpponent(null)
+      setChallengeMode("1v1")
       setIsCreating(false)
       setShowPicker(true)
     }
@@ -83,7 +78,6 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
     setIsCreating(true)
 
     try {
-      // 1. Fetch shared question pool: 5 easy + 5 medium + 5 hard
       const pool = await getChallengePool(categoryId)
       if (!pool) {
         toast.error("couldn't load questions — try again", {
@@ -94,13 +88,31 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
         return
       }
 
-      // 2. Create the challenge with the shared pool
-      const code = await createChallenge({
-        category: categoryId,
-        creatorName: userName,
-        creatorId: userId || undefined,
-        questionPool: pool,
-      })
+      let code: string | null
+
+      if (challengeMode === "group") {
+        if (!userId) {
+          toast.error("sign in to create a group challenge")
+          setIsCreating(false)
+          setSelectedCategory(null)
+          return
+        }
+        code = await createGroupChallenge({
+          category: categoryId,
+          creatorName: userName,
+          creatorId: userId,
+          questionPool: pool,
+        })
+      } else {
+        code = await createChallenge({
+          category: categoryId,
+          creatorName: userName,
+          creatorId: userId || undefined,
+          questionPool: pool,
+          targetChallengerId: selectedOpponent?.id,
+          targetChallengerName: selectedOpponent?.name,
+        })
+      }
 
       if (!code) {
         toast.error("couldn't create challenge — try again", {
@@ -111,14 +123,19 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
         return
       }
 
-      // Track free user's daily challenge usage
       if (!isPremium) {
         useDailyChallenge()
         setFreeChallengesLeft(getFreeChallengesRemaining())
       }
 
-      setShareCode(code)
-      setShareUrl(getChallengeUrl(code))
+      if (challengeMode === "group") {
+        setShareCode(code)
+        setShareUrl(getGroupChallengeUrl(code))
+      } else {
+        const refCode = await fetchMyReferralCode() || undefined
+        setShareCode(code)
+        setShareUrl(getChallengeUrl(code, refCode))
+      }
       setIsCreating(false)
     } catch (err) {
       console.error("Error creating challenge:", err)
@@ -136,7 +153,12 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const handleShareLink = async () => {
     if (!shareUrl) return
     try {
-      const shareText = `Think you can beat me? I challenged you to a ${selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || "" : ""} quiz on Rally. Tap the link to play!`
+      const catName = selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || "" : ""
+      const shareText = challengeMode === "group"
+        ? `Join my ${catName} group challenge on Rally! Up to 30 players — see who tops the leaderboard.`
+        : selectedOpponent
+        ? `${selectedOpponent.name.split(" ")[0]}, I challenged you to a ${catName} quiz on Rally! Tap the link to play!`
+        : `Think you can beat me? I challenged you to a ${catName} quiz on Rally. Tap the link to play!`
       if (navigator.share) {
         await navigator.share({
           title: `${userName} challenged you on Rally!`,
@@ -158,8 +180,11 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
 
   const handlePlayNow = () => {
     if (!shareCode || !selectedCategory) return
-    // Navigate to play page — creator plays adaptive difficulty for this category
-    window.location.href = `/play?creatorChallenge=${shareCode}&category=${encodeURIComponent(selectedCategory)}`
+    if (challengeMode === "group") {
+      window.location.href = `/play?group=${shareCode}&category=${encodeURIComponent(selectedCategory)}`
+    } else {
+      window.location.href = `/play?creatorChallenge=${shareCode}&category=${encodeURIComponent(selectedCategory)}`
+    }
   }
 
   return (
@@ -214,8 +239,41 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
             {/* State 1: Category picker */}
             {!shareCode && !isCreating && (
               <>
+                {/* Mode toggle: 1v1 vs Group */}
+                <div className="flex bg-[#021f3d] rounded-lg p-0.5 mb-3">
+                  <button
+                    onClick={() => setChallengeMode("1v1")}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      challengeMode === "1v1" ? "bg-[#378ADD] text-white" : "text-[#85B7EB]/50"
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" /> 1v1
+                  </button>
+                  <button
+                    onClick={() => { setChallengeMode("group"); setSelectedOpponent(null) }}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      challengeMode === "group" ? "bg-[#378ADD] text-white" : "text-[#85B7EB]/50"
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" /> group
+                  </button>
+                </div>
+
+                {/* Recent opponents row (1v1 only) */}
+                {challengeMode === "1v1" && (
+                  <RecentOpponents
+                    userId={userId}
+                    selectedId={selectedOpponent?.id}
+                    onSelect={(opp) => setSelectedOpponent(prev => prev?.id === opp.id ? null : opp)}
+                  />
+                )}
+
                 <p className="text-xs text-[#85B7EB]/60 mb-3">
-                  pick a category, share the link, then play your round
+                  {challengeMode === "group"
+                    ? "pick a category — share with your class or group"
+                    : selectedOpponent
+                    ? `pick a category to challenge ${selectedOpponent.name.split(" ")[0]}`
+                    : "pick a category, share the link, then play your round"}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {categories.map((cat) => (

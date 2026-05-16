@@ -25,9 +25,7 @@ export async function POST(req: Request) {
 
   const supabase = createServerClient()
 
-  // Extract supabase user ID from Stripe metadata
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getUserId = (obj: any): string | null =>
+  const getUserId = (obj: { metadata?: Record<string, string> } | null): string | null =>
     obj?.metadata?.supabase_user_id || null
 
   try {

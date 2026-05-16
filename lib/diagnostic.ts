@@ -63,27 +63,7 @@ export const ALL_SUBTOPICS = Object.entries(SUBTOPIC_MAP).flatMap(
   ([category, subtopics]) => subtopics.map(s => ({ category, ...s }))
 )
 
-export const CATEGORY_COLORS: Record<string, string> = {
-  "Algebra": "#378ADD",
-  "Reading Comprehension": "#14B8A6",
-  "Grammar": "#A855F7",
-  "Data & Statistics": "#F97316",
-  "AP Biology": "#22C55E",
-  "AP Pre Calculus": "#EC4899",
-  "AP US History": "#F59E0B",
-  "AP English Language": "#6366F1",
-}
-
-export const CATEGORY_SHORT: Record<string, string> = {
-  "Algebra": "Algebra",
-  "Reading Comprehension": "Reading",
-  "Grammar": "Grammar",
-  "Data & Statistics": "Data & Stats",
-  "AP Biology": "AP Bio",
-  "AP Pre Calculus": "AP Pre Calc",
-  "AP US History": "APUSH",
-  "AP English Language": "AP English",
-}
+export { CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/categories"
 
 export interface DiagnosticAnswer {
   category: string
