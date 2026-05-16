@@ -309,7 +309,12 @@ function DiagnosticContent() {
         )}
 
         {/* Work Area (calculator/notepad/draw) */}
-        <WorkArea isOpen={showWorkArea} onClose={() => setShowWorkArea(false)} />
+        <WorkArea
+          isOpen={showWorkArea}
+          onClose={() => setShowWorkArea(false)}
+          questionText={question?.question}
+          questionKey={question?.id ?? currentIdx}
+        />
       </div>
     )
   }

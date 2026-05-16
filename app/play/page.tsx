@@ -1274,7 +1274,12 @@ function PlayPageContent() {
       </main>
 
       {/* Work Area (Notepad / Calculator / Draw) */}
-      <WorkArea isOpen={showWorkArea} onClose={() => setShowWorkArea(false)} />
+      <WorkArea
+        isOpen={showWorkArea}
+        onClose={() => setShowWorkArea(false)}
+        questionText={question?.question}
+        questionKey={question?.id ?? currentQuestion}
+      />
 
       {/* CSS for gem animation */}
       <style jsx global>{`

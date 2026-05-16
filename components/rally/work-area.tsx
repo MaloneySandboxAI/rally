@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote } from "lucide-react"
+import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote, ClipboardCopy, Check } from "lucide-react"
+import { MathText } from "@/components/rally/math-text"
 
 // ============================================================
 // WORK AREA — bottom sheet with 3 tabs: Notepad, Calculator, Draw
@@ -10,16 +11,39 @@ import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote } fr
 interface WorkAreaProps {
   isOpen: boolean
   onClose: () => void
+  /** Current question text — shown sticky at the top so it stays visible while working. */
+  questionText?: string
+  /** Key that changes when the question changes — used to clear notepad between questions. */
+  questionKey?: string | number
 }
 
 type TabId = "notepad" | "calc" | "draw"
 
-export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
+export function WorkArea({ isOpen, onClose, questionText, questionKey }: WorkAreaProps) {
   const [activeTab, setActiveTab] = useState<TabId>("notepad")
   const sheetRef = useRef<HTMLDivElement>(null)
+  const [didCopyToNotes, setDidCopyToNotes] = useState(false)
 
   // Lifted notepad state so it survives tab switches
   const [notepadText, setNotepadText] = useState("")
+
+  // Clear notepad whenever the question changes (so it doesn't bleed across questions)
+  useEffect(() => {
+    setNotepadText("")
+    setDidCopyToNotes(false)
+  }, [questionKey])
+
+  // Insert the current question into the notepad with a blank work area below it,
+  // and switch to the notepad tab so the user can start solving immediately.
+  const copyQuestionToNotes = useCallback(() => {
+    if (!questionText) return
+    const cleaned = questionText.trim()
+    const block = `${cleaned}\n\n— — — — — — — —\n`
+    setNotepadText(prev => (prev ? `${block}\n${prev}` : block))
+    setActiveTab("notepad")
+    setDidCopyToNotes(true)
+    setTimeout(() => setDidCopyToNotes(false), 1400)
+  }, [questionText])
 
   // Lifted calculator state so it survives tab switches
   const [calcDisplay, setCalcDisplay] = useState("0")
@@ -47,7 +71,7 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
       <div
         ref={sheetRef}
         className="relative bg-[#0a2d4a] rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300"
-        style={{ height: "70vh", maxHeight: "70vh" }}
+        style={{ height: "78vh", maxHeight: "78vh" }}
       >
         {/* Handle + close */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -62,6 +86,39 @@ export function WorkArea({ isOpen, onClose }: WorkAreaProps) {
             </button>
           </div>
         </div>
+
+        {/* Sticky question preview — keeps the problem visible across all tabs */}
+        {questionText && (
+          <div className="px-4 pb-2 flex-shrink-0">
+            <div className="bg-[#021f3d] border border-[#378ADD]/25 rounded-xl px-3 py-2 flex items-start gap-2">
+              <div
+                className="flex-1 text-white text-[13px] leading-snug font-medium max-h-[15vh] overflow-y-auto pr-1"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                <MathText text={questionText} />
+              </div>
+              <button
+                onClick={copyQuestionToNotes}
+                className={`flex-shrink-0 flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${
+                  didCopyToNotes
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-[#378ADD]/20 text-[#378ADD] hover:bg-[#378ADD]/30"
+                }`}
+                aria-label="Copy problem into notepad"
+              >
+                {didCopyToNotes ? (
+                  <>
+                    <Check className="w-3 h-3" strokeWidth={3} /> copied
+                  </>
+                ) : (
+                  <>
+                    <ClipboardCopy className="w-3 h-3" /> to notes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 px-4 mb-2">
