@@ -755,6 +755,17 @@ function PlayPageContent() {
           })
           if (success) {
             console.log(`[rally] Creator results updated — ${correctGems} gems`)
+            // Notify challenger if they've already played (challenge has a challenger)
+            const challenge = await getChallenge(creatorChallengeCode)
+            if (challenge?.challenger_id) {
+              notifyChallengeOpponent({
+                recipientUserId: challenge.challenger_id,
+                senderName: challenge.creator_name,
+                category: categoryParam,
+                challengeCode: creatorChallengeCode,
+                type: "creator_finished",
+              })
+            }
           } else {
             console.error("[rally] Failed to update creator results")
           }

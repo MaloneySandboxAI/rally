@@ -40,6 +40,7 @@ export interface Challenge {
   status: "pending" | "completed"
   created_at: string
   completed_at: string | null
+  h2h_recorded?: boolean
 }
 
 /** Flatten a pool into [easy0..4, medium0..4, hard0..4] for DB storage */

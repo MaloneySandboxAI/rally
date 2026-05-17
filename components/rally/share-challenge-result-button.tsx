@@ -58,7 +58,7 @@ export function ShareChallengeResultButton(props: ShareButtonProps) {
           const blob = await toBlob(node, {
             pixelRatio: 3,
             cacheBust: true,
-            backgroundColor: "transparent",
+            backgroundColor: "#021f3d",
           })
           if (blob) {
             const file = new File([blob], `rally-challenge-${cardProps.shareCode}.png`, {
@@ -95,7 +95,7 @@ export function ShareChallengeResultButton(props: ShareButtonProps) {
       const dataUrl = await toPng(node, {
         pixelRatio: 3,
         cacheBust: true,
-        backgroundColor: "transparent",
+        backgroundColor: "#021f3d",
       })
       const link = document.createElement("a")
       link.download = `rally-challenge-${cardProps.shareCode}.png`

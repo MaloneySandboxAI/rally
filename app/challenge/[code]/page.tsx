@@ -73,7 +73,7 @@ function ChallengePageContent() {
 
           // Record h2h result (only once per challenge — check h2h_recorded flag)
           if (c.status === "completed" && c.creator_id && c.challenger_id) {
-            if (!(c as any).h2h_recorded) {
+            if (!c.h2h_recorded) {
               const creatorScore = c.creator_score ?? 0
               const challengerScore = c.challenger_score ?? 0
               if (creatorScore !== challengerScore) {
@@ -129,9 +129,11 @@ function ChallengePageContent() {
     const challengerWon = challengerGems > creatorGems
     const tied = creatorGems === challengerGems
 
-    // Count correct answers from results for display
+    // Count correct answers and total from results for display
     const creatorCorrect = challenge.creator_results?.filter(r => r.isCorrect).length ?? 0
+    const creatorTotal = challenge.creator_results?.length ?? 5
     const challengerCorrect = challenge.challenger_results?.filter(r => r.isCorrect).length ?? 0
+    const challengerTotal = challenge.challenger_results?.length ?? 5
 
     return (
       <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col items-center justify-center px-5 text-center relative">
@@ -153,7 +155,7 @@ function ChallengePageContent() {
                   {creatorGems}
                 </p>
               </div>
-              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{creatorCorrect}/5 correct</p>
+              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{creatorCorrect}/{creatorTotal} correct</p>
               {creatorWon && <p className="text-[10px] font-bold text-[#EF9F27] mt-0.5">winner</p>}
             </div>
             <div className="px-2">
@@ -167,7 +169,7 @@ function ChallengePageContent() {
                   {challengerGems}
                 </p>
               </div>
-              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{challengerCorrect}/5 correct</p>
+              <p className="text-[10px] text-[#85B7EB]/50 mt-0.5">{challengerCorrect}/{challengerTotal} correct</p>
               {challengerWon && <p className="text-[10px] font-bold text-[#EF9F27] mt-0.5">winner</p>}
             </div>
           </div>

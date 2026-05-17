@@ -2,6 +2,8 @@
 
 import { forwardRef } from "react"
 import { Diamond, Swords, Flame } from "lucide-react"
+import { CATEGORY_SHORT } from "@/lib/categories"
+import { getBaseUrl } from "@/lib/utils"
 
 // ============================================================
 // CREATOR SCORE SHARE CARD
@@ -13,29 +15,10 @@ export interface CreatorScoreShareCardProps {
   creatorName: string
   creatorGems: number
   creatorCorrect: number
+  creatorTotal?: number
   category: string
   shareCode: string
   baseUrl?: string
-}
-
-const CATEGORY_SHORT: Record<string, string> = {
-  "Algebra": "Algebra",
-  "Reading Comprehension": "Reading",
-  "Grammar": "Grammar",
-  "Data & Statistics": "Data & Stats",
-  "AP Biology": "AP Bio",
-  "AP Pre Calculus": "AP Pre Calc",
-  "AP US History": "APUSH",
-  "AP English Language": "AP English",
-}
-
-function getBaseUrl(override?: string): string {
-  if (override) return override.replace(/^https?:\/\//, "")
-  if (typeof window !== "undefined") {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL
-    return (envUrl || window.location.origin).replace(/^https?:\/\//, "")
-  }
-  return "rallyplaylive.com"
 }
 
 export const CreatorScoreShareCard = forwardRef<HTMLDivElement, CreatorScoreShareCardProps>(
@@ -203,7 +186,7 @@ export const CreatorScoreShareCard = forwardRef<HTMLDivElement, CreatorScoreShar
             zIndex: 1,
           }}
         >
-          gems · {creatorCorrect}/5 correct
+          gems · {creatorCorrect}/{props.creatorTotal ?? 5} correct
         </div>
 
         <div style={{ flex: 1 }} />
