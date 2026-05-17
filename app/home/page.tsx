@@ -15,27 +15,36 @@ export default function RallyHome() {
       <Header />
 
       <main className="flex-1 px-4 pb-24 pt-1 overflow-y-auto">
-        {/* Category level rings — the main visual */}
-        <section className="mb-4">
-          <h2 className="text-base font-extrabold text-foreground mb-0.5">your levels</h2>
-          <p className="text-xs text-[#85B7EB]/60 mb-2.5">tap a category to practice &amp; level up</p>
+        {/* Solo Practice */}
+        <section className="mb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-base font-extrabold text-foreground">solo practice</h2>
+            <span className="text-[10px] font-bold bg-[#378ADD]/15 text-[#378ADD] px-2 py-0.5 rounded-full">self-paced</span>
+          </div>
+          <p className="text-xs text-[#85B7EB]/60 mb-2.5">tap a category to practice at your own pace — no timer pressure</p>
           <CategoryRings />
         </section>
 
-        {/* Weekly challenge recap */}
-        <div className="mb-3">
-          <WeeklyRecapCard />
-        </div>
+        {/* Compete */}
+        <section className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <h2 className="text-base font-extrabold text-foreground">compete</h2>
+            <span className="text-[10px] font-bold bg-[#EF9F27]/15 text-[#EF9F27] px-2 py-0.5 rounded-full">4x gems</span>
+          </div>
 
-        {/* Push notification prompt — shown once, above challenges */}
-        <div className="mb-2">
-          <PushPrompt />
-        </div>
+          {/* Weekly challenge recap */}
+          <div className="mb-2">
+            <WeeklyRecapCard />
+          </div>
 
-        {/* Challenge — full width */}
-        <div className="mb-3">
+          {/* Push notification prompt */}
+          <div className="mb-2">
+            <PushPrompt />
+          </div>
+
+          {/* Challenge button */}
           <ChallengeButton />
-        </div>
+        </section>
 
         {/* Active games (only renders if there are games) */}
         <section className="mb-3">

@@ -106,7 +106,8 @@ export function GamesList() {
     <div className="flex flex-col gap-2">
       {challenges.map((c) => {
         const isCreator = c.creator_id === userId
-        const opponentName = isCreator ? (c.challenger_name || "waiting...") : c.creator_name
+        const hasOpponent = isCreator ? !!c.challenger_name : true
+        const opponentName = isCreator ? (c.challenger_name || "") : c.creator_name
         const color = CATEGORY_COLORS[c.category] || "#378ADD"
         const catLabel = CATEGORY_SHORT[c.category] || c.category
         const timeLeftStr = formatTimeRemaining(c)
@@ -162,19 +163,25 @@ export function GamesList() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white truncate">vs {opponentName}</span>
+                  <span className="text-sm font-bold text-white truncate">
+                    {hasOpponent ? `vs ${opponentName}` : catLabel}
+                  </span>
                   {status === "your_turn" && (
-                    <span className="text-[10px] font-bold bg-[#378ADD] text-white px-2 py-0.5 rounded-full">your turn</span>
+                    <span className="text-[10px] font-bold bg-[#378ADD] text-white px-2 py-0.5 rounded-full">play now</span>
                   )}
                   {status === "waiting" && (
-                    <span className="text-[10px] font-bold bg-[#0a2d4a] border border-[#85B7EB]/20 text-[#85B7EB]/60 px-2 py-0.5 rounded-full">waiting</span>
+                    <span className="text-[10px] font-bold bg-[#EF9F27]/15 border border-[#EF9F27]/30 text-[#EF9F27] px-2 py-0.5 rounded-full">link sent</span>
                   )}
                   {status === "expired" && (
                     <span className="text-[10px] font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full">expired</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-[#85B7EB]/50">{catLabel}</span>
+                  {status === "waiting" && !hasOpponent ? (
+                    <span className="text-[10px] text-[#85B7EB]/40">waiting for friend to open link</span>
+                  ) : (
+                    <span className="text-xs text-[#85B7EB]/50">{hasOpponent ? catLabel : ""}</span>
+                  )}
                   {status === "completed" && (
                     <span className="text-xs font-bold" style={{ color: resultColor }}>{resultLabel}</span>
                   )}
