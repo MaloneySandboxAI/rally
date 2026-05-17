@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Lock, Sparkles, TrendingUp, Clock, Infinity as InfinityIcon, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Lock, Sparkles, TrendingUp, Clock, Infinity as InfinityIcon } from "lucide-react"
 import { SUBTOPIC_MAP, CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/diagnostic"
 import {
   getCategorySubtopicLevels,
@@ -15,86 +15,7 @@ import {
 } from "@/lib/subtopic-levels"
 import { haptics } from "@/lib/haptics"
 
-/** Bottom sheet for choosing timed (5-question round) vs untimed (endless practice) */
-function ModeSelectSheet({
-  category,
-  subtopicId,
-  categoryColor,
-  onClose,
-}: {
-  category: string
-  subtopicId: string
-  categoryColor: string
-  onClose: () => void
-}) {
-  const router = useRouter()
-  const base = `/play?category=${encodeURIComponent(category)}&subtopic=${encodeURIComponent(subtopicId)}`
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Sheet */}
-      <div className="relative w-full max-w-md bg-[#0a2d4a] rounded-t-3xl px-5 pt-5 pb-8 animate-in slide-in-from-bottom duration-300">
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#021f3d] flex items-center justify-center"
-        >
-          <X className="w-4 h-4 text-[#85B7EB]/50" />
-        </button>
-
-        <h3 className="text-lg font-extrabold text-white mb-1">choose your mode</h3>
-        <p className="text-xs text-[#85B7EB]/50 mb-4">how do you want to practice?</p>
-
-        <div className="space-y-2.5">
-          {/* Timed */}
-          <button
-            onClick={() => {
-              haptics.medium()
-              router.push(base)
-            }}
-            className="w-full bg-[#021f3d] rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10 text-left"
-          >
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: categoryColor + "20" }}
-            >
-              <Clock className="w-5 h-5" style={{ color: categoryColor }} />
-            </div>
-            <div className="flex-1">
-              <span className="text-sm font-bold text-white block">timed round</span>
-              <span className="text-[11px] text-[#85B7EB]/50">5 questions · timer · earn gems</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-[#85B7EB]/30 shrink-0" />
-          </button>
-
-          {/* Untimed */}
-          <button
-            onClick={() => {
-              haptics.medium()
-              router.push(base + "&untimed=true")
-            }}
-            className="w-full bg-[#021f3d] rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10 text-left"
-          >
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "#A855F720" }}
-            >
-              <InfinityIcon className="w-5 h-5 text-[#A855F7]" />
-            </div>
-            <div className="flex-1">
-              <span className="text-sm font-bold text-white block">untimed practice</span>
-              <span className="text-[11px] text-[#85B7EB]/50">no timer · go at your own pace · review explanations</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-[#85B7EB]/30 shrink-0" />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+const MODE_KEY = "rally_practice_mode"
 
 function SkillMapContent() {
   const searchParams = useSearchParams()
@@ -102,14 +23,29 @@ function SkillMapContent() {
   const categoryColor = CATEGORY_COLORS[category] || "#378ADD"
   const categoryShort = CATEGORY_SHORT[category] || category
 
+  const router = useRouter()
   const [subtopics, setSubtopics] = useState<{ id: string; label: string; level: SubtopicLevel }[]>([])
   const [avgLevel, setAvgLevel] = useState(1)
-  const [modeSelectSubtopic, setModeSelectSubtopic] = useState<string | null>(null)
+  const [mode, setMode] = useState<"timed" | "untimed">(() => {
+    if (typeof window === "undefined") return "timed"
+    return (localStorage.getItem(MODE_KEY) as "timed" | "untimed") || "timed"
+  })
 
   useEffect(() => {
     setSubtopics(getCategorySubtopicLevels(category))
     setAvgLevel(getCategoryAverageLevel(category))
   }, [category])
+
+  const handleModeChange = (m: "timed" | "untimed") => {
+    setMode(m)
+    if (typeof window !== "undefined") localStorage.setItem(MODE_KEY, m)
+  }
+
+  const handleSubtopicTap = (subtopicId: string) => {
+    haptics.medium()
+    const base = `/play?category=${encodeURIComponent(category)}&subtopic=${encodeURIComponent(subtopicId)}`
+    router.push(mode === "untimed" ? base + "&untimed=true" : base)
+  }
 
   // Progress bar for each subtopic
   function LevelBar({ level }: { level: number }) {
@@ -159,6 +95,28 @@ function SkillMapContent() {
         </div>
       </header>
 
+      {/* Mode toggle — persists across sessions */}
+      <div className="mx-4 mb-3">
+        <div className="flex bg-[#0a2d4a] rounded-lg p-0.5">
+          <button
+            onClick={() => handleModeChange("timed")}
+            className={`flex-1 py-2 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              mode === "timed" ? "bg-[#378ADD] text-white" : "text-[#85B7EB]/50"
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" /> timed · earn gems
+          </button>
+          <button
+            onClick={() => handleModeChange("untimed")}
+            className={`flex-1 py-2 rounded-md text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              mode === "untimed" ? "bg-[#A855F7] text-white" : "text-[#85B7EB]/50"
+            }`}
+          >
+            <InfinityIcon className="w-3.5 h-3.5" /> untimed · review
+          </button>
+        </div>
+      </div>
+
       {/* Category-specific diagnostic */}
       <div className="mx-4 mb-3">
         <Link
@@ -194,7 +152,7 @@ function SkillMapContent() {
           return (
             <button
               key={sub.id}
-              onClick={() => setModeSelectSubtopic(sub.id)}
+              onClick={() => handleSubtopicTap(sub.id)}
               className="block w-full text-left bg-[#0a2d4a] rounded-xl px-4 py-3.5 active:scale-[0.98] transition-transform border border-transparent hover:border-[#85B7EB]/10"
             >
               <div className="flex items-center justify-between mb-2">
@@ -225,15 +183,6 @@ function SkillMapContent() {
         })}
       </div>
 
-      {/* Mode selection bottom sheet */}
-      {modeSelectSubtopic && (
-        <ModeSelectSheet
-          category={category}
-          subtopicId={modeSelectSubtopic}
-          categoryColor={categoryColor}
-          onClose={() => setModeSelectSubtopic(null)}
-        />
-      )}
     </div>
   )
 }
