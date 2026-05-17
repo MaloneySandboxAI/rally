@@ -1,6 +1,6 @@
 import { Header } from "@/components/rally/header"
 import { SatCountdown } from "@/components/rally/sat-countdown"
-import { GamesList } from "@/components/rally/games-list"
+import { GamesSummary } from "@/components/rally/games-list"
 import { ChallengeButton } from "@/components/rally/challenge-button"
 import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryRings } from "@/components/rally/category-rings"
@@ -25,10 +25,10 @@ export default function RallyHome() {
           <ChallengeButton />
         </section>
 
-        {/* Active games */}
-        <section className="mb-3">
-          <GamesList />
-        </section>
+        {/* Active games summary — tap to see full list */}
+        <div className="mb-3">
+          <GamesSummary />
+        </div>
 
         {/* Weekly recap + push prompt */}
         <div className="mb-3 space-y-2">

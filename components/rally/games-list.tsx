@@ -18,6 +18,65 @@ import Link from "next/link"
 import { CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/categories"
 import { getH2HRecord } from "@/lib/head-to-head"
 
+export function GamesSummary() {
+  const [counts, setCounts] = useState<{ yourTurn: number; waiting: number; results: number } | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return
+      const uid = session.user.id
+      getUserChallenges(uid).then((data) => {
+        const active = data.filter(c => !isChallengeExpired(c) || (c.status === "pending" && c.creator_id === uid))
+        let yourTurn = 0
+        let waiting = 0
+        let results = 0
+        for (const c of active) {
+          const isCreator = c.creator_id === uid
+          const creatorPlayed = c.creator_score >= 0
+          if (isChallengeStale(c)) continue
+          if (c.status === "completed") { results++; continue }
+          if ((isCreator && !creatorPlayed) || (!isCreator && creatorPlayed)) yourTurn++
+          else waiting++
+        }
+        if (yourTurn + waiting + results > 0) setCounts({ yourTurn, waiting, results })
+      })
+    })
+  }, [])
+
+  if (!counts) return null
+
+  return (
+    <Link
+      href="/games"
+      className="bg-[#0a2d4a] rounded-xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform"
+    >
+      <Swords className="w-5 h-5 text-[#378ADD] shrink-0" />
+      <div className="flex-1 flex items-center gap-3">
+        {counts.yourTurn > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-[#378ADD] text-white text-[10px] font-extrabold flex items-center justify-center">{counts.yourTurn}</span>
+            <span className="text-xs font-bold text-white">your turn</span>
+          </div>
+        )}
+        {counts.waiting > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-[#EF9F27]/20 text-[#EF9F27] text-[10px] font-extrabold flex items-center justify-center">{counts.waiting}</span>
+            <span className="text-xs font-bold text-[#85B7EB]/60">waiting</span>
+          </div>
+        )}
+        {counts.results > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-[#22C55E]/20 text-[#22C55E] text-[10px] font-extrabold flex items-center justify-center">{counts.results}</span>
+            <span className="text-xs font-bold text-[#85B7EB]/60">results</span>
+          </div>
+        )}
+      </div>
+      <ChevronRight className="w-4 h-4 text-[#85B7EB]/30 shrink-0" />
+    </Link>
+  )
+}
+
 export function GamesList() {
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [userId, setUserId] = useState<string | null>(null)
