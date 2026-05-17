@@ -1,6 +1,8 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import webpush from "web-push"
+import * as webpush from "web-push"
+
+export const runtime = "nodejs"
 
 webpush.setVapidDetails(
   "mailto:maloney@evaine.ai",
