@@ -1,5 +1,6 @@
 "use client"
 
+import { createClient } from "@/lib/supabase/client"
 import { CATEGORY_SHORT } from "@/lib/categories"
 
 export async function notifyChallengeOpponent(params: {
@@ -21,16 +22,14 @@ export async function notifyChallengeOpponent(params: {
       ? `They locked in their ${catName} score. Your turn!`
       : `Tap to see who won!`
 
-    await fetch("/api/push/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipientUserId: params.recipientUserId,
+    const supabase = createClient()
+    supabase.functions.invoke("send-push-notification", {
+      body: {
+        recipient_user_id: params.recipientUserId,
         title,
         body,
         url: `/challenge/${params.challengeCode}`,
-        tag: `challenge-${params.challengeCode}`,
-      }),
+      },
     })
   } catch {
     // Best-effort — don't block gameplay

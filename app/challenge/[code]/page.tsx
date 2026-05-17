@@ -52,14 +52,36 @@ function ChallengePageContent() {
             setIsOwnChallenge(true)
           }
 
-          // Record h2h result and fetch record for completed challenges
+          // Auto-create referral if user is new and doesn't have one
+          if (c.creator_id && c.creator_id !== user.id) {
+            const { data: existingRef } = await supabase
+              .from("referrals")
+              .select("id")
+              .eq("referred_id", user.id)
+              .limit(1)
+              .single()
+            if (!existingRef) {
+              await supabase.from("referrals").insert({
+                referrer_id: c.creator_id,
+                referred_id: user.id,
+                status: "pending",
+                source: "challenge",
+                challenge_id: c.id,
+              }).then(() => {})
+            }
+          }
+
+          // Record h2h result (only once per challenge — check h2h_recorded flag)
           if (c.status === "completed" && c.creator_id && c.challenger_id) {
-            const creatorScore = c.creator_score ?? 0
-            const challengerScore = c.challenger_score ?? 0
-            if (creatorScore !== challengerScore) {
-              const winnerId = creatorScore > challengerScore ? c.creator_id : c.challenger_id
-              const loserId = creatorScore > challengerScore ? c.challenger_id : c.creator_id
-              recordH2HResult(winnerId, loserId, c.category)
+            if (!(c as any).h2h_recorded) {
+              const creatorScore = c.creator_score ?? 0
+              const challengerScore = c.challenger_score ?? 0
+              if (creatorScore !== challengerScore) {
+                const winnerId = creatorScore > challengerScore ? c.creator_id : c.challenger_id
+                const loserId = creatorScore > challengerScore ? c.challenger_id : c.creator_id
+                recordH2HResult(winnerId, loserId, c.category)
+                supabase.from("challenges").update({ h2h_recorded: true }).eq("share_code", code)
+              }
             }
 
             const opponentId = user.id === c.creator_id ? c.challenger_id : c.creator_id
