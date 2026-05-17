@@ -191,27 +191,31 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
     <>
       <button
         onClick={handleClick}
-        className="w-full bg-primary text-primary-foreground rounded-2xl px-4 py-3.5 flex items-center justify-between font-extrabold shadow-lg shadow-primary/30 transition-all active:scale-[0.98] hover:brightness-110"
+        className="w-full bg-gradient-to-r from-[#378ADD] to-[#5B9FE6] text-white rounded-2xl px-5 py-4 flex items-center justify-between font-extrabold shadow-xl shadow-[#378ADD]/40 transition-all active:scale-[0.97] hover:brightness-110"
         aria-label="Challenge a friend"
       >
-        <div className="flex items-center gap-2.5">
-          {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
-            <Lock className="w-5 h-5 shrink-0" strokeWidth={3} />
-          ) : (
-            <Swords className="w-5 h-5 shrink-0" strokeWidth={2.5} />
-          )}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+            {!isPremium && isLoggedIn && freeChallengesLeft <= 0 ? (
+              <Lock className="w-5 h-5" strokeWidth={3} />
+            ) : (
+              <Swords className="w-5 h-5" strokeWidth={2.5} />
+            )}
+          </div>
           <div className="min-w-0 text-left">
-            <div className="text-sm font-extrabold leading-tight">challenge a friend</div>
-            <p className="text-[10px] font-semibold text-white/60 truncate leading-tight">
+            <div className="text-base font-extrabold leading-tight">
+              {!isLoggedIn ? "sign in to challenge" : !isPremium && freeChallengesLeft <= 0 ? "upgrade for challenges" : "start a challenge"}
+            </div>
+            <p className="text-[11px] font-semibold text-white/60 truncate leading-tight mt-0.5">
               {!isLoggedIn
-                ? "sign in to challenge"
+                ? "compete head-to-head with friends"
                 : !isPremium && freeChallengesLeft <= 0
-                ? "upgrade for more challenges"
-                : "earn 4x gems in head-to-head"}
+                ? "get unlimited challenges with premium"
+                : "1v1 or group · same questions · most gems wins"}
             </p>
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/60 shrink-0" />
+        <ChevronRight className="w-5 h-5 text-white/70 shrink-0" strokeWidth={3} />
       </button>
 
       {/* Bottom Sheet */}

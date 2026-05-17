@@ -15,45 +15,40 @@ export default function RallyHome() {
       <Header />
 
       <main className="flex-1 px-4 pb-24 pt-1 overflow-y-auto">
-        {/* Solo Practice — prominent section */}
-        <section className="mb-5 bg-[#0a2d4a] rounded-2xl p-4 border border-[#378ADD]/20">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-lg font-extrabold text-white">solo practice &amp; diagnostic tests</h2>
-              <p className="text-xs text-[#85B7EB]/60 mt-0.5">self-paced — tap a category to start</p>
-            </div>
-            <span className="text-[10px] font-bold bg-[#378ADD] text-white px-2.5 py-1 rounded-full">solo</span>
+        {/* Hero: Challenge a friend — top of page */}
+        <section className="mb-4 bg-gradient-to-br from-[#378ADD]/20 to-[#A855F7]/10 rounded-2xl p-4 border border-[#378ADD]/25">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-lg font-extrabold text-white">challenge a friend</h2>
+            <span className="text-[10px] font-bold bg-[#EF9F27] text-white px-2 py-0.5 rounded-full">4x gems</span>
           </div>
-          <CategoryRings />
-        </section>
-
-        {/* Compete */}
-        <section className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-base font-extrabold text-foreground">compete</h2>
-            <span className="text-[10px] font-bold bg-[#EF9F27]/15 text-[#EF9F27] px-2 py-0.5 rounded-full">4x gems</span>
-          </div>
-
-          {/* Weekly challenge recap */}
-          <div className="mb-2">
-            <WeeklyRecapCard />
-          </div>
-
-          {/* Push notification prompt */}
-          <div className="mb-2">
-            <PushPrompt />
-          </div>
-
-          {/* Challenge button */}
+          <p className="text-xs text-[#85B7EB]/60 mb-3">pick a category, share the link, compete head-to-head</p>
           <ChallengeButton />
         </section>
 
-        {/* Active games (only renders if there are games) */}
+        {/* Active games */}
         <section className="mb-3">
           <GamesList />
         </section>
 
-        {/* Diagnostic + SAT countdown — compact secondary info */}
+        {/* Weekly recap + push prompt */}
+        <div className="mb-3 space-y-2">
+          <WeeklyRecapCard />
+          <PushPrompt />
+        </div>
+
+        {/* Solo Practice */}
+        <section className="mb-4 bg-[#0a2d4a] rounded-2xl p-4 border border-[#85B7EB]/10">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-base font-extrabold text-white">solo practice &amp; diagnostic tests</h2>
+              <p className="text-xs text-[#85B7EB]/60 mt-0.5">self-paced — tap a category to start</p>
+            </div>
+            <span className="text-[10px] font-bold bg-[#85B7EB]/15 text-[#85B7EB]/60 px-2.5 py-1 rounded-full">solo</span>
+          </div>
+          <CategoryRings />
+        </section>
+
+        {/* Secondary info */}
         <div className="space-y-2.5">
           <DiagnosticCard />
           <SatCountdown />
