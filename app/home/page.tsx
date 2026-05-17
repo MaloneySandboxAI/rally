@@ -15,13 +15,15 @@ export default function RallyHome() {
       <Header />
 
       <main className="flex-1 px-4 pb-24 pt-1 overflow-y-auto">
-        {/* Solo Practice */}
-        <section className="mb-5">
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-base font-extrabold text-foreground">solo practice</h2>
-            <span className="text-[10px] font-bold bg-[#378ADD]/15 text-[#378ADD] px-2 py-0.5 rounded-full">self-paced</span>
+        {/* Solo Practice — prominent section */}
+        <section className="mb-5 bg-[#0a2d4a] rounded-2xl p-4 border border-[#378ADD]/20">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-lg font-extrabold text-white">solo practice &amp; diagnostic tests</h2>
+              <p className="text-xs text-[#85B7EB]/60 mt-0.5">self-paced — tap a category to start</p>
+            </div>
+            <span className="text-[10px] font-bold bg-[#378ADD] text-white px-2.5 py-1 rounded-full">solo</span>
           </div>
-          <p className="text-xs text-[#85B7EB]/60 mb-2.5">tap a category to practice at your own pace — no timer pressure</p>
           <CategoryRings />
         </section>
 
