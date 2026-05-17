@@ -3,15 +3,16 @@ import { NextResponse } from "next/server"
 import * as webpush from "web-push"
 
 export const runtime = "nodejs"
-
-webpush.setVapidDetails(
-  "mailto:maloney@evaine.ai",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
+export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
   try {
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    const privateKey = process.env.VAPID_PRIVATE_KEY
+    if (!publicKey || !privateKey) {
+      return NextResponse.json({ error: "VAPID keys not configured" }, { status: 503 })
+    }
+    webpush.setVapidDetails("mailto:maloney@evaine.ai", publicKey, privateKey)
     const { recipientUserId, title, body, url, tag } = await req.json()
 
     if (!recipientUserId || !title || !body) {
