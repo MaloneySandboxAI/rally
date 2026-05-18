@@ -5,6 +5,7 @@ import { Trophy, Diamond, Crown, Medal, ChevronRight, Swords } from "lucide-reac
 import { getLeaderboard } from "@/lib/challenges"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { BottomNav } from "@/components/rally/bottom-nav"
 
 interface LeaderboardEntry {
   userId: string
@@ -163,6 +164,7 @@ export default function RanksPage() {
           </>
         )}
       </main>
+      <BottomNav />
     </div>
   )
 }

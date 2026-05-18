@@ -14,6 +14,7 @@ import {
   type SubtopicLevel,
 } from "@/lib/subtopic-levels"
 import { haptics } from "@/lib/haptics"
+import { BottomNav } from "@/components/rally/bottom-nav"
 
 const MODE_KEY = "rally_practice_mode"
 
@@ -183,6 +184,7 @@ function SkillMapContent() {
         })}
       </div>
 
+      <BottomNav />
     </div>
   )
 }

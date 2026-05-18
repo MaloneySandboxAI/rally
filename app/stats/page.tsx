@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Diamond, Flame, Target, Zap, BarChart3, TrendingUp, TrendingDown, Minus, ChevronRight, Lock, Crosshair } from "lucide-react"
 import { loadStats, getAdaptiveDifficulty, type RallyStats, type CategoryDetail } from "@/lib/stats"
+import { BottomNav } from "@/components/rally/bottom-nav"
 import { hasStatsDeepDive, GEM_ECONOMY } from "@/lib/gem-context"
 import Link from "next/link"
 
@@ -356,6 +357,7 @@ export default function StatsPage() {
         )}
 
       </main>
+      <BottomNav />
     </div>
   )
 }

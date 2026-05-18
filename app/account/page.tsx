@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2, Users, Copy, Check, XCircle, Lock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { usePremium } from "@/lib/premium-context"
+import { BottomNav } from "@/components/rally/bottom-nav"
 import { createParentToken, getParentToken, revokeParentToken, updateParentSnapshot } from "@/lib/parent-dashboard"
 
 export default function AccountPage() {
@@ -348,6 +349,7 @@ export default function AccountPage() {
           <a href="mailto:maloney@evaine.ai" className="text-[#378ADD] underline">maloney@evaine.ai</a>
         </p>
       </main>
+      <BottomNav />
     </div>
   )
 }

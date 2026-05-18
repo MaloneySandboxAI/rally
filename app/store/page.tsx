@@ -7,6 +7,7 @@ import { Store, Diamond, Heart, Flame, ShieldCheck, ChevronLeft, BarChart3 } fro
 import { useGems, buyStreakFreeze, hasStreakFreeze, buyStatsDeepDive, hasStatsDeepDive, GEM_ECONOMY } from "@/lib/gem-context"
 import { getHearts, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { toast } from "sonner"
+import { BottomNav } from "@/components/rally/bottom-nav"
 
 export default function StorePage() {
   const router = useRouter()
@@ -212,6 +213,7 @@ export default function StorePage() {
           </Link>
         </div>
       </main>
+      <BottomNav />
     </div>
   )
 }
