@@ -199,6 +199,7 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - Feature builds done via Conductor (AI agent) using detailed prompts
 - Code reviews and fixes done in Cowork sessions
 - User prefers "auto mode" with minimal back-and-forth
+- **IMPORTANT**: At the end of every session, proactively offer to run the `session-wrapup` skill to update CLAUDE.md and PROJECT-STATUS.md with what was accomplished. Also run it after any Conductor build is pushed. This keeps the docs accurate across sessions and devices.
 
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (currently using demo key)
