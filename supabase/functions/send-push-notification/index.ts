@@ -1,9 +1,18 @@
 // Supabase Edge Function: send-push-notification
-// Sends web push notifications to a user's registered subscription(s).
+// Notifies a challenge participant's opponent that a round finished.
+//
+// The caller is authenticated from their JWT and must be a participant
+// in the referenced challenge. The recipient and the notification
+// content (title / body / url) are derived server-side from the
+// challenge row — never accepted from the caller — so this endpoint
+// cannot be used to spam arbitrary users or smuggle redirect URLs.
+//
+// Request body: { challenge_code: string, type: "creator_finished" | "challenger_finished" }
 //
 // Required secrets (set via: supabase secrets set KEY=VALUE):
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_EMAIL
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (auto-provided by Supabase)
+//   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+//   (the SUPABASE_* values are auto-provided by Supabase)
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
@@ -12,26 +21,98 @@ const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!
 const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") || "mailto:maloney@evaine.ai"
 
+// Short category labels (mirrors lib/categories.ts CATEGORY_SHORT).
+const CATEGORY_SHORT: Record<string, string> = {
+  "Algebra": "Algebra",
+  "Reading Comprehension": "Reading",
+  "Grammar": "Grammar",
+  "Data & Statistics": "Data & Stats",
+  "AP Biology": "AP Bio",
+  "AP Pre Calculus": "AP Pre Calc",
+  "AP US History": "APUSH",
+  "AP English Language": "AP English",
+}
+
+function json(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
 serve(async (req) => {
   try {
-    const { recipient_user_id, title, body, url } = await req.json()
-
-    if (!recipient_user_id || !title || !body) {
-      return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400 })
+    // --- Authenticate the caller from their JWT ---
+    const authHeader = req.headers.get("Authorization") ?? ""
+    const callerClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const { data: { user: caller } } = await callerClient.auth.getUser()
+    if (!caller) {
+      return json({ error: "Unauthorized" }, 401)
     }
 
+    const { challenge_code, type } = await req.json()
+    if (
+      typeof challenge_code !== "string" ||
+      (type !== "creator_finished" && type !== "challenger_finished")
+    ) {
+      return json({ error: "Missing or invalid fields" }, 400)
+    }
+
+    // --- Service-role client for trusted lookups + delivery ---
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
 
+    const { data: challenge } = await supabase
+      .from("challenges")
+      .select("share_code, category, creator_id, creator_name, challenger_id, challenger_name")
+      .eq("share_code", challenge_code)
+      .single()
+
+    if (!challenge) {
+      return json({ error: "Challenge not found" }, 404)
+    }
+
+    // --- Authorize: the caller must be a participant in this challenge ---
+    if (caller.id !== challenge.creator_id && caller.id !== challenge.challenger_id) {
+      return json({ error: "Forbidden" }, 403)
+    }
+
+    // --- The recipient is the OTHER participant ---
+    const recipientId = caller.id === challenge.creator_id
+      ? challenge.challenger_id
+      : challenge.creator_id
+    if (!recipientId) {
+      return json({ sent: false, reason: "no_recipient" })
+    }
+
+    // --- Build the notification content server-side ---
+    const catName = CATEGORY_SHORT[challenge.category] ?? challenge.category
+    const senderName = caller.id === challenge.creator_id
+      ? challenge.creator_name
+      : (challenge.challenger_name ?? "Your opponent")
+    const isCreatorDone = type === "creator_finished"
+    const title = isCreatorDone
+      ? `${senderName} played your challenge!`
+      : `${senderName} finished the ${catName} challenge!`
+    const body = isCreatorDone
+      ? `They locked in their ${catName} score. Your turn!`
+      : "Tap to see who won!"
+    // Same-origin relative path only — never an attacker-controlled URL.
+    const url = `/challenge/${challenge.share_code}`
+
     const { data: subs } = await supabase
       .from("push_subscriptions")
       .select("id, subscription")
-      .eq("user_id", recipient_user_id)
+      .eq("user_id", recipientId)
 
     if (!subs || subs.length === 0) {
-      return new Response(JSON.stringify({ sent: false, reason: "no_subscription" }))
+      return json({ sent: false, reason: "no_subscription" })
     }
 
     const payload = JSON.stringify({ title, body, url, tag: `rally-${Date.now()}` })
@@ -48,9 +129,9 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ sent: true }))
+    return json({ sent: true })
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 })
+    return json({ error: String(err) }, 500)
   }
 })
 

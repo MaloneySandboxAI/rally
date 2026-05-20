@@ -156,6 +156,14 @@ export async function getChallenge(shareCode: string): Promise<Challenge | null>
 /**
  * Submit the challenger's results to complete the challenge.
  * Score = total gems earned.
+ *
+ * Runs through the complete_challenge() RPC: direct UPDATEs to a
+ * challenge the caller does not yet participate in are blocked by RLS,
+ * so the SECURITY DEFINER RPC performs the pending -> completed
+ * transition. It derives challenger_id from the authenticated session
+ * server-side (the challengerId param is ignored), and only writes
+ * challenger-owned columns. Returns false if no pending challenge was
+ * updated (e.g. it was already completed by the other player).
  */
 export async function completeChallenge(params: {
   shareCode: string
@@ -167,21 +175,20 @@ export async function completeChallenge(params: {
   if (typeof window === "undefined") return false
   const supabase = createClient()
 
-  const { error } = await supabase
-    .from("challenges")
-    .update({
-      challenger_id: params.challengerId || null,
-      challenger_name: params.challengerName,
-      challenger_score: params.challengerScore,
-      challenger_results: params.challengerResults,
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("share_code", params.shareCode)
-    .eq("status", "pending")
+  const { data, error } = await supabase.rpc("complete_challenge", {
+    p_share_code: params.shareCode,
+    p_challenger_name: params.challengerName,
+    p_challenger_score: params.challengerScore,
+    p_challenger_results: params.challengerResults,
+  })
 
   if (error) {
     console.error("[rally] Error completing challenge:", error)
+    return false
+  }
+
+  if (data !== true) {
+    console.warn("[rally] completeChallenge: challenge was not pending (already completed?)")
     return false
   }
 
