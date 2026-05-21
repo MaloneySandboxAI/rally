@@ -5,12 +5,14 @@ import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { getChallenge, isChallengeExpired, getChallengeTimeRemaining, type Challenge } from "@/lib/challenges"
 import { createClient } from "@/lib/supabase/client"
 import { Spinner } from "@/components/ui/spinner"
-import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock } from "lucide-react"
+import { Diamond, Trophy, Swords, ChevronRight, ChevronLeft, Clock, Share2 } from "lucide-react"
 import Link from "next/link"
 import { CATEGORY_SHORT, CATEGORY_COLORS } from "@/lib/categories"
 import { RematchButton } from "@/components/rally/rematch-button"
 import { storePendingReferral, getPendingReferral } from "@/lib/referrals"
 import { recordH2HResult, getH2HRecord, formatH2HRecord, type H2HRecord } from "@/lib/head-to-head"
+import { activateGuestMode, getGuestName, isGuestMode } from "@/lib/guest"
+import { toast } from "sonner"
 
 function getCategoryDisplay(id: string): string {
   return CATEGORY_SHORT[id] || id
@@ -28,6 +30,9 @@ function ChallengePageContent() {
   const [isOwnChallenge, setIsOwnChallenge] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [h2hRecord, setH2hRecord] = useState<H2HRecord | null>(null)
+  const [showGuestModal, setShowGuestModal] = useState(false)
+  const [guestInputName, setGuestInputName] = useState("")
+  const [sharingCard, setSharingCard] = useState(false)
 
   useEffect(() => {
     if (!code) return
@@ -200,7 +205,56 @@ function ChallengePageContent() {
           harder questions = more gems per answer, so difficulty matters
         </p>
 
+        {/* Signup CTA for guests who just completed a challenge */}
+        {!currentUserId && (
+          <div className="w-full max-w-sm bg-gradient-to-br from-[#378ADD]/20 to-[#A855F7]/10 border border-[#378ADD]/25 rounded-2xl p-4 mb-1">
+            <p className="text-sm font-extrabold text-white mb-0.5">save your score &amp; challenge back</p>
+            <p className="text-xs text-[#85B7EB]/60 mb-3">create a free account — takes 10 seconds</p>
+            <a
+              href={`/login?returnTo=/challenge/${code}`}
+              className="w-full bg-[#378ADD] text-white rounded-xl py-2.5 flex items-center justify-center font-bold text-sm"
+            >
+              sign up free →
+            </a>
+          </div>
+        )}
+
         <div className="w-full max-w-sm space-y-2.5">
+          {/* Share card button */}
+          <button
+            disabled={sharingCard}
+            onClick={async () => {
+              setSharingCard(true)
+              try {
+                const cardUrl = `/api/challenges/${challenge.share_code}/share-card`
+                const shareUrl = `${window.location.origin}/c/${challenge.share_code}`
+                const taunt = `I just played ${CATEGORY_SHORT[challenge.category] ?? challenge.category} on Rally — can you beat me? ${shareUrl}`
+                if (navigator.share) {
+                  // Try to share as image on mobile
+                  try {
+                    const res = await fetch(cardUrl)
+                    const blob = await res.blob()
+                    const file = new File([blob], "rally-challenge.png", { type: "image/png" })
+                    await navigator.share({ files: [file], text: taunt, url: shareUrl })
+                  } catch {
+                    // Fall back to URL-only share
+                    await navigator.share({ text: taunt, url: shareUrl })
+                  }
+                } else {
+                  await navigator.clipboard.writeText(shareUrl)
+                  toast.success("challenge link copied!")
+                }
+              } catch {
+                // user cancelled share — ignore
+              } finally {
+                setSharingCard(false)
+              }
+            }}
+            className="w-full bg-[#A855F7]/20 border border-[#A855F7]/30 text-[#A855F7] rounded-xl py-2.5 flex items-center justify-center gap-2 font-bold text-sm active:scale-[0.98] disabled:opacity-50"
+          >
+            <Share2 className="w-4 h-4" />
+            {sharingCard ? "preparing..." : "share result"}
+          </button>
           {currentUserId && (
             <RematchButton
               category={challenge.category}
@@ -323,7 +377,16 @@ function ChallengePageContent() {
 
       <button
         onClick={() => {
-          router.push(`/play?challenge=true&category=${encodeURIComponent(challenge.category)}&challengeCode=${challenge.share_code}`)
+          const playUrl = `/play?challenge=true&category=${encodeURIComponent(challenge.category)}&challengeCode=${challenge.share_code}`
+          if (currentUserId) {
+            router.push(playUrl)
+          } else if (isGuestMode()) {
+            // Already in guest mode — play with stored name
+            router.push(playUrl)
+          } else {
+            // Not logged in and not yet a guest — capture name first
+            setShowGuestModal(true)
+          }
         }}
         className="w-full max-w-xs bg-[#378ADD] text-white rounded-xl py-3.5 px-5 flex items-center justify-center gap-2 font-extrabold text-base shadow-lg shadow-[#378ADD]/30 active:scale-[0.98]"
       >
@@ -337,6 +400,48 @@ function ChallengePageContent() {
       >
         or play solo instead
       </a>
+
+      {/* Guest name modal */}
+      {showGuestModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
+          <div className="bg-[#0a2d4a] rounded-t-3xl p-6 w-full max-w-md animate-in slide-in-from-bottom duration-200">
+            <h2 className="text-lg font-extrabold text-white mb-1">what&apos;s your name?</h2>
+            <p className="text-xs text-[#85B7EB]/60 mb-4">shown on the results — no account needed</p>
+            <input
+              type="text"
+              value={guestInputName}
+              onChange={e => setGuestInputName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  const name = guestInputName.trim() || "Guest"
+                  activateGuestMode(name)
+                  router.push(`/play?challenge=true&category=${encodeURIComponent(challenge.category)}&challengeCode=${challenge.share_code}`)
+                }
+              }}
+              placeholder="your name"
+              maxLength={30}
+              autoFocus
+              className="w-full bg-[#021f3d] border border-[#378ADD]/30 rounded-xl px-4 py-3 text-white text-base font-bold placeholder-[#85B7EB]/30 focus:outline-none focus:border-[#378ADD]/70 mb-3"
+            />
+            <button
+              onClick={() => {
+                const name = guestInputName.trim() || "Guest"
+                activateGuestMode(name)
+                router.push(`/play?challenge=true&category=${encodeURIComponent(challenge.category)}&challengeCode=${challenge.share_code}`)
+              }}
+              className="w-full bg-[#378ADD] text-white rounded-xl py-3 font-extrabold text-base active:scale-[0.98]"
+            >
+              play now →
+            </button>
+            <button
+              onClick={() => setShowGuestModal(false)}
+              className="w-full text-[#85B7EB]/50 text-sm font-medium mt-3"
+            >
+              cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

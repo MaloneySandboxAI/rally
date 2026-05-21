@@ -2,6 +2,7 @@ import { Header } from "@/components/rally/header"
 import { SatCountdown } from "@/components/rally/sat-countdown"
 import { GamesSummary } from "@/components/rally/games-list"
 import { ChallengeButton } from "@/components/rally/challenge-button"
+import { QuickChallengeButton } from "@/components/rally/quick-challenge-button"
 import { BottomNav } from "@/components/rally/bottom-nav"
 import { CategoryRings } from "@/components/rally/category-rings"
 import { ReferralBanner } from "@/components/rally/referral-banner"
@@ -17,9 +18,12 @@ export default function RallyHome() {
       <main className="flex-1 px-4 pb-24 pt-1 overflow-y-auto">
         {/* Hero: Challenge a friend — top of page */}
         <section className="mb-4 bg-gradient-to-br from-[#378ADD]/20 to-[#A855F7]/10 rounded-2xl p-4 border border-[#378ADD]/25">
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-extrabold text-white">challenge a friend</h2>
-            <span className="text-[10px] font-bold bg-[#EF9F27] text-white px-2 py-0.5 rounded-full">4x gems</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-extrabold text-white">challenge a friend</h2>
+              <span className="text-[10px] font-bold bg-[#EF9F27] text-white px-2 py-0.5 rounded-full">4x gems</span>
+            </div>
+            <QuickChallengeButton />
           </div>
           <p className="text-xs text-[#85B7EB]/60 mb-3">pick a category, share the link, compete head-to-head</p>
           <ChallengeButton />

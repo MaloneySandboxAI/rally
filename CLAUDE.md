@@ -57,7 +57,7 @@ Defined in `lib/categories.ts` with `isMath` flag:
 ### Untimed Practice Mode
 - Toggle on skills page subtopic tap
 - URL param: `&untimed=true` on `/play`
-- No timer, no hearts/lives, no gems, no speed bonus
+- No timer, no hearts/lives, no speed bonus; earns gems at solo rate (same as timed)
 - Endless play — user taps "done" in header when finished
 - Full explanation shown after each answer (not line-clamped)
 - Stats + subtopic levels still adjust; gems do not

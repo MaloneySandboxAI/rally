@@ -29,7 +29,7 @@ import { ResultsScreen } from "@/components/rally/results-screen"
 import { notifyChallengeOpponent } from "@/lib/challenge-notify"
 import { getGroupChallenge, getGroupPool, submitGroupEntry } from "@/lib/group-challenges"
 
-/** Get display name from Supabase auth session, falling back gracefully */
+/** Get display name from Supabase auth session, falling back to stored guest name. */
 async function getDisplayName(): Promise<string> {
   try {
     const supabase = createClient()
@@ -39,6 +39,10 @@ async function getDisplayName(): Promise<string> {
       return meta?.display_name || meta?.full_name || meta?.name || session.user.email?.split("@")[0] || "anonymous"
     }
   } catch {}
+  if (typeof window !== "undefined") {
+    const guestName = localStorage.getItem("rally_guest_name")
+    if (guestName) return guestName
+  }
   return "anonymous"
 }
 
@@ -133,6 +137,10 @@ function PlayPageContent() {
   // Mark component as mounted (client-side only)
   useEffect(() => {
     setIsMounted(true)
+    // Track last played category so Quick Challenge can default to it
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rally_last_category", categoryParam)
+    }
     // Check hearts/round limits for solo play (challenges + untimed are always allowed)
     if (!isChallenge && !isUntimed) {
       setHearts(getHearts())
@@ -473,7 +481,7 @@ function PlayPageContent() {
       haptics.success()
       setScore(prev => prev + 1)
 
-      const gemsForThis = isUntimed ? 0 : gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
+      const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
 
       // Adaptive difficulty: bump UP on correct answer
       // For subtopic mode, re-pick from level (stays in range); for generic, escalate
@@ -602,30 +610,47 @@ function PlayPageContent() {
       const correctCount = answerResults.filter(r => r.isCorrect).length
       const totalAnswered = answerResults.length
 
-      // Untimed mode: no gems, no hearts, but still save stats & adjust levels
+      // Untimed mode: earns gems at solo rate (no speed bonus, no hearts, no round limit)
       if (isUntimed) {
+        let totalEarned = correctGems
+        let wasCapped = false
+        if (!isPremium) {
+          const capped = Math.min(totalEarned, dailyGemsRemaining)
+          if (capped < totalEarned) wasCapped = true
+          totalEarned = capped
+          recordGemsEarned(totalEarned)
+        }
+        const gemsBefore = totalGems
+        addGems(totalEarned)
+        const milestone = checkGemMilestone(gemsBefore, gemsBefore + totalEarned)
+        if (milestone) setGemMilestone(milestone)
+        const streakResult = markRoundCompleted()
+        if (streakResult.isNewDay) setStreakCelebration(streakResult.newStreak)
         const unlockMessage = saveRoundStats({
           categoryId: categoryParam,
           correct: correctCount,
           total: totalAnswered,
-          gemsEarned: 0,
+          gemsEarned: totalEarned,
           answerResults,
         })
-        if (unlockMessage) {
-          toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
-        }
+        if (unlockMessage) toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
         if (subtopicParam && totalAnswered >= 3) {
           const levelResult = adjustSubtopicLevel({
             subtopicId: subtopicParam,
             correct: correctCount,
             total: totalAnswered,
           })
-          if (levelResult.message) {
-            toast.success(levelResult.message, { duration: 4000 })
-          }
+          if (levelResult.message) toast.success(levelResult.message, { duration: 4000 })
         }
         updateParentSnapshot()
         setGemsAwarded(true)
+        if (wasCapped) {
+          toast("you hit today’s gem limit!", {
+            description: "upgrade to earn unlimited gems",
+            action: { label: "unlock", onClick: () => { window.location.href = "/upgrade?reason=gem_cap" } },
+            duration: 8000,
+          })
+        }
         return
       }
 
@@ -1015,7 +1040,7 @@ function PlayPageContent() {
               correctAnswer={correctAnswerIndex}
               explanation={question.explanation}
               onSelect={handleAnswerSelect}
-              showGemAnimation={showGemAnimation && index === correctAnswerIndex && !isUntimed}
+              showGemAnimation={showGemAnimation && index === correctAnswerIndex}
               gemAmount={currentQuestionSpeedBonus ? speedGemPerCorrect : baseGemPerCorrect}
               isSpeedBonus={currentQuestionSpeedBonus && !isUntimed}
               isTimeout={isTimeout}
@@ -1053,6 +1078,7 @@ function PlayPageContent() {
         onClose={() => setShowWorkArea(false)}
         questionText={question?.question}
         questionKey={question?.id ?? currentQuestion}
+        isMath={isMathCategory}
       />
 
       {/* CSS for gem animation */}

@@ -200,7 +200,7 @@ export async function completeChallenge(params: {
  */
 export function getChallengeUrl(shareCode: string, refCode?: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://rallyplaylive.com"
-  const base = `${origin}/challenge/${shareCode}`
+  const base = `${origin}/c/${shareCode}`
   return refCode ? `${base}?ref=${refCode}` : base
 }
 
@@ -364,7 +364,7 @@ export async function deleteExpiredChallenges(userId: string): Promise<number> {
 
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("challenges")
     .delete()
     .eq("creator_id", userId)
@@ -372,6 +372,7 @@ export async function deleteExpiredChallenges(userId: string): Promise<number> {
     .lt("created_at", cutoff)
     .select("id")
 
+  if (error) throw new Error(error.message)
   return data?.length || 0
 }
 
@@ -383,21 +384,11 @@ export async function clearCompletedChallenges(userId: string): Promise<number> 
   if (typeof window === "undefined") return 0
   const supabase = createClient()
 
-  // Delete completed challenges where user is creator
-  const { data: d1 } = await supabase
-    .from("challenges")
-    .delete()
-    .eq("creator_id", userId)
-    .eq("status", "completed")
-    .select("id")
+  const [{ data: d1, error: e1 }, { data: d2, error: e2 }] = await Promise.all([
+    supabase.from("challenges").delete().eq("creator_id", userId).eq("status", "completed").select("id"),
+    supabase.from("challenges").delete().eq("challenger_id", userId).eq("status", "completed").select("id"),
+  ])
 
-  // Delete completed challenges where user is challenger
-  const { data: d2 } = await supabase
-    .from("challenges")
-    .delete()
-    .eq("challenger_id", userId)
-    .eq("status", "completed")
-    .select("id")
-
+  if (e1 || e2) throw new Error((e1 || e2)!.message)
   return (d1?.length || 0) + (d2?.length || 0)
 }

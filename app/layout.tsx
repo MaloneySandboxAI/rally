@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
+import Script from 'next/script'
 import { Analytics } from '@vercel/analytics/next'
 import { PostHogProvider } from '@/lib/posthog-provider'
 import { FeedbackButton } from '@/components/rally/feedback-button'
@@ -91,6 +92,10 @@ export default function RootLayout({
             </PremiumProvider>
           </GemProvider>
         </PostHogProvider>
+        <Script
+          src="https://www.desmos.com/api/v1.12/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"
+          strategy="afterInteractive"
+        />
         <Analytics />
       </body>
     </html>
