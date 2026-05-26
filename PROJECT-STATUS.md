@@ -72,7 +72,6 @@
 - [ ] **Desmos production API key** — partnership email sent May 26, 2026 (awaiting reply); currently using demo key `dcb31709b452b1cf9dc26972add0fda6`
 - [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)
 - [x] ~~Cancel v0 Premium~~ — subscription canceled May 26, 2026
-- [ ] **Vercel build-failure notifications** — enable in Vercel → Settings → Notifications so silent broken-build runs (like the May 20–26 deploy outage) surface immediately
 
 ### Short-term
 - [x] ~~Send Desmos partnership email for API licensing~~ — sent May 26, 2026 to partnerships@desmos.com
