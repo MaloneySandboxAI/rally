@@ -61,7 +61,19 @@ Read the current `PROJECT-STATUS.md` and update:
 - Keep the "Immediate" section focused on truly next-up items (3-5 max)
 - Move completed "Immediate" items up to the "Completed" section, don't just check them off in place
 
-### Step 4: Summary
+### Step 4: Verify Production Deploy Status
+
+Before wrapping the session, confirm code pushed to `main` actually built and shipped:
+
+1. Open Vercel deployments: https://vercel.com/ctgmaloney-7849s-projects/rally/deployments
+2. Confirm the latest commit on `main` shows status **Ready** (not **Error**)
+3. If a build is still running, wait for it to complete
+4. If a build failed, surface the error from the build log and offer to troubleshoot BEFORE declaring the session done
+5. Never assume "pushed to main" means "live in production" — Vercel auto-deploy can break silently. A green build is the proof.
+
+**Background:** Rally went 6 days with broken builds (May 20–26, 2026) because a JSX-in-`.ts` parse error silently failed every deploy. `next.config.mjs` has `ignoreBuildErrors: true`, which suppresses TypeScript type errors but does NOT cover syntax/parse errors. Pushed ≠ shipped — always verify.
+
+### Step 5: Summary
 
 Tell the user:
 - What documentation was updated
