@@ -25,8 +25,8 @@ Defined in `lib/categories.ts` with `isMath` flag:
 ### Gem Economy
 - Solo timed rates: Easy 10, Medium 20, Hard 40
 - Challenge rates: Easy 40, Medium 80, Hard 160 (4x multiplier)
-- Speed bonus: 1.5x for fast answers
-- Untimed practice: no gems currently (planned: same gem economy as timed)
+- Speed bonus: 1.5x for fast answers (timed only — no speed bonus in untimed)
+- Untimed practice: same as solo timed rates (Easy 10, Medium 20, Hard 40); daily gem cap still applies for free users
 
 ### Challenge System
 - **Flow**: Creator picks category -> shares link -> THEN plays their round (link must be shared before play unlocks)
@@ -60,7 +60,8 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - No timer, no hearts/lives, no speed bonus; earns gems at solo rate (same as timed)
 - Endless play — user taps "done" in header when finished
 - Full explanation shown after each answer (not line-clamped)
-- Stats + subtopic levels still adjust; gems do not
+- Stats, subtopic levels, streaks, and gems all adjust on round completion; daily gem cap applies for free users
+- Gem-earned summary card shown on results screen with breakdown by difficulty
 
 ### Desmos Calculator Integration
 - Desmos API v1.12 loaded async in `app/layout.tsx`
@@ -202,9 +203,10 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - **IMPORTANT**: At the end of every session, proactively offer to run the `session-wrapup` skill to update CLAUDE.md and PROJECT-STATUS.md with what was accomplished. Also run it after any Conductor build is pushed. This keeps the docs accurate across sessions and devices.
 
 ## Pending / Roadmap
-- [ ] Desmos API: obtain production API key (currently using demo key)
-- [ ] Landing page: push new polished landing page to main
-- [ ] Gem economy: make untimed mode award same gems as timed (to encourage upgrades)
-- [ ] Cancel v0 Premium subscription ($20/mo) — credits used
-- [ ] Send Desmos partnership email for API licensing
-- [ ] Landing page SEO and meta tags optimization
+- [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
+
+## Recently Completed (May 26, 2026)
+- [x] Landing page pushed to production (live at rallyplaylive.com with full OG/Twitter meta)
+- [x] Untimed gem economy unified — gem-earned card now shown on results screen for untimed sessions (commit c3dc1b4)
+- [x] Desmos partnership email sent to partnerships@desmos.com
+- [x] v0 Premium subscription canceled
