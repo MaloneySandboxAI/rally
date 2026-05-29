@@ -42,8 +42,9 @@
 - [x] Service worker + Supabase push subscription storage
 
 ### Calculator
-- [x] Desmos graphing calculator integration (same as SAT Bluebook)
-- [x] Scientific calculator mode toggle
+- [x] Open-source graphing calculator (MathLive + math.js + function-plot — MIT/Apache 2.0, no recurring cost)
+- [x] Inline scalar evaluation (e.g. `3+4*2 = 11`)
+- [x] 2D function plotting for expressions with `x`
 - [x] Basic calculator for non-math categories
 - [x] Auto-resize on tab switch
 
@@ -69,7 +70,7 @@
 
 ### Immediate (This Sprint)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
-- [ ] **Desmos production API key** — partnership email sent May 26, 2026 (awaiting reply); currently using demo key `dcb31709b452b1cf9dc26972add0fda6`
+- [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost
 - [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)
 - [x] ~~Cancel v0 Premium~~ — subscription canceled May 26, 2026
 
@@ -100,7 +101,7 @@
 ## Technical Debt
 - `app/play/page.tsx` is ~1900 lines — could be split into smaller components
 - `next.config.mjs` has `ignoreBuildErrors: true` — should fix underlying type errors
-- Demo Desmos API key needs replacement before scaling
+- Calculator stack migrated to open-source (was Desmos $100/mo demo key)
 - No automated tests
 - No CI/CD beyond Vercel auto-deploy
 
@@ -112,7 +113,6 @@
 - **Supabase**: Rally project (PostgreSQL + Auth)
 - **PostHog**: Rally analytics project
 - **Stripe**: Subscription payments
-- **Desmos**: Partnership email pending (for production API key)
 - **v0 by Vercel**: Landing page project (v0-rally-landing-page) — Premium canceled May 26, 2026
 
 ---
