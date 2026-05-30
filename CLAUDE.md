@@ -210,6 +210,13 @@ Defined in `lib/categories.ts` with `isMath` flag:
 
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
+- [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
+
+## Recently Completed (May 29, 2026)
+- [x] Reconciled DB ↔ migration-file drift — verified migrations 022, 023 applied; 024 unnecessary (waitlist already locked, `parent_tokens` doesn't exist)
+- [x] Pushed 3 backlogged commits to `origin/main` (H3/M4/M10 polish, waitlist+parent_tokens RLS, merge) — Vercel auto-deployed
+- [x] Removed duplicate `024_*.sql` file from repo root (was identical to the one in `supabase/migrations/`)
+- [x] Documented manual migration workflow + idempotency requirement in CLAUDE.md (this section's parent doc)
 
 ## Recently Completed (May 26, 2026)
 - [x] Landing page pushed to production (live at rallyplaylive.com with full OG/Twitter meta)

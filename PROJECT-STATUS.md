@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: May 26, 2026*
+*Last updated: May 29, 2026*
 
 ## Completed Features
 
@@ -24,7 +24,7 @@
 - [x] Guest play mode
 - [x] Age verification (COPPA)
 - [x] Profile setup flow
-- [x] Parent dashboard
+- [ ] Parent dashboard — route `/parent/[token]` shipped in code, but `parent_tokens` table never created in prod (migration 008 not applied). Non-functional until either migration runs or route is removed.
 
 ### Social & Competition
 - [x] Challenge share cards (screenshot-friendly, canvas-rendered)
@@ -63,6 +63,12 @@
 - [x] Guest mode 404 and broken flows
 - [x] Challenge showing score instead of accept screen
 
+### Database & Migrations (May 29, 2026)
+- [x] Reconciled DB ↔ migration file drift — verified 022 (`guest_sessions`, public challenge read) and 023 (challenge delete policies) applied; 024 confirmed unnecessary in prod (waitlist already locked, `parent_tokens` doesn't exist)
+- [x] Pushed 3 backlogged commits to `origin/main` (H3/M4/M10 polish + waitlist/parent_tokens RLS migration + merge)
+- [x] Deleted stray duplicate `024_*.sql` from repo root
+- [x] Added "Database Migrations" section to CLAUDE.md documenting manual-apply workflow, drift reality, and idempotency requirement for new migrations
+
 ---
 
 ## In Progress / Pending
@@ -70,8 +76,10 @@
 ### Immediate (This Sprint)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [ ] **Desmos production API key** — partnership email sent May 26, 2026 (awaiting reply); currently using demo key `dcb31709b452b1cf9dc26972add0fda6`
+- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
 - [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)
 - [x] ~~Cancel v0 Premium~~ — subscription canceled May 26, 2026
+- [x] ~~Reconcile migration drift~~ — all required migrations confirmed applied (May 29, 2026)
 
 ### Short-term
 - [x] ~~Send Desmos partnership email for API licensing~~ — sent May 26, 2026 to partnerships@desmos.com
@@ -103,6 +111,7 @@
 - Demo Desmos API key needs replacement before scaling
 - No automated tests
 - No CI/CD beyond Vercel auto-deploy
+- No Supabase CLI — migrations applied manually via dashboard SQL Editor; prod can drift from `supabase/migrations/` file history (some files pre-applied in prod, some never run). All new migrations must be idempotent — see CLAUDE.md > Database Migrations.
 
 ---
 
