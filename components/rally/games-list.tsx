@@ -14,6 +14,7 @@ import {
 } from "@/lib/challenges"
 import { EmptyGamesState } from "./empty-games-state"
 import { Swords, Clock, Trophy, ChevronRight, Diamond, X, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import Link from "next/link"
 import { CATEGORY_COLORS, CATEGORY_SHORT } from "@/lib/categories"
 import { getH2HRecord } from "@/lib/head-to-head"
@@ -126,6 +127,8 @@ export function GamesList() {
     const success = await cancelChallenge(shareCode, userId)
     if (success) {
       setChallenges(prev => prev.filter(c => c.share_code !== shareCode))
+    } else {
+      toast.error("couldn't cancel challenge — try again")
     }
     setCancelingCode(null)
   }
@@ -133,17 +136,27 @@ export function GamesList() {
   const handleClearCompleted = async () => {
     if (!userId) return
     setClearing(true)
-    await clearCompletedChallenges(userId)
-    setChallenges(prev => prev.filter(c => c.status !== "completed"))
-    setClearing(false)
+    try {
+      await clearCompletedChallenges(userId)
+      setChallenges(prev => prev.filter(c => c.status !== "completed"))
+    } catch {
+      toast.error("couldn't clear completed games — try again")
+    } finally {
+      setClearing(false)
+    }
   }
 
   const handleClearExpired = async () => {
     if (!userId) return
     setClearingExpired(true)
-    await deleteExpiredChallenges(userId)
-    setChallenges(prev => prev.filter(c => !isChallengeStale(c) || c.creator_id !== userId))
-    setClearingExpired(false)
+    try {
+      await deleteExpiredChallenges(userId)
+      setChallenges(prev => prev.filter(c => !isChallengeStale(c) || c.creator_id !== userId))
+    } catch {
+      toast.error("couldn't delete expired challenges — try again")
+    } finally {
+      setClearingExpired(false)
+    }
   }
 
   if (loading) {

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote, ClipboardCopy, Check } from "lucide-react"
 import { MathText } from "@/components/rally/math-text"
+import { DesmosCalculator } from "@/components/rally/desmos-calculator"
 
 // ============================================================
 // WORK AREA — bottom sheet with 3 tabs: Notepad, Calculator, Draw
@@ -15,11 +16,13 @@ interface WorkAreaProps {
   questionText?: string
   /** Key that changes when the question changes — used to clear notepad between questions. */
   questionKey?: string | number
+  /** Whether the current category is math — shows Desmos instead of the basic calculator. */
+  isMath?: boolean
 }
 
 type TabId = "notepad" | "calc" | "draw"
 
-export function WorkArea({ isOpen, onClose, questionText, questionKey }: WorkAreaProps) {
+export function WorkArea({ isOpen, onClose, questionText, questionKey, isMath }: WorkAreaProps) {
   const [activeTab, setActiveTab] = useState<TabId>("notepad")
   const sheetRef = useRef<HTMLDivElement>(null)
   const [didCopyToNotes, setDidCopyToNotes] = useState(false)
@@ -155,14 +158,18 @@ export function WorkArea({ isOpen, onClose, questionText, questionKey }: WorkAre
             <NotepadTab text={notepadText} setText={setNotepadText} />
           </div>
           <div className={activeTab === "calc" ? "h-full" : "hidden"}>
-            <CalculatorTab
-              display={calcDisplay} setDisplay={setCalcDisplay}
-              expression={calcExpression} setExpression={setCalcExpression}
-              memory={calcMemory} setMemory={setCalcMemory}
-              previousValue={calcPreviousValue} setPreviousValue={setCalcPreviousValue}
-              operation={calcOperation} setOperation={setCalcOperation}
-              waitingForOperand={calcWaitingForOperand} setWaitingForOperand={setCalcWaitingForOperand}
-            />
+            {isMath ? (
+              <DesmosCalculator isVisible={activeTab === "calc"} />
+            ) : (
+              <CalculatorTab
+                display={calcDisplay} setDisplay={setCalcDisplay}
+                expression={calcExpression} setExpression={setCalcExpression}
+                memory={calcMemory} setMemory={setCalcMemory}
+                previousValue={calcPreviousValue} setPreviousValue={setCalcPreviousValue}
+                operation={calcOperation} setOperation={setCalcOperation}
+                waitingForOperand={calcWaitingForOperand} setWaitingForOperand={setCalcWaitingForOperand}
+              />
+            )}
           </div>
           <div className={activeTab === "draw" ? "h-full" : "hidden"}>
             <DrawTab />

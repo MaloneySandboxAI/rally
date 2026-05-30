@@ -191,7 +191,7 @@ export function ResultsScreen({ score, isChallenge, isCreatorChallenge, challeng
       )}
 
       {/* Gems Earned */}
-      {!isUntimed && <div className="w-full max-w-sm mb-3 bg-gradient-to-r from-[#F59E0B]/15 to-[#F97316]/15 border border-[#F59E0B]/30 rounded-xl p-3.5">
+      <div className="w-full max-w-sm mb-3 bg-gradient-to-r from-[#F59E0B]/15 to-[#F97316]/15 border border-[#F59E0B]/30 rounded-xl p-3.5">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <Diamond className="w-5 h-5 text-[#F59E0B] fill-[#F59E0B]" />
@@ -207,7 +207,7 @@ export function ResultsScreen({ score, isChallenge, isCreatorChallenge, challeng
             </div>
           ))}
         </div>
-      </div>}
+      </div>
 
       {/* Streak + Difficulty Reached + Weak Spot Nudge */}
       <div className="w-full max-w-sm mb-3 space-y-2">

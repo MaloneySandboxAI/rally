@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: May 20, 2026*
+*Last updated: May 26, 2026*
 
 ## Completed Features
 
@@ -68,14 +68,14 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
-- [ ] **Push landing page to production** — new polished landing page is in `app/page.tsx`, needs `git push`
-- [ ] **Desmos production API key** — currently using demo key `dcb31709b452b1cf9dc26972add0fda6`; need to contact Desmos partnerships for production license
-- [ ] **Unify gem economy** — make untimed practice mode award same gems as timed mode to encourage upgrades
-- [ ] **Cancel v0 Premium** — $20/mo subscription, credits ($28.81) already used for landing page build
+- [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
+- [ ] **Desmos production API key** — partnership email sent May 26, 2026 (awaiting reply); currently using demo key `dcb31709b452b1cf9dc26972add0fda6`
+- [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)
+- [x] ~~Cancel v0 Premium~~ — subscription canceled May 26, 2026
 
 ### Short-term
-- [ ] Send Desmos partnership email for API licensing
-- [ ] Landing page SEO optimization (meta tags, Open Graph, structured data)
+- [x] ~~Send Desmos partnership email for API licensing~~ — sent May 26, 2026 to partnerships@desmos.com
+- [x] ~~Landing page SEO optimization~~ — og tags, Twitter card, theme color, meta description all live on rallyplaylive.com
 - [ ] Landing page: add Desmos calculator as a featured selling point
 - [ ] Connect "Get Started Free" and "Log in" buttons on landing page to actual auth flow
 - [ ] Mobile responsiveness QA on landing page
@@ -113,7 +113,7 @@
 - **PostHog**: Rally analytics project
 - **Stripe**: Subscription payments
 - **Desmos**: Partnership email pending (for production API key)
-- **v0 by Vercel**: Landing page project (v0-rally-landing-page) — cancel Premium after credits used
+- **v0 by Vercel**: Landing page project (v0-rally-landing-page) — Premium canceled May 26, 2026
 
 ---
 
