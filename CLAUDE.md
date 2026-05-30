@@ -202,6 +202,12 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - User prefers "auto mode" with minimal back-and-forth
 - **IMPORTANT**: At the end of every session, proactively offer to run the `session-wrapup` skill to update CLAUDE.md and PROJECT-STATUS.md with what was accomplished. Also run it after any Conductor build is pushed. This keeps the docs accurate across sessions and devices.
 
+### Database Migrations
+- No Supabase CLI is configured. Migrations under `supabase/migrations/` are applied **manually** by pasting the SQL into the Supabase dashboard SQL Editor. The folder is a git-tracked history of what's been run, not an automated pipeline.
+- Apply migrations in filename order. After running a migration in the dashboard, the corresponding `.sql` file is what records "this ran" — don't skip committing it.
+- **Production DB can drift from the file history.** Some migrations on disk are already applied in prod (e.g. policies created by an earlier commit), and some features in the file history were never deployed against prod (e.g. `parent_tokens` from 008). Before running anything, check whether the target objects already exist.
+- **All new migrations must be idempotent.** Use `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and the `DROP POLICY IF EXISTS` → `CREATE POLICY` pattern (Postgres has no `CREATE POLICY IF NOT EXISTS`). Wrap conditional logic in `DO $$ ... $$` blocks. This makes re-runs safe when prod is already partially in sync.
+
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
 
