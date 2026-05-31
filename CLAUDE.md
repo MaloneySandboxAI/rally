@@ -208,6 +208,30 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - **Production DB can drift from the file history.** Some migrations on disk are already applied in prod (e.g. policies created by an earlier commit), and some features in the file history were never deployed against prod (e.g. `parent_tokens` from 008). Before running anything, check whether the target objects already exist.
 - **All new migrations must be idempotent.** Use `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and the `DROP POLICY IF EXISTS` → `CREATE POLICY` pattern (Postgres has no `CREATE POLICY IF NOT EXISTS`). Wrap conditional logic in `DO $$ ... $$` blocks. This makes re-runs safe when prod is already partially in sync.
 
+## Question Distractor Improvement Pipeline (agent-driven, no API cost)
+
+Rewrites wrong-answer choices to match real SAT distractor logic. Full spec: `/Users/colleenmaloney/Documents/Rally/answer-improvement-prompt.md`.
+
+### One-time setup
+1. Run `supabase/migrations/025_question_improvement_v2.sql` in the Supabase SQL editor.
+2. `pnpm install` (adds `tsx` and `dotenv` dev deps).
+3. Confirm `.env.local` has `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Process
+1. In Conductor, start an agent in the `rally` repo.
+2. Agent loops: `pnpm tsx scripts/q-fetch.ts --batch 50 --category Algebra` → reason → write to `scripts/.batch-pending.json` → `pnpm tsx scripts/q-write.ts scripts/.batch-pending.json`.
+3. Spot-check `improvement_v2` in Supabase as it processes.
+4. `pnpm tsx scripts/q-promote.ts --category Algebra --dry-run` then drop `--dry-run` to promote.
+5. Repeat for Data & Stats and AP Pre Calc.
+
+### Cost
+Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
+
+### Scripts
+- `scripts/q-fetch.ts` — pulls next batch of unprocessed math questions (writes JSON to stdout)
+- `scripts/q-write.ts <file>` — writes improvements from a JSON file into `improvement_v2` column
+- `scripts/q-promote.ts [--category X] [--dry-run]` — promotes staged improvements → live columns
+
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
 - [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
