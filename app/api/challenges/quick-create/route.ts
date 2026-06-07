@@ -25,26 +25,23 @@ export async function POST(req: NextRequest) {
     creatorName = String(body.guestName).trim().slice(0, 30) || "Anonymous"
   }
 
-  // Fetch 5 easy + 5 medium + 5 hard question IDs for the category
+  // Fetch 5 easy + 5 medium + 5 hard question IDs via true random sampling
+  const excludeIds: number[] = body.excludeIds ?? []
   const [easyRes, medRes, hardRes] = await Promise.all([
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "easy").limit(20),
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "medium").limit(20),
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "hard").limit(20),
+    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "easy", p_n: 5, p_exclude: excludeIds }),
+    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "medium", p_n: 5, p_exclude: excludeIds }),
+    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "hard", p_n: 5, p_exclude: excludeIds }),
   ])
 
   if (!easyRes.data?.length || !medRes.data?.length || !hardRes.data?.length) {
     return NextResponse.json({ error: "Not enough questions for this category" }, { status: 422 })
   }
 
-  function sample<T>(arr: T[], n: number): T[] {
-    const shuffled = [...arr].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, n)
-  }
-
-  const easy = sample(easyRes.data.map((r: { id: number }) => r.id), 5)
-  const medium = sample(medRes.data.map((r: { id: number }) => r.id), 5)
-  const hard = sample(hardRes.data.map((r: { id: number }) => r.id), 5)
-  const questionIds = [...easy, ...medium, ...hard]
+  const questionIds = [
+    ...easyRes.data.map((r: { id: number }) => r.id),
+    ...medRes.data.map((r: { id: number }) => r.id),
+    ...hardRes.data.map((r: { id: number }) => r.id),
+  ]
 
   // Create challenge with retry on share_code collision
   let shareCode: string | null = null
