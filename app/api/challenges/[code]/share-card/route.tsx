@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 import { NextRequest } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { CATEGORY_SHORT } from "@/lib/categories"
 
 export const runtime = "nodejs"
@@ -45,7 +45,7 @@ export async function GET(
   const width = 1080
   const height = format === "story" ? 1920 : 1080
 
-  const supabase = createServerClient()
+  const supabase = createServiceRoleClient()
   const { data: challenge } = await supabase
     .from("challenges")
     .select("creator_name, creator_score, challenger_name, challenger_score, category, status, share_code")

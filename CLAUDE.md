@@ -102,6 +102,11 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - `lib/subscription.ts` and `lib/premium-context.tsx` manage premium state
 - `app/upgrade/page.tsx` and `app/upgrade/success/page.tsx` for upgrade flow
 
+### Session storage — cookie-based (not localStorage)
+The Supabase browser client stores the session in a first-party cookie (`sb-*`), not localStorage. This survives Safari ITP's 7-day idle purge, which was causing students to re-log in every time they clicked a new challenge link from iMessage. Cookie config: `Max-Age=30 days`, `SameSite=Lax`, `Secure`.
+
+The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is pending Apple Developer Program enrollment.
+
 ## App Routes
 | Route | Purpose |
 |-------|---------|

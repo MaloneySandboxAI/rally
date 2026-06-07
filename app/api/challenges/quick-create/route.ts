@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createRouteHandlerClient } from "@/lib/supabase/route"
 
 const CHARS = "abcdefghjkmnpqrstuvwxyz23456789"
 function generateShareCode(): string {
@@ -9,10 +10,11 @@ function generateShareCode(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerClient()
+  const supabase = createServiceRoleClient()
 
-  // Get calling user's session via Authorization header or cookie
-  const { data: { user } } = await supabase.auth.getUser()
+  // Read caller identity from request cookies (not service-role client)
+  const authClient = await createRouteHandlerClient()
+  const { data: { user } } = await authClient.auth.getUser()
   const body = await req.json().catch(() => ({}))
   const category: string = body.category || "Algebra"
 
@@ -25,26 +27,48 @@ export async function POST(req: NextRequest) {
     creatorName = String(body.guestName).trim().slice(0, 30) || "Anonymous"
   }
 
-  // Fetch 5 easy + 5 medium + 5 hard question IDs for the category
+  // Load previously seen question IDs for this player
+  const playerId = user?.id ?? body.guestId
+  let seenIds: number[] = []
+  if (playerId) {
+    const { data: seenRows } = await supabase
+      .from("user_seen_questions")
+      .select("question_id")
+      .eq("player_id", playerId)
+    if (seenRows?.length) {
+      seenIds = seenRows.map((r: { question_id: number }) => r.question_id)
+    }
+  }
+
+  // Fetch 5 easy + 5 medium + 5 hard question IDs via true random sampling
+  const excludeIds: number[] = [...seenIds, ...(body.excludeIds ?? [])]
+
+  async function sampleWithFallback(difficulty: string) {
+    const res = await supabase.rpc("sample_questions", {
+      p_category: category, p_difficulty: difficulty, p_n: 5, p_exclude: excludeIds,
+    })
+    if (res.data && res.data.length >= 5) return res
+    // Graceful exhaustion: retry without exclusion
+    return supabase.rpc("sample_questions", {
+      p_category: category, p_difficulty: difficulty, p_n: 5, p_exclude: [],
+    })
+  }
+
   const [easyRes, medRes, hardRes] = await Promise.all([
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "easy").limit(20),
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "medium").limit(20),
-    supabase.from("sat_questions").select("id").eq("category", category).eq("difficulty", "hard").limit(20),
+    sampleWithFallback("easy"),
+    sampleWithFallback("medium"),
+    sampleWithFallback("hard"),
   ])
 
   if (!easyRes.data?.length || !medRes.data?.length || !hardRes.data?.length) {
     return NextResponse.json({ error: "Not enough questions for this category" }, { status: 422 })
   }
 
-  function sample<T>(arr: T[], n: number): T[] {
-    const shuffled = [...arr].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, n)
-  }
-
-  const easy = sample(easyRes.data.map((r: { id: number }) => r.id), 5)
-  const medium = sample(medRes.data.map((r: { id: number }) => r.id), 5)
-  const hard = sample(hardRes.data.map((r: { id: number }) => r.id), 5)
-  const questionIds = [...easy, ...medium, ...hard]
+  const questionIds = [
+    ...easyRes.data.map((r: { id: number }) => r.id),
+    ...medRes.data.map((r: { id: number }) => r.id),
+    ...hardRes.data.map((r: { id: number }) => r.id),
+  ]
 
   // Create challenge with retry on share_code collision
   let shareCode: string | null = null
@@ -70,6 +94,17 @@ export async function POST(req: NextRequest) {
 
   if (!shareCode) {
     return NextResponse.json({ error: "Failed to generate unique code" }, { status: 500 })
+  }
+
+  // Record these questions as seen for the creator
+  if (playerId) {
+    const rows = questionIds.map(qid => ({ player_id: playerId, question_id: qid }))
+    await supabase
+      .from("user_seen_questions")
+      .upsert(rows, { onConflict: "player_id,question_id", ignoreDuplicates: true })
+      .then(({ error }) => {
+        if (error) console.error("[rally] Error recording seen questions:", error)
+      })
   }
 
   const origin = req.headers.get("origin") || "https://rallyplaylive.com"
