@@ -160,3 +160,4 @@ When creating prompts for Conductor (AI code agent):
 | Analytics | `lib/posthog-provider.tsx` |
 | Supabase client | `lib/supabase/client.ts` |
 | Supabase server | `lib/supabase/server.ts` |
+| Answer remediation | `scripts/remediate-answers.ts` |
