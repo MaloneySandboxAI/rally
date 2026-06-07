@@ -4,9 +4,13 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 /**
- * Server-side Supabase client using the service role key.
- * Use this in API routes where you need admin-level access (e.g. webhook handlers).
+ * Service-role Supabase client — bypasses RLS.
+ * Use ONLY for admin operations (webhooks, service-level writes).
+ * For route handlers that need the caller's identity, use createRouteHandlerClient().
  */
-export function createServerClient() {
+export function createServiceRoleClient() {
   return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 }
+
+/** @deprecated Use createServiceRoleClient() — this alias exists for migration. */
+export const createServerClient = createServiceRoleClient

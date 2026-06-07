@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createRouteHandlerClient } from "@/lib/supabase/route"
 
 const CHARS = "abcdefghjkmnpqrstuvwxyz23456789"
 function generateShareCode(): string {
@@ -9,10 +10,11 @@ function generateShareCode(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerClient()
+  const supabase = createServiceRoleClient()
 
-  // Get calling user's session via Authorization header or cookie
-  const { data: { user } } = await supabase.auth.getUser()
+  // Read caller identity from request cookies (not service-role client)
+  const authClient = await createRouteHandlerClient()
+  const { data: { user } } = await authClient.auth.getUser()
   const body = await req.json().catch(() => ({}))
   const category: string = body.category || "Algebra"
 

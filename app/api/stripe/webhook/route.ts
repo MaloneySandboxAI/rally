@@ -1,5 +1,5 @@
 import Stripe from "stripe"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  const supabase = createServerClient()
+  const supabase = createServiceRoleClient()
 
   const getUserId = (obj: { metadata?: Record<string, string> } | null): string | null =>
     obj?.metadata?.supabase_user_id || null
