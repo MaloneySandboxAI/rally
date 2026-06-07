@@ -27,12 +27,37 @@ export async function POST(req: NextRequest) {
     creatorName = String(body.guestName).trim().slice(0, 30) || "Anonymous"
   }
 
+  // Load previously seen question IDs for this player
+  const playerId = user?.id ?? body.guestId
+  let seenIds: number[] = []
+  if (playerId) {
+    const { data: seenRows } = await supabase
+      .from("user_seen_questions")
+      .select("question_id")
+      .eq("player_id", playerId)
+    if (seenRows?.length) {
+      seenIds = seenRows.map((r: { question_id: number }) => r.question_id)
+    }
+  }
+
   // Fetch 5 easy + 5 medium + 5 hard question IDs via true random sampling
-  const excludeIds: number[] = body.excludeIds ?? []
+  const excludeIds: number[] = [...seenIds, ...(body.excludeIds ?? [])]
+
+  async function sampleWithFallback(difficulty: string) {
+    const res = await supabase.rpc("sample_questions", {
+      p_category: category, p_difficulty: difficulty, p_n: 5, p_exclude: excludeIds,
+    })
+    if (res.data && res.data.length >= 5) return res
+    // Graceful exhaustion: retry without exclusion
+    return supabase.rpc("sample_questions", {
+      p_category: category, p_difficulty: difficulty, p_n: 5, p_exclude: [],
+    })
+  }
+
   const [easyRes, medRes, hardRes] = await Promise.all([
-    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "easy", p_n: 5, p_exclude: excludeIds }),
-    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "medium", p_n: 5, p_exclude: excludeIds }),
-    supabase.rpc("sample_questions", { p_category: category, p_difficulty: "hard", p_n: 5, p_exclude: excludeIds }),
+    sampleWithFallback("easy"),
+    sampleWithFallback("medium"),
+    sampleWithFallback("hard"),
   ])
 
   if (!easyRes.data?.length || !medRes.data?.length || !hardRes.data?.length) {
@@ -69,6 +94,17 @@ export async function POST(req: NextRequest) {
 
   if (!shareCode) {
     return NextResponse.json({ error: "Failed to generate unique code" }, { status: 500 })
+  }
+
+  // Record these questions as seen for the creator
+  if (playerId) {
+    const rows = questionIds.map(qid => ({ player_id: playerId, question_id: qid }))
+    await supabase
+      .from("user_seen_questions")
+      .upsert(rows, { onConflict: "player_id,question_id", ignoreDuplicates: true })
+      .then(({ error }) => {
+        if (error) console.error("[rally] Error recording seen questions:", error)
+      })
   }
 
   const origin = req.headers.get("origin") || "https://rallyplaylive.com"
