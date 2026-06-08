@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { X, Undo2, Trash2, Calculator as CalculatorIcon, Pencil, StickyNote, ClipboardCopy, Check } from "lucide-react"
 import { MathText } from "@/components/rally/math-text"
-import { DesmosCalculator } from "@/components/rally/desmos-calculator"
+import { FreeCalculator as DesmosCalculator } from "@/components/rally/free-calculator"
 
 // ============================================================
 // WORK AREA — bottom sheet with 3 tabs: Notepad, Calculator, Draw

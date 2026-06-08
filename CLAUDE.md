@@ -12,7 +12,7 @@ Rally is a mobile-first SAT & AP prep quiz app with solo play, head-to-head chal
 - **Payments**: Stripe (subscription upgrades)
 - **GitHub**: MaloneySandboxAI account
 - **Domain**: rallyplaylive.com
-- **Calculator**: Desmos API v1.12 (same graphing calculator used on the SAT/Bluebook)
+- **Calculator**: MathLive + math.js + function-plot (open-source, no recurring cost)
 - **Build tool**: Conductor (AI code agent) for feature builds; Cowork for planning, reviews, fixes
 
 ## Key Architecture
@@ -63,13 +63,12 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - Stats, subtopic levels, streaks, and gems all adjust on round completion; daily gem cap applies for free users
 - Gem-earned summary card shown on results screen with breakdown by difficulty
 
-### Desmos Calculator Integration
-- Desmos API v1.12 loaded async in `app/layout.tsx`
-- Demo API key: `dcb31709b452b1cf9dc26972add0fda6` (swap for production key later)
-- Type declarations in `types/desmos.d.ts`
-- Component: `components/rally/desmos-calculator.tsx` with graphing/scientific mode toggle
-- WorkArea (`components/rally/work-area.tsx`) conditionally renders Desmos for math categories, basic calculator for non-math
+### Calculator Integration
+- Component: `components/rally/free-calculator.tsx` (MathLive + math.js + function-plot — MIT/Apache 2.0)
+- WorkArea (`components/rally/work-area.tsx`) conditionally renders FreeCalculator for math categories, basic calculator for non-math
 - `isMath` prop passed from play page based on category config
+- Libraries loaded dynamically (only when Calculator tab opens) — ~1.5MB, doesn't touch main bundle
+- Inline scalar evaluation: type `3+4*2` → shows `= 11`; type expressions with `x` to plot them
 
 ### Push Notifications
 - Service worker registration in app
@@ -140,8 +139,8 @@ The companion fix (iOS Universal Links so iMessage opens the Rally app directly 
 - `app/login/page.tsx` — Authentication page
 
 ### Components (components/rally/)
-- `work-area.tsx` — Bottom sheet with tabs: Notepad, Calculator (Desmos for math), Draw
-- `desmos-calculator.tsx` — Desmos graphing/scientific calculator embed
+- `work-area.tsx` — Bottom sheet with tabs: Notepad, Calculator (FreeCalculator for math), Draw
+- `free-calculator.tsx` — Open-source graphing calculator (MathLive + math.js + function-plot)
 - `challenge-button.tsx` — Challenge creation UI, gates play behind link share
 - `games-list.tsx` — Active games list with expired challenge management
 - `category-rings.tsx` — Home page category selection
@@ -207,6 +206,8 @@ The companion fix (iOS Universal Links so iMessage opens the Rally app directly 
 - User prefers "auto mode" with minimal back-and-forth
 - **IMPORTANT**: At the end of every session, proactively offer to run the `session-wrapup` skill to update CLAUDE.md and PROJECT-STATUS.md with what was accomplished. Also run it after any Conductor build is pushed. This keeps the docs accurate across sessions and devices.
 
+## Recently Completed (May 29, 2026)
+- [x] Replaced Desmos with open-source calculator stack (MathLive + math.js + function-plot) — eliminates $100/mo recurring cost
 ### Database Migrations
 - No Supabase CLI is configured. Migrations under `supabase/migrations/` are applied **manually** by pasting the SQL into the Supabase dashboard SQL Editor. The folder is a git-tracked history of what's been run, not an automated pipeline.
 - Apply migrations in filename order. After running a migration in the dashboard, the corresponding `.sql` file is what records "this ran" — don't skip committing it.
@@ -250,5 +251,4 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 ## Recently Completed (May 26, 2026)
 - [x] Landing page pushed to production (live at rallyplaylive.com with full OG/Twitter meta)
 - [x] Untimed gem economy unified — gem-earned card now shown on results screen for untimed sessions (commit c3dc1b4)
-- [x] Desmos partnership email sent to partnerships@desmos.com
 - [x] v0 Premium subscription canceled
