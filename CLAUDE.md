@@ -101,6 +101,11 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - `lib/subscription.ts` and `lib/premium-context.tsx` manage premium state
 - `app/upgrade/page.tsx` and `app/upgrade/success/page.tsx` for upgrade flow
 
+### Session storage — cookie-based (not localStorage)
+The Supabase browser client stores the session in a first-party cookie (`sb-*`), not localStorage. This survives Safari ITP's 7-day idle purge, which was causing students to re-log in every time they clicked a new challenge link from iMessage. Cookie config: `Max-Age=30 days`, `SameSite=Lax`, `Secure`.
+
+The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is pending Apple Developer Program enrollment.
+
 ## App Routes
 | Route | Purpose |
 |-------|---------|
@@ -203,6 +208,45 @@ Defined in `lib/categories.ts` with `isMath` flag:
 
 ## Recently Completed (May 29, 2026)
 - [x] Replaced Desmos with open-source calculator stack (MathLive + math.js + function-plot) — eliminates $100/mo recurring cost
+### Database Migrations
+- No Supabase CLI is configured. Migrations under `supabase/migrations/` are applied **manually** by pasting the SQL into the Supabase dashboard SQL Editor. The folder is a git-tracked history of what's been run, not an automated pipeline.
+- Apply migrations in filename order. After running a migration in the dashboard, the corresponding `.sql` file is what records "this ran" — don't skip committing it.
+- **Production DB can drift from the file history.** Some migrations on disk are already applied in prod (e.g. policies created by an earlier commit), and some features in the file history were never deployed against prod (e.g. `parent_tokens` from 008). Before running anything, check whether the target objects already exist.
+- **All new migrations must be idempotent.** Use `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and the `DROP POLICY IF EXISTS` → `CREATE POLICY` pattern (Postgres has no `CREATE POLICY IF NOT EXISTS`). Wrap conditional logic in `DO $$ ... $$` blocks. This makes re-runs safe when prod is already partially in sync.
+
+## Question Distractor Improvement Pipeline (agent-driven, no API cost)
+
+Rewrites wrong-answer choices to match real SAT distractor logic. Full spec: `/Users/colleenmaloney/Documents/Rally/answer-improvement-prompt.md`.
+
+### One-time setup
+1. Run `supabase/migrations/025_question_improvement_v2.sql` in the Supabase SQL editor.
+2. `pnpm install` (adds `tsx` and `dotenv` dev deps).
+3. Confirm `.env.local` has `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Process
+1. In Conductor, start an agent in the `rally` repo.
+2. Agent loops: `pnpm tsx scripts/q-fetch.ts --batch 50 --category Algebra` → reason → write to `scripts/.batch-pending.json` → `pnpm tsx scripts/q-write.ts scripts/.batch-pending.json`.
+3. Spot-check `improvement_v2` in Supabase as it processes.
+4. `pnpm tsx scripts/q-promote.ts --category Algebra --dry-run` then drop `--dry-run` to promote.
+5. Repeat for Data & Stats and AP Pre Calc.
+
+### Cost
+Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
+
+### Scripts
+- `scripts/q-fetch.ts` — pulls next batch of unprocessed math questions (writes JSON to stdout)
+- `scripts/q-write.ts <file>` — writes improvements from a JSON file into `improvement_v2` column
+- `scripts/q-promote.ts [--category X] [--dry-run]` — promotes staged improvements → live columns
+
+## Pending / Roadmap
+- [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
+- [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
+
+## Recently Completed (May 29, 2026)
+- [x] Reconciled DB ↔ migration-file drift — verified migrations 022, 023 applied; 024 unnecessary (waitlist already locked, `parent_tokens` doesn't exist)
+- [x] Pushed 3 backlogged commits to `origin/main` (H3/M4/M10 polish, waitlist+parent_tokens RLS, merge) — Vercel auto-deployed
+- [x] Removed duplicate `024_*.sql` file from repo root (was identical to the one in `supabase/migrations/`)
+- [x] Documented manual migration workflow + idempotency requirement in CLAUDE.md (this section's parent doc)
 
 ## Recently Completed (May 26, 2026)
 - [x] Landing page pushed to production (live at rallyplaylive.com with full OG/Twitter meta)

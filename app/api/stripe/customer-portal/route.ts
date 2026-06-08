@@ -1,7 +1,6 @@
 import Stripe from "stripe"
-import { createServerClient } from "@/lib/supabase/server"
-import { createServerClient as createAuthClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createRouteHandlerClient } from "@/lib/supabase/route"
 import { NextResponse } from "next/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -15,23 +14,13 @@ export async function POST(req: Request) {
     }
 
     // Verify the authenticated user matches the requested userId
-    const cookieStore = await cookies()
-    const authClient = createAuthClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll() {},
-        },
-      }
-    )
+    const authClient = await createRouteHandlerClient()
     const { data: { user: authUser } } = await authClient.auth.getUser()
     if (!authUser || authUser.id !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = createServerClient()
+    const supabase = createServiceRoleClient()
 
     const { data: user } = await supabase
       .from("users")

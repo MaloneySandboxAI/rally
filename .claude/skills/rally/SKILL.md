@@ -202,6 +202,87 @@ Display name priority: `user_metadata.display_name` > `user_metadata.full_name` 
 - `/join` is in `PUBLIC_PATHS` (no auth required)
 - Self-referral is blocked
 
+## Question & Distractor Standards
+
+When generating, reviewing, or inserting SAT questions into `sat_questions`, follow these rules. They apply to SQL migrations, Conductor prompts, the remediation script (`scripts/remediate-answers.ts`), and any future generator.
+
+### Distractor rules
+1. Every wrong answer must result from a **specific, realistic student error** — never a random number. Name the misconception. Common sources: sign error; forgetting to divide/multiply by the coefficient; reciprocal/inverted operation; off-by-one or dropped term; solving for the wrong quantity (found x but question asked for 2x or x²); arithmetic slip.
+2. All four choices must be **plausible and similar in form** — same magnitude, units, decimal places, sign conventions.
+3. Exactly **one correct answer**; no ambiguous or second-correct choices.
+4. The correct answer must **not stand out** (not the only positive, only fraction, longest option, or stuck in a fixed letter position). Shuffle its position across the question bank.
+5. **Order choices logically** (ascending numeric) when natural.
+
+### Explanation
+Every question must have a non-empty `explanation` column: 1–3 sentences showing how to reach the correct answer.
+
+### SAT fidelity guard
+If a question tests something **off-spec for the current Digital SAT** — e.g. explicit inverse functions f⁻¹(x), or content outside Algebra / Advanced Math / Problem-Solving & Data Analysis / Geometry & Trig — flag it for human review. Do not silently alter or delete it.
+
+### DB schema reminder
+Columns: `id`, `category`, `difficulty`, `subtopic`, `question` (stem), `option_a`–`option_d`, `correct` (letter A–D), `explanation`.
+
+### Few-shot example
+
+**Input:**
+```
+stem: "If 3x + 6 = 0, what is x?"
+choices: ["A) -2", "B) 2", "C) 6", "D) -6"]
+correct: A
+```
+
+**Output:**
+```json
+{
+  "stem": "If 3x + 6 = 0, what is x?",
+  "topic": "Algebra",
+  "difficulty": "easy",
+  "choices": ["A) -6", "B) -2", "C) 2", "D) 6"],
+  "correct": "B",
+  "explanation": "Subtract 6 from both sides: 3x = -6. Divide by 3: x = -2.",
+  "distractor_rationale": {
+    "A": "Subtracted 6 but forgot to divide by 3",
+    "C": "Sign error — solved 3x = 6 instead of 3x = -6",
+    "D": "Both errors: wrong sign and forgot to divide"
+  },
+  "needs_review": false,
+  "review_note": ""
+}
+```
+
+**Second example (reading comprehension):**
+
+**Input:**
+```
+stem: "Based on the passage, the author's primary purpose is to..."
+choices: ["A) argue against regulation", "B) describe a historical event", "C) compare two theories", "D) propose a new solution"]
+correct: B
+```
+
+**Output:**
+```json
+{
+  "stem": "Based on the passage, the author's primary purpose is to...",
+  "topic": "Reading Comprehension",
+  "difficulty": "medium",
+  "choices": [
+    "A) argue against a common misconception about the event",
+    "B) describe a historical event and its significance",
+    "C) compare competing interpretations of the event",
+    "D) propose a revision to the accepted timeline"
+  ],
+  "correct": "B",
+  "explanation": "The passage narrates the event chronologically and explains its lasting impact, without taking a position or comparing views.",
+  "distractor_rationale": {
+    "A": "Confuses descriptive tone with argumentative — passage states facts, doesn't rebut claims",
+    "C": "Passage mentions one interpretation, not a comparison of multiple",
+    "D": "No timeline challenge appears in the passage — student may conflate 'significance' with 'revision'"
+  },
+  "needs_review": false,
+  "review_note": ""
+}
+```
+
 ## Common Pitfalls to Avoid
 1. **Don't access browser APIs during render** — always guard with `typeof window !== "undefined"`
 2. **Don't use `NEXT_PUBLIC_` prefix for server-only secrets** — and vice versa

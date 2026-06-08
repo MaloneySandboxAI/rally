@@ -39,6 +39,16 @@ export async function middleware(request: NextRequest) {
   // cookies expire and getSession() returns null on subsequent loads.
   await supabase.auth.getUser()
 
+  // Re-set guest cookie as server-set so it survives Safari ITP
+  // (JS-set cookies are capped to ~7 days by ITP; server-set are not)
+  if (request.cookies.get("rally_is_guest")?.value === "true") {
+    response.cookies.set("rally_is_guest", "true", {
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+      sameSite: "lax",
+    })
+  }
+
   return response
 }
 

@@ -33,10 +33,8 @@ export default function ParentDashboardPage({ params }: { params: { token: strin
       try {
         const supabase = createClient()
         const { data: row, error } = await supabase
-          .from("parent_tokens")
-          .select("snapshot, student_name, updated_at")
-          .eq("token", params.token)
-          .single()
+          .rpc("get_parent_snapshot", { p_token: params.token })
+          .maybeSingle()
 
         if (error || !row) {
           setNotFound(true)

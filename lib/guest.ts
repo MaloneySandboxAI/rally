@@ -28,6 +28,7 @@ export function activateGuestMode(name: string): void {
   setGuestName(name)
   getOrCreateGuestId()
   localStorage.setItem(GUEST_FLAG_KEY, "true")
+  document.cookie = "rally_is_guest=true; path=/; max-age=31536000; samesite=lax"
 }
 
 export function isGuestMode(): boolean {
@@ -40,4 +41,5 @@ export function clearGuestMode(): void {
   localStorage.removeItem(GUEST_FLAG_KEY)
   localStorage.removeItem(GUEST_ID_KEY)
   localStorage.removeItem(GUEST_NAME_KEY)
+  document.cookie = "rally_is_guest=; path=/; max-age=0"
 }
