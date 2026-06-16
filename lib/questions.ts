@@ -72,16 +72,37 @@ export async function getQuestions(
  * Fetch a SINGLE question filtered by difficulty.
  * Used for within-round adaptive difficulty: start easy, bump up on correct, drop on wrong.
  * Falls back to any difficulty if no questions match the requested level.
+ *
+ * TODO: PostgREST URL length limits cause `not.in.(...)` to degrade once a user has
+ * seen ~500+ questions in a single category. Today the whole bank is ~1,945 questions
+ * across all categories so we're fine, but if any one category grows past ~500 we
+ * should move the NOT IN to a server-side Postgres function / RPC.
  */
 export async function getOneQuestion(
   category: string,
   difficulty: string,
   excludeIds: number[] = [],
-  subtopic?: string | null
+  subtopic?: string | null,
+  userId?: string
 ): Promise<Question | null> {
   if (typeof window === "undefined") return null
 
   const supabase = getSupabase()
+
+  // Layer the per-user persistent history on top of the in-memory excluded list.
+  // Guests (no userId) skip this entirely.
+  let mergedExcluded = excludeIds
+  if (userId) {
+    const { data: history } = await supabase
+      .from("user_question_history")
+      .select("question_id")
+      .eq("user_id", userId)
+      .eq("category", category)
+    const historyIds = history?.map(h => h.question_id as number) ?? []
+    if (historyIds.length > 0) {
+      mergedExcluded = Array.from(new Set([...excludeIds, ...historyIds]))
+    }
+  }
 
   let query = supabase
     .from("sat_questions")
@@ -93,11 +114,13 @@ export async function getOneQuestion(
     query = query.eq("subtopic", subtopic)
   }
 
-  if (excludeIds.length > 0) {
-    query = query.not("id", "in", `(${excludeIds.join(",")})`)
+  if (mergedExcluded.length > 0) {
+    query = query.not("id", "in", `(${mergedExcluded.join(",")})`)
   }
 
   const { data, error } = await query.limit(10)
+
+  let chosen: Question | null = null
 
   if (error) {
     console.error("[v0] Supabase single-question fetch error:", error)
@@ -115,8 +138,8 @@ export async function getOneQuestion(
       fallbackQuery = fallbackQuery.eq("subtopic", subtopic)
     }
 
-    if (excludeIds.length > 0) {
-      fallbackQuery = fallbackQuery.not("id", "in", `(${excludeIds.join(",")})`)
+    if (mergedExcluded.length > 0) {
+      fallbackQuery = fallbackQuery.not("id", "in", `(${mergedExcluded.join(",")})`)
     }
 
     const { data: fallbackData, error: fallbackError } = await fallbackQuery.limit(10)
@@ -126,11 +149,44 @@ export async function getOneQuestion(
     }
 
     const shuffled = [...fallbackData].sort(() => Math.random() - 0.5)
-    return shuffled[0] as Question
+    chosen = shuffled[0] as Question
+  } else {
+    const shuffled = [...data].sort(() => Math.random() - 0.5)
+    chosen = shuffled[0] as Question
   }
 
-  const shuffled = [...data].sort(() => Math.random() - 0.5)
-  return shuffled[0] as Question
+  // Fire-and-forget: record this question in the user's persistent history so it
+  // won't be picked again next session. Don't block rendering on the round-trip.
+  if (userId && chosen) {
+    supabase
+      .from("user_question_history")
+      .upsert(
+        { user_id: userId, question_id: chosen.id, category },
+        { onConflict: "user_id,question_id" }
+      )
+      .then(() => {}, () => {})
+  }
+
+  return chosen
+}
+
+/**
+ * Clear a user's persistent question history for a single category. Called when
+ * the in-memory used-IDs set has exhausted everything available — we wipe both
+ * the session set AND the DB rows so the user can replay from a clean slate.
+ */
+export async function resetQuestionHistoryForCategory(
+  userId: string,
+  category: string
+): Promise<void> {
+  if (typeof window === "undefined") return
+
+  const supabase = getSupabase()
+  await supabase
+    .from("user_question_history")
+    .delete()
+    .eq("user_id", userId)
+    .eq("category", category)
 }
 
 /**

@@ -9,7 +9,7 @@ import { completeReferralIfPending } from "@/lib/referrals"
 import { WorkArea, WorkAreaButton } from "@/components/rally/work-area"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import { getOneQuestion, getQuestionsByIds, type Question } from "@/lib/questions"
+import { getOneQuestion, getQuestionsByIds, resetQuestionHistoryForCategory, type Question } from "@/lib/questions"
 import { completeChallenge, updateCreatorResults, getChallenge, poolFromFlat, type ChallengeResult, type ChallengePool } from "@/lib/challenges"
 import { saveRoundStats } from "@/lib/stats"
 import { checkGemMilestone, GemMilestoneCelebration } from "@/components/rally/gem-milestone"
@@ -133,6 +133,12 @@ function PlayPageContent() {
   // Within-round adaptive difficulty — uses useRef so it's never lost on re-render
   // and NEVER depends on localStorage. Resets to 'easy' at the start of every round.
   const difficultyRef = useRef<string>("easy")
+
+  // Current Supabase user id, resolved once per round and reused by both the
+  // initial fetch and fetchNextQuestion so getOneQuestion can layer the
+  // per-user persistent history on top of the session-used-IDs set.
+  // undefined for guest play.
+  const userIdRef = useRef<string | undefined>(undefined)
 
   // Mark component as mounted (client-side only)
   useEffect(() => {
@@ -271,11 +277,19 @@ function PlayPageContent() {
         } else {
           difficultyRef.current = "easy"
         }
+        // Resolve current user id once for this round — getOneQuestion uses it
+        // to merge persistent history into the excluded set.
+        userIdRef.current = await getUserId()
+        const uid = userIdRef.current
         const excluded = getUsedIdsForCategory(categoryParam)
-        let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam)
-        if (!question && excluded.length > 0) {
+        let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam, uid)
+        if (!question) {
+          // True exhaustion: wipe both the in-memory set AND the persistent history.
           resetUsedIds(categoryParam)
-          question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam)
+          if (uid) {
+            await resetQuestionHistoryForCategory(uid, categoryParam)
+          }
+          question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam, uid)
           if (question) {
             toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
           }
@@ -314,11 +328,15 @@ function PlayPageContent() {
       }
 
       // SOLO MODE: fetch from Supabase
+      const uid = userIdRef.current
       const excluded = getUsedIdsForCategory(categoryParam)
-      let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam)
+      let question = await getOneQuestion(categoryParam, difficultyRef.current, excluded, subtopicParam, uid)
       if (!question) {
         resetUsedIds(categoryParam)
-        question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam)
+        if (uid) {
+          await resetQuestionHistoryForCategory(uid, categoryParam)
+        }
+        question = await getOneQuestion(categoryParam, difficultyRef.current, [], subtopicParam, uid)
         if (question) {
           toast.success("You've seen all questions! Starting fresh.", { duration: 3000 })
         }

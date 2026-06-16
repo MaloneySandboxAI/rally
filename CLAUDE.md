@@ -49,6 +49,9 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - `poolToFlat(pool)`: flattens `{easy, medium, hard}` to `[...easy, ...medium, ...hard]`
 - `poolFromFlat(flat)`: reconstructs by slicing at indices 0-5, 5-10, 10-15
 
+### Question history — per-user, persistent
+Logged-in users have their seen questions tracked in `user_question_history` (Supabase). The picker (`getOneQuestion` in `lib/questions.ts`) excludes any IDs that appear in this table for the current user + category. When a user has seen every question in a category, both the in-memory `sessionUsedIds` and the DB history are reset and a toast tells them they're starting fresh. Guest (unauthenticated) users keep the session-only behavior they had before. Challenge mode is unaffected — challenges share a pre-built question pool by design.
+
 ### Timer System (category-aware)
 - Math categories: Easy 45s, Medium 75s, Hard 120s
 - Reading categories: Easy 35s, Medium 55s, Hard 90s
