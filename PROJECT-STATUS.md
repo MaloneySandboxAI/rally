@@ -71,6 +71,11 @@
 - [x] Scoped FoxDog out beyond legal/accounts — its Flutter pipeline doesn't apply to Rally's Next.js stack
 - [x] Wrote `APP-STORE-LAUNCH-PLAN.md` (Cowork handoff doc — full Capacitor plan, listing checklist, risk flags)
 
+### App Store Launch — iOS Build Prep (June 26, 2026)
+- [x] **Apple Guideline 3.1.1 compliance** — hide all Stripe upgrade UI on iOS native (PR #7, live on prod). New `lib/use-platform.ts` `useIsNativeIOS()` hook (reads `window.Capacitor`, SSR-safe, defaults false). Gated entry points: gem-cap toasts + soloBlocked screen (`app/play/page.tsx`), header gem indicator (`components/rally/header.tsx`), account upgrade + parent-report cards (`app/account/page.tsx`), challenge-limit redirect (`components/rally/challenge-button.tsx`), and `/upgrade` deep-link redirect. Web/Android unchanged — gate can't trigger in a browser.
+- [x] Verified the hiding logic in-browser via simulated `window.Capacitor` (cards confirmed hidden); removed the temporary `?fakeios` QA toggle afterward (PR #8)
+- [ ] **Final verification on real iOS device via TestFlight** — only place `window.Capacitor` is genuinely "ios"; confirm no upgrade prompts surface anywhere in the app
+
 ### Database & Migrations (May 29, 2026)
 - [x] Reconciled DB ↔ migration file drift — verified 022 (`guest_sessions`, public challenge read) and 023 (challenge delete policies) applied; 024 confirmed unnecessary in prod (waitlist already locked, `parent_tokens` doesn't exist)
 - [x] Pushed 3 backlogged commits to `origin/main` (H3/M4/M10 polish + waitlist/parent_tokens RLS migration + merge)
@@ -82,7 +87,7 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
-- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Open risks: Stripe-vs-Apple-IAP (Guideline 3.1.1), Google OAuth in webview, Sign in with Apple requirement.
+- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep). Remaining risks: Google OAuth in webview, Sign in with Apple requirement. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
 - [ ] **iOS Universal Links** — now unblocked (Apple enrollment done); enables iMessage challenge links to open the app
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
@@ -136,8 +141,8 @@
 
 ## Build & Deploy Cheat Sheet
 ```bash
-# Push changes to production
-cd ~/Desktop/rally && git add -A && git commit -m "description" && git push origin main
+# Push changes to production (local clone lives at ~/conductor/repos/rally)
+cd ~/conductor/repos/rally && git add -A && git commit -m "description" && git push origin main
 
 # Vercel auto-deploys in ~30-35 seconds
 # Check deploy: https://vercel.com/ctgmaloney-7849s-projects/rally/deployments
