@@ -258,13 +258,16 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
 - [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
-- [ ] iOS App Store launch — execute `APP-STORE-LAUNCH-PLAN.md` (Capacitor wrap of the live Next.js site → TestFlight → submit). Done in Cowork. Open risks: Stripe vs Apple IAP (Guideline 3.1.1), Google OAuth in webview, Sign in with Apple.
+- [ ] iOS App Store launch — execute `APP-STORE-LAUNCH-PLAN.md` (Capacitor wrap of the live Next.js site → TestFlight → submit). Done in Cowork. Guideline 3.1.1 (Stripe vs Apple IAP) handled for v1 by hiding upgrade UI on iOS (see "iOS native platform — upgrade UI hidden"). Remaining risks: Google OAuth in webview, Sign in with Apple.
 - [ ] iOS Universal Links — now unblocked (Apple Developer enrollment complete); enables iMessage challenge links to open the app directly
 
 ## App Store Launch (June 26, 2026)
 - **Approach:** wrap the existing Next.js app in a **Capacitor** native iOS shell loading the live site (`https://rallyplaylive.com`). **No Flutter rebuild.** FoxDog was used **only** for the legal/account foundation and is scoped out of the build (its Flutter scaffold/ship pipeline doesn't apply to Next.js).
 - **Legal/account foundation (complete via FoxDog):** LLC formed, registered agent, EIN, DUNS, Apple Developer enrollment, store account.
 - **Full plan + Cowork handoff:** see `APP-STORE-LAUNCH-PLAN.md` at repo root.
+
+## Recently Completed (June 26, 2026)
+- [x] Apple Guideline 3.1.1 compliance — hide all Stripe upgrade UI on iOS native via `useIsNativeIOS()` (`lib/use-platform.ts`); see "iOS native platform — upgrade UI hidden" for the full list of gated entry points (PR #7, live on prod). Verified hiding logic in-browser with a simulated `window.Capacitor`, then removed the temporary `?fakeios` QA toggle (PR #8). Web/Android unchanged. Still TODO: final check on a real device via TestFlight.
 
 ## Recently Completed (May 29, 2026)
 - [x] Reconciled DB ↔ migration-file drift — verified migrations 022, 023 applied; 024 unnecessary (waitlist already locked, `parent_tokens` doesn't exist)
