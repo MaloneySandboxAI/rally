@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: May 29, 2026*
+*Last updated: June 26, 2026*
 
 ## Completed Features
 
@@ -64,6 +64,13 @@
 - [x] Guest mode 404 and broken flows
 - [x] Challenge showing score instead of accept screen
 
+### App Store Launch — Legal/Account Foundation (June 26, 2026)
+- [x] Legal entity / LLC formed, registered agent address on file, EIN + DUNS obtained (via FoxDog)
+- [x] Apple Developer Program enrollment + store account setup complete
+- [x] Decided packaging approach: **Capacitor native shell loading live site** (not Flutter, not static export)
+- [x] Scoped FoxDog out beyond legal/accounts — its Flutter pipeline doesn't apply to Rally's Next.js stack
+- [x] Wrote `APP-STORE-LAUNCH-PLAN.md` (Cowork handoff doc — full Capacitor plan, listing checklist, risk flags)
+
 ### Database & Migrations (May 29, 2026)
 - [x] Reconciled DB ↔ migration file drift — verified 022 (`guest_sessions`, public challenge read) and 023 (challenge delete policies) applied; 024 confirmed unnecessary in prod (waitlist already locked, `parent_tokens` doesn't exist)
 - [x] Pushed 3 backlogged commits to `origin/main` (H3/M4/M10 polish + waitlist/parent_tokens RLS migration + merge)
@@ -75,6 +82,8 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
+- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Open risks: Stripe-vs-Apple-IAP (Guideline 3.1.1), Google OAuth in webview, Sign in with Apple requirement.
+- [ ] **iOS Universal Links** — now unblocked (Apple enrollment done); enables iMessage challenge links to open the app
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
 - [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)

@@ -244,6 +244,13 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 ## Pending / Roadmap
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
 - [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
+- [ ] iOS App Store launch — execute `APP-STORE-LAUNCH-PLAN.md` (Capacitor wrap of the live Next.js site → TestFlight → submit). Done in Cowork. Open risks: Stripe vs Apple IAP (Guideline 3.1.1), Google OAuth in webview, Sign in with Apple.
+- [ ] iOS Universal Links — now unblocked (Apple Developer enrollment complete); enables iMessage challenge links to open the app directly
+
+## App Store Launch (June 26, 2026)
+- **Approach:** wrap the existing Next.js app in a **Capacitor** native iOS shell loading the live site (`https://rallyplaylive.com`). **No Flutter rebuild.** FoxDog was used **only** for the legal/account foundation and is scoped out of the build (its Flutter scaffold/ship pipeline doesn't apply to Next.js).
+- **Legal/account foundation (complete via FoxDog):** LLC formed, registered agent, EIN, DUNS, Apple Developer enrollment, store account.
+- **Full plan + Cowork handoff:** see `APP-STORE-LAUNCH-PLAN.md` at repo root.
 
 ## Recently Completed (May 29, 2026)
 - [x] Reconciled DB ↔ migration-file drift — verified migrations 022, 023 applied; 024 unnecessary (waitlist already locked, `parent_tokens` doesn't exist)
@@ -255,3 +262,18 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 - [x] Landing page pushed to production (live at rallyplaylive.com with full OG/Twitter meta)
 - [x] Untimed gem economy unified — gem-earned card now shown on results screen for untimed sessions (commit c3dc1b4)
 - [x] v0 Premium subscription canceled
+
+<!-- FOXDOG:START -->
+## FoxDog — get this app live on the App Store & Google Play
+
+FoxDog is connected to you via the `foxdog` MCP server. The user built this app and wants your
+help getting it live in the stores. They are likely **non-technical and new to the app-store
+process** — explain things simply, be reassuring, and check with them before each step.
+
+Start by calling the **`foxdog_start`** MCP tool, then do exactly what it returns, one step at a
+time (advance with `foxdog_next`). FoxDog gives you the precise next action, the command to run,
+and how to confirm it worked. Use `foxdog_doctor` to verify the local setup. Never ask the user
+to send FoxDog any signing keys or store credentials — those stay on their machine.
+
+Docs: https://foxdog.ai/docs
+<!-- FOXDOG:END -->
