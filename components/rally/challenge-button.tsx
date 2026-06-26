@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { createChallenge, getChallengeUrl } from "@/lib/challenges"
 import { getChallengePool } from "@/lib/questions"
 import { usePremium } from "@/lib/premium-context"
+import { useIsNativeIOS } from "@/lib/use-platform"
 import { getFreeChallengesRemaining, useDailyChallenge } from "@/lib/access"
 import { toast } from "sonner"
 import { SAT_CATEGORIES, AP_CATEGORIES } from "@/lib/categories"
@@ -17,6 +18,8 @@ import { createGroupChallenge, getGroupChallengeUrl } from "@/lib/group-challeng
 export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
   const categories = mode === "ap" ? AP_CATEGORIES : SAT_CATEGORIES
   const { isPremium } = usePremium()
+  // No Stripe upgrade redirect inside the iOS app (Apple Guideline 3.1.1)
+  const isNativeIOS = useIsNativeIOS()
   const [showPicker, setShowPicker] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [checkedAuth, setCheckedAuth] = useState(false)
@@ -57,7 +60,15 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
       return
     }
     if (!isPremium && freeChallengesLeft <= 0) {
-      window.location.href = "/upgrade?reason=challenges"
+      if (isNativeIOS) {
+        // Apple Guideline 3.1.1: no upgrade upsell on iOS — just inform.
+        toast("you've used your free challenges for today", {
+          description: "come back tomorrow to challenge again",
+          duration: 5000,
+        })
+      } else {
+        window.location.href = "/upgrade?reason=challenges"
+      }
       return
     }
     {
@@ -204,13 +215,17 @@ export function ChallengeButton({ mode = "sat" }: { mode?: "sat" | "ap" }) {
           </div>
           <div className="min-w-0 text-left">
             <div className="text-base font-extrabold leading-tight">
-              {!isLoggedIn ? "sign in to challenge" : !isPremium && freeChallengesLeft <= 0 ? "upgrade for challenges" : "start a challenge"}
+              {!isLoggedIn
+                ? "sign in to challenge"
+                : !isPremium && freeChallengesLeft <= 0
+                ? (isNativeIOS ? "out of challenges today" : "upgrade for challenges")
+                : "start a challenge"}
             </div>
             <p className="text-[11px] font-semibold text-white/60 truncate leading-tight mt-0.5">
               {!isLoggedIn
                 ? "compete head-to-head with friends"
                 : !isPremium && freeChallengesLeft <= 0
-                ? "get unlimited challenges with premium"
+                ? (isNativeIOS ? "come back tomorrow for more challenges" : "get unlimited challenges with premium")
                 : "1v1 or group · same questions · most gems wins"}
             </p>
           </div>

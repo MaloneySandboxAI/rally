@@ -6,6 +6,7 @@ import { useGems } from "@/lib/gem-context"
 import { usePremium } from "@/lib/premium-context"
 import { getHearts } from "@/lib/hearts"
 import { createClient } from "@/lib/supabase/client"
+import { useIsNativeIOS } from "@/lib/use-platform"
 import Link from "next/link"
 
 function getValidStreak(): number {
@@ -27,6 +28,8 @@ export function Header() {
   const [hearts, setHearts] = useState(5)
   const [streak, setStreak] = useState(0)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // Hide the link to the Stripe upgrade page inside the iOS app (Apple Guideline 3.1.1)
+  const isNativeIOS = useIsNativeIOS()
 
   useEffect(() => {
     setHearts(getHearts())
@@ -63,15 +66,26 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Daily gem cap indicator for free users */}
+        {/* Daily gem cap indicator for free users.
+            On iOS native, show the status but drop the /upgrade link (Apple Guideline 3.1.1). */}
         {!isPremium && (
-          <Link href="/upgrade" className="flex items-center gap-1 text-[10px] text-[#85B7EB]/40 hover:text-[#85B7EB]/60 transition-colors">
-            {dailyGemsCapped ? (
-              <span className="text-[#F97316] font-semibold">cap reached</span>
-            ) : (
-              <span>{dailyGemsRemaining}/{dailyGemCap} today</span>
-            )}
-          </Link>
+          isNativeIOS ? (
+            <span className="flex items-center gap-1 text-[10px] text-[#85B7EB]/40">
+              {dailyGemsCapped ? (
+                <span className="text-[#F97316] font-semibold">cap reached</span>
+              ) : (
+                <span>{dailyGemsRemaining}/{dailyGemCap} today</span>
+              )}
+            </span>
+          ) : (
+            <Link href="/upgrade" className="flex items-center gap-1 text-[10px] text-[#85B7EB]/40 hover:text-[#85B7EB]/60 transition-colors">
+              {dailyGemsCapped ? (
+                <span className="text-[#F97316] font-semibold">cap reached</span>
+              ) : (
+                <span>{dailyGemsRemaining}/{dailyGemCap} today</span>
+              )}
+            </Link>
+          )
         )}
 
         {isPremium && (

@@ -104,6 +104,20 @@ Logged-in users have their seen questions tracked in `user_question_history` (Su
 - `lib/subscription.ts` and `lib/premium-context.tsx` manage premium state
 - `app/upgrade/page.tsx` and `app/upgrade/success/page.tsx` for upgrade flow
 
+### iOS native platform — upgrade UI hidden
+The iOS app (Capacitor WebView, loads the live site via `capacitor.config.ts`) hides all entry points to `/upgrade` to comply with Apple Guideline 3.1.1 (digital subscriptions require Apple IAP, not Stripe). Detection uses `useIsNativeIOS()` in `lib/use-platform.ts`, which reads `window.Capacitor` directly (no `@capacitor/core` dependency, SSR-safe, defaults to `false`). Web and Android keep the existing Stripe flow unchanged.
+
+Entry points gated on iOS native:
+- `app/play/page.tsx` — gem-cap toasts (timed + untimed) drop the "unlock" action and just say "come back tomorrow"; the `soloBlocked` gem-cap screen drops the "unlock unlimited gems" button (hearts refill, which costs gems not money, still works).
+- `components/rally/header.tsx` — daily gem-cap indicator renders as a plain `<span>` instead of a `/upgrade` link.
+- `app/account/page.tsx` — free users see neither the "Upgrade to Premium" card nor the locked "Parent Progress Report" upsell; premium users keep "Manage Subscription" (account management, not a purchase).
+- `components/rally/challenge-button.tsx` — hitting the free-challenge limit shows an informational toast instead of redirecting to `/upgrade`; button label/subtext avoid "upgrade"/"premium" wording.
+- `app/upgrade/page.tsx` — if reached via a deep link on iOS, redirects to `/home` (and renders a spinner, never flashing the Stripe UI).
+
+Note: `components/rally/pro-banner.tsx` shows pricing but is dead code (imported nowhere), so it never surfaces on iOS. The `usePremium` gating itself is unchanged — only the upsell prompts are hidden.
+
+v1.1 plan: replace the hidden UI with native StoreKit IAP via a Capacitor plugin so iOS users can subscribe in-app, then restore the upgrade UI routed through IAP instead of Stripe.
+
 ### Session storage — cookie-based (not localStorage)
 The Supabase browser client stores the session in a first-party cookie (`sb-*`), not localStorage. This survives Safari ITP's 7-day idle purge, which was causing students to re-log in every time they clicked a new challenge link from iMessage. Cookie config: `Max-Age=30 days`, `SameSite=Lax`, `Secure`.
 

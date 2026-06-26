@@ -5,16 +5,27 @@ import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { Rocket, Check, Swords, Diamond, Zap, ChevronLeft, Loader2, Crown } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { useIsNativeIOS } from "@/lib/use-platform"
 import Link from "next/link"
 import { toast } from "sonner"
 
 function UpgradeContent() {
   const searchParams = useSearchParams()
   const reason = searchParams.get("reason") // "gem_cap" | "challenges" | null
+  const isNativeIOS = useIsNativeIOS()
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("annual")
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  // Apple Guideline 3.1.1: the Stripe upgrade flow must not be reachable inside
+  // the iOS app. Even though no entry points surface it on iOS, a deep link
+  // could land here — bounce back to /home.
+  useEffect(() => {
+    if (isNativeIOS) {
+      window.location.replace("/home")
+    }
+  }, [isNativeIOS])
 
   useEffect(() => {
     const supabase = createClient()
@@ -62,6 +73,16 @@ function UpgradeContent() {
     : reason === "challenges"
     ? "challenge friends and earn 4x gems"
     : "for less than a coffee a month"
+
+  // On iOS native, render nothing while the redirect effect above fires —
+  // never flash the Stripe upgrade UI (Apple Guideline 3.1.1).
+  if (isNativeIOS) {
+    return (
+      <div className="min-h-[100dvh] bg-[#021f3d] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#378ADD] animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[100dvh] bg-[#021f3d] flex flex-col">
