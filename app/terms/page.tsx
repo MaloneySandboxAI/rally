@@ -3,7 +3,7 @@
 import Link from "next/link"
 
 export default function TermsOfServicePage() {
-  const lastUpdated = "April 7, 2026"
+  const lastUpdated = "June 26, 2026"
 
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
@@ -19,7 +19,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-white font-bold text-base mb-2">1. Acceptance of Terms</h2>
           <p>
-            By accessing or using Rally (&quot;the App&quot;), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the App. You must be at least 13 years of age to use Rally.
+            By accessing or using Rally (&quot;the App&quot;), provided by Sandbox AI LLC, a Washington limited liability company (&quot;Sandbox AI,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the App. You must be at least 13 years of age to use Rally.
           </p>
         </section>
 
@@ -68,7 +68,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-white font-bold text-base mb-2">8. Limitation of Liability</h2>
           <p>
-            To the fullest extent permitted by law, Rally and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the App, including but not limited to loss of data, loss of profits, or damage to your device. Our total liability for any claim arising from these terms shall not exceed the amount you paid us in the 12 months preceding the claim, or $100, whichever is less.
+            To the fullest extent permitted by law, Sandbox AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the App, including but not limited to loss of data, loss of profits, or damage to your device. Our total liability for any claim arising from these terms shall not exceed the amount you paid us in the 12 months preceding the claim, or $100, whichever is less.
           </p>
         </section>
 
@@ -83,6 +83,9 @@ export default function TermsOfServicePage() {
           <h2 className="text-white font-bold text-base mb-2">10. Dispute Resolution</h2>
           <p>
             Any disputes arising from these terms or your use of Rally shall first be attempted to be resolved through good-faith negotiation. If negotiation fails, disputes shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association. You agree that any dispute resolution proceedings will be conducted on an individual basis and not as a class action.
+          </p>
+          <p className="mt-2">
+            These Terms are governed by the laws of the State of Washington, without regard to its conflict-of-law principles. Any arbitration shall be conducted in King County, Washington, unless the parties mutually agree to another venue.
           </p>
         </section>
 
@@ -99,6 +102,19 @@ export default function TermsOfServicePage() {
             For questions about these Terms of Service, contact us at:{" "}
             <a href="mailto:maloney@evaine.ai" className="text-[#378ADD] underline">maloney@evaine.ai</a>
           </p>
+        </section>
+
+        <section>
+          <h2 className="text-white font-bold text-base mb-2">13. Additional Terms for iOS App Users</h2>
+          <p className="mb-2">If you downloaded Rally from the Apple App Store, the following additional terms apply:</p>
+          <p className="mb-2"><span className="text-white font-semibold">Acknowledgment.</span> These Terms are between you and Sandbox AI only, and not with Apple Inc. (&quot;Apple&quot;). Sandbox AI, not Apple, is solely responsible for Rally and its content.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Scope of License.</span> The license granted to you is limited to a non-transferable license to use Rally on any Apple-branded product that you own or control, as permitted by the Apple App Store Usage Rules.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Maintenance and Support.</span> Sandbox AI is solely responsible for providing maintenance and support for Rally. Apple has no obligation to furnish any maintenance or support services.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Warranty.</span> Sandbox AI is solely responsible for any product warranties, whether express or implied by law, to the extent not effectively disclaimed. In the event of any failure of Rally to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price (if any) for Rally to you. To the maximum extent permitted by applicable law, Apple will have no other warranty obligation whatsoever with respect to Rally.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Product Claims.</span> Sandbox AI, not Apple, is responsible for addressing any claims relating to Rally or your use of it, including but not limited to product liability claims, claims that Rally fails to conform to any applicable legal or regulatory requirement, and claims arising under consumer protection or similar legislation.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Intellectual Property Rights.</span> In the event of any third-party claim that Rally or your possession and use of Rally infringes that third party&apos;s intellectual property rights, Sandbox AI, not Apple, will be solely responsible for the investigation, defense, settlement, and discharge of any such intellectual property infringement claim.</p>
+          <p className="mb-2"><span className="text-white font-semibold">Legal Compliance.</span> You represent and warrant that (i) you are not located in a country subject to a U.S. Government embargo or designated as a &quot;terrorist supporting&quot; country, and (ii) you are not listed on any U.S. Government list of prohibited or restricted parties.</p>
+          <p><span className="text-white font-semibold">Third-Party Beneficiary.</span> Apple and Apple&apos;s subsidiaries are third-party beneficiaries of these Terms, and upon your acceptance of these Terms, Apple will have the right (and will be deemed to have accepted the right) to enforce these Terms against you as a third-party beneficiary thereof.</p>
         </section>
       </main>
     </div>

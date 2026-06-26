@@ -3,7 +3,7 @@
 import Link from "next/link"
 
 export default function PrivacyPolicyPage() {
-  const lastUpdated = "April 7, 2026"
+  const lastUpdated = "June 26, 2026"
 
   return (
     <div className="min-h-screen bg-[#021f3d] pb-24">
@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-white font-bold text-base mb-2">1. Introduction</h2>
           <p>
-            Rally (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is a SAT preparation quiz application. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile and web application. Please read this policy carefully. By using Rally, you agree to the collection and use of information in accordance with this policy.
+            Rally is a SAT preparation quiz application operated by Sandbox AI LLC, a Washington limited liability company (&quot;Sandbox AI,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile and web application. Please read this policy carefully. By using Rally, you agree to the collection and use of information in accordance with this policy.
           </p>
         </section>
 
@@ -43,7 +43,10 @@ export default function PrivacyPolicyPage() {
           <p className="mt-2"><span className="text-white font-semibold">Vercel</span> — Application hosting and deployment. Processes web requests and collects basic analytics.</p>
           <p className="mt-2"><span className="text-white font-semibold">PostHog</span> — Product analytics. Collects anonymous usage data to help us understand how the app is used.</p>
           <p className="mt-2"><span className="text-white font-semibold">Google</span> — Authentication provider (if you sign in with Google). We receive your name and email only.</p>
+          <p className="mt-2"><span className="text-white font-semibold">Resend</span> — Email delivery provider. Sends authentication emails (sign-in links) on our behalf. Receives your email address to deliver the message; does not retain content beyond standard delivery logs.</p>
+          <p className="mt-2"><span className="text-white font-semibold">Stripe</span> — Payment processor for premium subscriptions on web. If you upgrade, Stripe receives your payment details directly (we never see your full card number). See Stripe&apos;s privacy policy at <a href="https://stripe.com/privacy" className="text-[#378ADD] underline">https://stripe.com/privacy</a> for details.</p>
           <p className="mt-2">We do not sell your personal information to any third party.</p>
+          <p className="mt-2">When you purchase a subscription via the iOS App Store (when available), Apple processes the payment and receives the data described in their App Store &amp; Privacy policy at <a href="https://www.apple.com/legal/privacy/data/" className="text-[#378ADD] underline">https://www.apple.com/legal/privacy/data/</a>.</p>
         </section>
 
         <section>
