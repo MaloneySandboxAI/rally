@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2, Users, Copy, Check, XCircle, Lock } from "lucide-react"
+import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2, Users, Copy, Check, XCircle, Lock, HelpCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { usePremium } from "@/lib/premium-context"
 import { useIsNativeIOS } from "@/lib/use-platform"
@@ -276,6 +276,13 @@ export default function AccountPage() {
 
         {/* Legal links */}
         <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
+          <Link href="/help" className="flex items-center justify-between px-5 py-4 border-b border-[#021f3d]/50 active:bg-[#378ADD]/10 transition-colors">
+            <div className="flex items-center gap-3">
+              <HelpCircle className="w-5 h-5 text-[#378ADD]" />
+              <span className="text-white font-semibold text-sm">Help &amp; Support</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[#85B7EB]/30" />
+          </Link>
           <Link href="/privacy" className="flex items-center justify-between px-5 py-4 border-b border-[#021f3d]/50 active:bg-[#378ADD]/10 transition-colors">
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-[#378ADD]" />
