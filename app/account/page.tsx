@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { User, Trash2, LogOut, Shield, FileText, ChevronRight, Crown, CreditCard, Loader2, Users, Copy, Check, XCircle, Lock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { usePremium } from "@/lib/premium-context"
+import { useIsNativeIOS } from "@/lib/use-platform"
 import { BottomNav } from "@/components/rally/bottom-nav"
 import { createParentToken, getParentToken, revokeParentToken, updateParentSnapshot } from "@/lib/parent-dashboard"
 
@@ -19,6 +20,8 @@ export default function AccountPage() {
   const [deleting, setDeleting] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const { isPremium, subscription } = usePremium()
+  // Hide Stripe-backed upgrade entry points inside the iOS app (Apple Guideline 3.1.1)
+  const isNativeIOS = useIsNativeIOS()
   const [userId, setUserId] = useState<string | null>(null)
   const [parentToken, setParentToken] = useState<string | null>(null)
   const [parentLinkLoading, setParentLinkLoading] = useState(false)
@@ -124,8 +127,10 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Subscription section */}
-        {!isGuest && (
+        {/* Subscription section.
+            On iOS native, free users see no "Upgrade to Premium" entry (Apple Guideline 3.1.1);
+            premium users keep "Manage Subscription" since that's account management, not a purchase. */}
+        {!isGuest && !(isNativeIOS && !isPremium) && (
           <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
             {isPremium ? (
               <button
@@ -166,8 +171,10 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* Parent dashboard */}
-        {!isGuest && (
+        {/* Parent dashboard.
+            On iOS native, hide the locked "premium feature" upsell for free users (Apple Guideline 3.1.1);
+            premium users keep the real parent-link tool. */}
+        {!isGuest && !(isNativeIOS && !isPremium) && (
           <div className="bg-[#0a2d4a] rounded-2xl overflow-hidden">
             {isPremium ? (
               <div className="px-5 py-4">

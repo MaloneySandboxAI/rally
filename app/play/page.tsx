@@ -15,6 +15,7 @@ import { saveRoundStats } from "@/lib/stats"
 import { checkGemMilestone, GemMilestoneCelebration } from "@/components/rally/gem-milestone"
 import { canPlaySolo, getHearts, loseHeart, incrementRoundsToday, refillHearts, HEARTS_CONFIG } from "@/lib/hearts"
 import { usePremium } from "@/lib/premium-context"
+import { useIsNativeIOS } from "@/lib/use-platform"
 import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import { StreakCelebration } from "@/components/rally/streak-celebration"
@@ -89,6 +90,8 @@ function PlayPageContent() {
   const isUntimed = searchParams.get("untimed") === "true" && !isChallenge // untimed practice mode (solo only)
   const { totalGems, addGems } = useGems()
   const { isPremium, dailyGemsCapped, dailyGemsRemaining, recordGemsEarned } = usePremium()
+  // Hide Stripe-backed upgrade prompts inside the iOS app (Apple Guideline 3.1.1)
+  const isNativeIOS = useIsNativeIOS()
 
   // Find category info
   const categoryInfo = CATEGORIES.find(c => c.id === categoryParam) || CATEGORIES[0]
@@ -663,11 +666,19 @@ function PlayPageContent() {
         updateParentSnapshot()
         setGemsAwarded(true)
         if (wasCapped) {
-          toast("you hit today’s gem limit!", {
-            description: "upgrade to earn unlimited gems",
-            action: { label: "unlock", onClick: () => { window.location.href = "/upgrade?reason=gem_cap" } },
-            duration: 8000,
-          })
+          if (isNativeIOS) {
+            // Apple Guideline 3.1.1: no upgrade upsell on iOS — just inform.
+            toast("you hit today’s gem limit!", {
+              description: "come back tomorrow for more gems",
+              duration: 6000,
+            })
+          } else {
+            toast("you hit today’s gem limit!", {
+              description: "upgrade to earn unlimited gems",
+              action: { label: "unlock", onClick: () => { window.location.href = "/upgrade?reason=gem_cap" } },
+              duration: 8000,
+            })
+          }
         }
         return
       }
@@ -751,14 +762,22 @@ function PlayPageContent() {
 
       // Show upsell if free user hit the daily gem cap
       if (wasCapped) {
-        toast("you hit today\u2019s gem limit!", {
-          description: "upgrade to earn unlimited gems",
-          action: {
-            label: "unlock",
-            onClick: () => { window.location.href = "/upgrade?reason=gem_cap" },
-          },
-          duration: 8000,
-        })
+        if (isNativeIOS) {
+          // Apple Guideline 3.1.1: no upgrade upsell on iOS \u2014 just inform.
+          toast("you hit today\u2019s gem limit!", {
+            description: "come back tomorrow for more gems",
+            duration: 6000,
+          })
+        } else {
+          toast("you hit today\u2019s gem limit!", {
+            description: "upgrade to earn unlimited gems",
+            action: {
+              label: "unlock",
+              onClick: () => { window.location.href = "/upgrade?reason=gem_cap" },
+            },
+            duration: 8000,
+          })
+        }
       }
 
       // GROUP CHALLENGE: submit entry to group_challenge_entries
@@ -871,17 +890,22 @@ function PlayPageContent() {
         <h1 className="text-2xl font-extrabold text-white mb-2">{soloBlocked}</h1>
         <p className="text-[#85B7EB]/60 text-sm mb-2">
           {isGemCap
-            ? "free players can earn 100 gems per day. upgrade for unlimited."
+            ? isNativeIOS
+              ? "free players can earn 100 gems per day. come back tomorrow!"
+              : "free players can earn 100 gems per day. upgrade for unlimited."
             : "wrong answers cost hearts. come back tomorrow or refill now."}
         </p>
         <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
           {isGemCap ? (
-            <a
-              href="/upgrade?reason=gem_cap"
-              className="bg-gradient-to-r from-[#378ADD] to-[#A855F7] text-white rounded-2xl py-3 px-6 font-bold text-center"
-            >
-              unlock unlimited gems
-            </a>
+            // Apple Guideline 3.1.1: no Stripe upgrade button inside the iOS app.
+            isNativeIOS ? null : (
+              <a
+                href="/upgrade?reason=gem_cap"
+                className="bg-gradient-to-r from-[#378ADD] to-[#A855F7] text-white rounded-2xl py-3 px-6 font-bold text-center"
+              >
+                unlock unlimited gems
+              </a>
+            )
           ) : (
             <button
               onClick={() => {
