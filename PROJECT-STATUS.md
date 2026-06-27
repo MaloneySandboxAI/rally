@@ -75,6 +75,8 @@
 - [x] **Apple Guideline 3.1.1 compliance** — hide all Stripe upgrade UI on iOS native (PR #7, live on prod). New `lib/use-platform.ts` `useIsNativeIOS()` hook (reads `window.Capacitor`, SSR-safe, defaults false). Gated entry points: gem-cap toasts + soloBlocked screen (`app/play/page.tsx`), header gem indicator (`components/rally/header.tsx`), account upgrade + parent-report cards (`app/account/page.tsx`), challenge-limit redirect (`components/rally/challenge-button.tsx`), and `/upgrade` deep-link redirect. Web/Android unchanged — gate can't trigger in a browser.
 - [x] Verified the hiding logic in-browser via simulated `window.Capacitor` (cards confirmed hidden); removed the temporary `?fakeios` QA toggle afterward (PR #8)
 - [ ] **Final verification on real iOS device via TestFlight** — only place `window.Capacitor` is genuinely "ios"; confirm no upgrade prompts surface anywhere in the app
+- [x] **iOS Universal Links (web side)** — challenge/group/referral links open the app instead of a fresh Safari context. AASA file served at `app/.well-known/apple-app-site-association/route.ts` (reads `APPLE_TEAM_ID`, bundle `com.rallyplaylive.app`; linked paths `/challenge/*`, `/group/*`, `/c/*`, `/g/*`, `/join`, `/home`). Capacitor `appUrlOpen` handler in `lib/capacitor-deep-links.ts` via the `window.Capacitor` bridge (no `@capacitor/app` web import — same pattern as `useIsNativeIOS`), mounted through `components/rally/deep-link-init.tsx` in `app/layout.tsx`. Companion cookie-session fix (Part 2) was already live on main. Branch `MaloneySandboxAI/universal-links`, **not yet pushed/merged.**
+- [ ] **iOS Universal Links — native steps** (manual, on user's Mac): `APPLE_TEAM_ID` set in Vercel ✓; still need `pnpm add @capacitor/app` + `npx cap sync ios`, Xcode → Associated Domains (`applinks:www.rallyplaylive.com`, `applinks:rallyplaylive.com`), and a physical-device iMessage test
 
 ### Database & Migrations (May 29, 2026)
 - [x] Reconciled DB ↔ migration file drift — verified 022 (`guest_sessions`, public challenge read) and 023 (challenge delete policies) applied; 024 confirmed unnecessary in prod (waitlist already locked, `parent_tokens` doesn't exist)
@@ -88,7 +90,7 @@
 
 ### Immediate (This Sprint)
 - [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep). Remaining risks: Google OAuth in webview, Sign in with Apple requirement. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
-- [ ] **iOS Universal Links** — now unblocked (Apple enrollment done); enables iMessage challenge links to open the app
+- [x] ~~iOS Universal Links (web side)~~ — AASA route + Capacitor deep-link handler implemented (branch `MaloneySandboxAI/universal-links`, not yet merged); native Xcode steps remain (see iOS Build Prep)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
 - [x] ~~Unify gem economy~~ — untimed mode earns solo-rate gems; gem-earned card now visible on results screen (commit c3dc1b4)
