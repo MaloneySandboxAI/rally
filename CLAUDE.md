@@ -123,6 +123,9 @@ The Supabase browser client stores the session in a first-party cookie (`sb-*`),
 
 The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is pending Apple Developer Program enrollment.
 
+### Reviewer bypass (App Store submission only)
+`app/auth/reviewer/route.ts` accepts `?token=XXX` and signs the browser in as `reviewer@rallyplaylive.com` if the token matches `REVIEWER_BYPASS_TOKEN`. Used solely for Apple's App Store reviewer who cannot receive magic link emails. The route returns 404 if the env var is missing, so removing the env var from Vercel disables the bypass cleanly without a code change. Remove after v1 is approved.
+
 ## App Routes
 | Route | Purpose |
 |-------|---------|
