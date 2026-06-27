@@ -121,7 +121,20 @@ v1.1 plan: replace the hidden UI with native StoreKit IAP via a Capacitor plugin
 ### Session storage — cookie-based (not localStorage)
 The Supabase browser client stores the session in a first-party cookie (`sb-*`), not localStorage. This survives Safari ITP's 7-day idle purge, which was causing students to re-log in every time they clicked a new challenge link from iMessage. Cookie config: `Max-Age=30 days`, `SameSite=Lax`, `Secure`.
 
-The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is pending Apple Developer Program enrollment.
+The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is implemented — see "iOS Universal Links" below.
+
+### iOS Universal Links — open challenge links in the app
+So iMessage challenge links open the native Rally app (where the student is already authenticated) instead of a fresh Safari context, the app serves an Apple App Site Association (AASA) file and the native shell routes incoming links to the matching in-app page.
+
+- **AASA route**: `app/.well-known/apple-app-site-association/route.ts` serves the AASA JSON with `Content-Type: application/json`. It reads `process.env.APPLE_TEAM_ID` at request time (`dynamic = "force-dynamic"`) and pairs it with the bundle ID `com.rallyplaylive.app`. Linked paths: `/challenge/*`, `/group/*`, `/c/*`, `/g/*`, `/join`, `/home`.
+- **Deep-link handler**: `lib/capacitor-deep-links.ts` (`initDeepLinks()`) listens for Capacitor's `appUrlOpen` event and `window.location.replace()`s to `pathname + search` for `*.rallyplaylive.com` URLs so the auth gate runs on the destination. It reaches the App plugin via the global `window.Capacitor.Plugins.App` bridge rather than importing `@capacitor/app`/`@capacitor/core` — same no-hard-dependency, SSR-safe pattern as `lib/use-platform.ts`, so nothing is added to the web bundle and no npm install is needed for the web build. `components/rally/deep-link-init.tsx` (`<DeepLinkInit />`, mounted in `app/layout.tsx`) calls it once on mount; it's a no-op outside the native iOS shell.
+
+**Manual steps required (one-time, outside this repo):**
+1. **Apple Team ID** — from developer.apple.com → Membership Details (10-char alphanumeric). _(Already set in Vercel for this project per the build instructions.)_
+2. **Vercel env** — add `APPLE_TEAM_ID=XXXXXXXXXX` for Production + Preview, then redeploy so the AASA route serves the real value (not `REPLACE_WITH_TEAM_ID`).
+3. **Native iOS project** — install the App plugin so `appUrlOpen` fires: `pnpm add @capacitor/app` then `npx cap sync ios` (run on the user's Mac; the sandbox can't reach npm).
+4. **Xcode** — `npx cap open ios`, select the Rally target → Signing & Capabilities → "+ Capability" → **Associated Domains**, add `applinks:www.rallyplaylive.com` and `applinks:rallyplaylive.com`. Confirm the Team is selected under Signing.
+5. **Verify** — visit `https://www.rallyplaylive.com/.well-known/apple-app-site-association` (should return JSON with the real team + bundle ID), validate at `https://search.developer.apple.com/appsearch-validation-tool/`, then test on a **physical device** (Universal Links don't work in the simulator from iMessage): send a challenge link via iMessage from another phone, tap it → opens the Rally app at `/challenge/CODE`, already logged in.
 
 ### Reviewer bypass (App Store submission only)
 `app/auth/reviewer/route.ts` accepts `?token=XXX` and signs the browser in as `reviewer@rallyplaylive.com` if the token matches `REVIEWER_BYPASS_TOKEN`. Used solely for Apple's App Store reviewer who cannot receive magic link emails. The route returns 404 if the env var is missing, so removing the env var from Vercel disables the bypass cleanly without a code change. Remove after v1 is approved.
