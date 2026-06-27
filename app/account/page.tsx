@@ -18,6 +18,7 @@ export default function AccountPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const { isPremium, subscription } = usePremium()
   // Hide Stripe-backed upgrade entry points inside the iOS app (Apple Guideline 3.1.1)
@@ -59,21 +60,35 @@ export default function AccountPage() {
   async function handleDeleteAccount() {
     if (deleteConfirmText !== "DELETE") return
     setDeleting(true)
-
-    // Clear all Rally localStorage data
-    const keysToRemove = [
-      "rally_gems", "rally_stats", "rally_difficulty_level",
-      "rally_round_history", "rally_streak", "rally_last_played",
-      "rally_hearts", "rally_hearts_date", "rally_rounds_today",
-      "rally_rounds_date", "rally_is_pro", "rally_streak_freeze",
-      "rally_is_guest", "rally_last_login", "rally_age_verified",
-    ]
-    keysToRemove.forEach(key => localStorage.removeItem(key))
+    setDeleteError(null)
 
     if (!isGuest) {
-      // Sign out from Supabase (this removes the session)
-      // Note: Full server-side data deletion requires Supabase admin API
-      // Users can also email maloney@evaine.ai for complete data removal
+      // Hard-delete the server-side account (auth.users + all related data).
+      // Must succeed before we clear local state, so the user isn't left
+      // signed out with their data still on the server.
+      try {
+        const res = await fetch("/api/account/delete", { method: "POST" })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setDeleteError(data.error || "Failed to delete account. Please try again or contact support.")
+          setDeleting(false)
+          return
+        }
+      } catch {
+        setDeleteError("Something went wrong. Please try again or contact support.")
+        setDeleting(false)
+        return
+      }
+    }
+
+    // Clear all Rally localStorage data (gems, stats, streaks, guest id, etc.)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key?.startsWith("rally_")) localStorage.removeItem(key)
+    }
+
+    if (!isGuest) {
+      // Sign out from Supabase (clears the auth session cookie)
       const supabase = createClient()
       await supabase.auth.signOut()
     }
@@ -322,9 +337,13 @@ export default function AccountPage() {
           <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 space-y-4">
             <h3 className="text-red-400 font-bold text-base">Delete your account?</h3>
             <p className="text-[#85B7EB]/60 text-sm">
-              This will permanently delete all your local data (gems, stats, streaks) and sign you out.
-              {!isGuest && " For complete removal of server-side data, you can also email maloney@evaine.ai."}
+              {isGuest
+                ? "This will permanently delete all your local data (gems, stats, streaks) and sign you out."
+                : "This permanently erases your account and all associated data (gems, stats, streaks, history) from our servers. This cannot be undone."}
             </p>
+            {deleteError && (
+              <p className="text-red-400 text-sm font-semibold">{deleteError}</p>
+            )}
             <div>
               <label className="text-[#85B7EB]/50 text-xs block mb-1">
                 Type DELETE to confirm
@@ -342,6 +361,7 @@ export default function AccountPage() {
                 onClick={() => {
                   setShowDeleteConfirm(false)
                   setDeleteConfirmText("")
+                  setDeleteError(null)
                 }}
                 className="flex-1 border border-[#378ADD]/30 text-[#85B7EB] rounded-xl py-3 font-bold text-sm transition-all hover:bg-[#378ADD]/10"
               >

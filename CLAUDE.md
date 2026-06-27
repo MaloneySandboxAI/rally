@@ -34,7 +34,7 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - **Shared question pool**: 15 questions per challenge (5 easy + 5 medium + 5 hard), stored as flat `integer[]` in DB
 - **Adaptive difficulty**: Both players start easy, bump up on correct, drop on wrong, drawing from the same pool
 - **DB sentinel**: `creator_score = -1` means creator hasn't played yet; `status` is 'pending' or 'completed'
-- **H2H records**: `head_to_head_records` table tracks win/loss/draw between player pairs, deduplicated by sorted user IDs
+- **H2H records**: `head_to_head` table tracks win/loss/draw between player pairs, deduplicated by sorted user IDs
 - **Share cards**: Screenshot-friendly result cards with gradient backgrounds, rendered via canvas
 
 ### Group/Classroom Challenges
@@ -133,6 +133,17 @@ Configured providers in Supabase (Authentication → Providers → Apple):
 - Secret Key: 180-day JWT signed with the .p8 key (Key ID `866P6U22N8`, Team ID `U9VU383K79`) from the Apple Developer Portal — regenerate every ~180 days (calendar reminder for end of November 2026) with `~/Documents/Rally/generate-apple-jwt.mjs` and paste into Supabase before web sign-in breaks.
 
 Apple Guideline 4.8: required because Rally offers Google OAuth.
+
+### Account deletion (Guideline 5.1.1(v))
+`POST /api/account/delete` (`app/api/account/delete/route.ts`) hard-deletes the caller's account. It identifies the user from their session cookie (`createRouteHandlerClient().auth.getUser()` — never trusts a client-supplied id), then uses the service-role client (`createServiceRoleClient()`, `SUPABASE_SERVICE_ROLE_KEY`) to **explicitly clean up every table that references the user before** calling `auth.admin.deleteUser(uid)`:
+- **Anonymized (row kept, link nulled)** so other players' games survive: `challenges.creator_id/challenger_id`, `group_challenges.creator_id`, `group_challenge_entries.player_id`, `feedback.user_id`, and `users.referred_by` (on anyone this user referred).
+- **Deleted (the user's own data)**: `head_to_head` (either player — the table is `head_to_head`, confirmed via live FK audit + `lib/head-to-head.ts` + migration 019; an earlier draft mistakenly used `head_to_head_records`), `referrals` (referrer or referred — NOT NULL FKs, can't null), `push_subscriptions`, `user_state`, `parent_tokens` (ignored if the table doesn't exist in prod), `user_seen_questions` (keyed on `player_id` **text**, no FK). `user_question_history` (uuid FK, CASCADE) and `public.users` (CASCADE) are cleaned up by `deleteUser()` automatically; `public.users` is also deleted explicitly first so its NO ACTION dependents (`referrals`) are already cleared.
+
+Why explicit cleanup instead of relying on FK cascades: several of those FKs use the default **NO ACTION** rule and `public.users` isn't created by any migration (so its delete rule is unknown and prod can drift) — `deleteUser()` alone would throw an FK violation. Explicit cleanup makes the endpoint correct regardless of live FK rules, so **no migration has to be applied for it to work**. Per-table cleanup errors are logged but non-fatal; `deleteUser()` is the decisive gate (500 on failure). Stripe is intentionally untouched (Stripe owns that data lifecycle).
+
+Client side (`app/account/page.tsx`, `handleDeleteAccount`): for logged-in users it `POST`s the endpoint and aborts on failure (showing `deleteError` inline) so the user is never left signed-out with data still on the server; on success (and for guests, who have no server account) it removes **all** `rally_*` localStorage keys, signs out, and redirects to `/login`.
+
+Audit note: if a table created directly in the Supabase dashboard (not in `supabase/migrations/`) also FKs to `auth.users` with NO ACTION and holds rows for the user, `deleteUser()` will 500 — run the FK-rule audit query (see the account-deletion task notes) against live Supabase; if it surfaces an unlisted table, add one `step(...)` line to the route.
 
 ### iOS Universal Links — open challenge links in the app
 So iMessage challenge links open the native Rally app (where the student is already authenticated) instead of a fresh Safari context, the app serves an Apple App Site Association (AASA) file and the native shell routes incoming links to the matching in-app page.

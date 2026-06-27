@@ -142,9 +142,9 @@ export default function HelpPage() {
           <div>
             <h3 className="text-white font-bold text-base mb-1">How do I delete my account?</h3>
             <p>
-              Email us at{" "}
-              <a href="mailto:maloney@evaine.ai" className="text-[#378ADD] underline">maloney@evaine.ai</a>{" "}
-              and we&apos;ll delete your account and all associated data. We&apos;re working on a self-service deletion option in-app.
+              Go to the Account page and tap <span className="text-white font-semibold">Delete account</span>. This
+              permanently erases your account and all associated data and cannot be undone. You can also email us at{" "}
+              <a href="mailto:maloney@evaine.ai" className="text-[#378ADD] underline">maloney@evaine.ai</a> for help.
             </p>
           </div>
 
