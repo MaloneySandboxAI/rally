@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: June 26, 2026*
+*Last updated: June 26, 2026 (Sign in with Apple)*
 
 ## Completed Features
 
@@ -21,6 +21,7 @@
 ### Auth & Accounts
 - [x] Google OAuth login
 - [x] Email magic link login
+- [x] Sign in with Apple (native iOS Face ID/Touch ID sheet + web OAuth fallback) — Guideline 4.8 (required since Google OAuth is offered)
 - [x] Guest play mode
 - [x] Age verification (COPPA)
 - [x] Profile setup flow
@@ -77,6 +78,8 @@
 - [ ] **Final verification on real iOS device via TestFlight** — only place `window.Capacitor` is genuinely "ios"; confirm no upgrade prompts surface anywhere in the app
 - [x] **iOS Universal Links (web side)** — challenge/group/referral links open the app instead of a fresh Safari context. AASA file served at `app/.well-known/apple-app-site-association/route.ts` (reads `APPLE_TEAM_ID`, bundle `com.rallyplaylive.app`; linked paths `/challenge/*`, `/group/*`, `/c/*`, `/g/*`, `/join`, `/home`). Capacitor `appUrlOpen` handler in `lib/capacitor-deep-links.ts` via the `window.Capacitor` bridge (no `@capacitor/app` web import — same pattern as `useIsNativeIOS`), mounted through `components/rally/deep-link-init.tsx` in `app/layout.tsx`. Companion cookie-session fix (Part 2) was already live on main. Branch `MaloneySandboxAI/universal-links`, **not yet pushed/merged.**
 - [ ] **iOS Universal Links — native steps** (manual, on user's Mac): `APPLE_TEAM_ID` set in Vercel ✓; still need `pnpm add @capacitor/app` + `npx cap sync ios`, Xcode → Associated Domains (`applinks:www.rallyplaylive.com`, `applinks:rallyplaylive.com`), and a physical-device iMessage test
+- [x] **Sign in with Apple (web side)** — `lib/auth-apple.ts` `signInWithApple(redirectTo?)`: native iOS uses the Face ID/Touch ID sheet via `window.Capacitor.Plugins.SignInWithApple` bridge → `supabase.auth.signInWithIdToken`; web/Android fall back to `signInWithOAuth({ provider: "apple" })`. "Continue with Apple" button added above Google in `app/login/page.tsx`. No `@capacitor/core`/plugin web import (matches `useIsNativeIOS` pattern), so web build needs no npm install. Supabase Apple provider + Apple Services ID/Bundle ID/.p8 JWT already configured. Committed on branch `MaloneySandboxAI/algiers`, **not yet pushed/merged.**
+- [ ] **Sign in with Apple — native steps** (manual, on user's Mac): `pnpm add @capacitor-community/apple-sign-in` + `npx cap sync ios` (registers the native bridge); TestFlight test of the native sheet. If native token exchange errors, add a matching `nonce` to `authorize()` (omitted for now to match the spec; untestable until TestFlight). Rotate the Supabase Apple secret JWT (~180 days, ≈ end of Nov 2026) via `~/Documents/Rally/generate-apple-jwt.mjs`.
 
 ### Database & Migrations (May 29, 2026)
 - [x] Reconciled DB ↔ migration file drift — verified 022 (`guest_sessions`, public challenge read) and 023 (challenge delete policies) applied; 024 confirmed unnecessary in prod (waitlist already locked, `parent_tokens` doesn't exist)
@@ -89,7 +92,7 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
-- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep). Remaining risks: Google OAuth in webview, Sign in with Apple requirement. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
+- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep); Guideline 4.8 (Sign in with Apple) now satisfied (web side built — see iOS Build Prep). Remaining risk: Google OAuth in webview. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
 - [x] ~~iOS Universal Links (web side)~~ — AASA route + Capacitor deep-link handler implemented (branch `MaloneySandboxAI/universal-links`, not yet merged); native Xcode steps remain (see iOS Build Prep)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
