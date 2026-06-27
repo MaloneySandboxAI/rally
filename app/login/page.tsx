@@ -4,6 +4,7 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Mail } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { signInWithApple } from "@/lib/auth-apple"
 
 export default function LoginPage() {
   return (
@@ -30,6 +31,25 @@ function LoginContent() {
     const base = `${window.location.origin}/auth/callback`
     if (returnTo) return `${base}?returnTo=${encodeURIComponent(returnTo)}`
     return base
+  }
+
+  async function handleAppleSignIn() {
+    setLoading(true)
+    setError(null)
+    // On native iOS this resolves with a session (no redirect); on web it
+    // redirects to Apple. Only re-enable the button if something went wrong.
+    const { error } = await signInWithApple(getCallbackUrl())
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    } else if (
+      typeof window !== "undefined" &&
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).Capacitor?.isNativePlatform?.()
+    ) {
+      // Native sign-in succeeded without a redirect — send the user on.
+      router.push(returnTo ?? "/home")
+    }
   }
 
   async function handleGoogleSignIn() {
@@ -79,6 +99,19 @@ function LoginContent() {
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-4">
+        {/* Apple — first per Apple's iOS convention (Guideline 4.8) */}
+        <button
+          onClick={handleAppleSignIn}
+          disabled={loading}
+          className="w-full bg-black text-white rounded-2xl py-4 px-5 flex items-center justify-center gap-3 font-bold text-base shadow-lg transition-all active:scale-[0.98] hover:brightness-110 disabled:opacity-60"
+        >
+          {/* Apple logo (official monochrome silhouette) */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.05 12.04c-.03-2.82 2.3-4.17 2.4-4.24-1.31-1.91-3.34-2.18-4.06-2.2-1.73-.17-3.37 1.02-4.25 1.02-.87 0-2.22-1-3.65-.97-1.88.03-3.61 1.09-4.58 2.77-1.95 3.39-.5 8.41 1.4 11.16.93 1.35 2.04 2.86 3.5 2.81 1.4-.06 1.93-.91 3.62-.91 1.69 0 2.17.91 3.65.88 1.51-.03 2.46-1.38 3.38-2.73 1.06-1.56 1.5-3.07 1.53-3.15-.03-.02-2.94-1.13-2.97-4.48zM14.28 3.78c.77-.93 1.29-2.23 1.15-3.52-1.11.04-2.46.74-3.25 1.67-.71.82-1.33 2.15-1.16 3.41 1.24.1 2.5-.63 3.26-1.56z"/>
+          </svg>
+          Continue with Apple
+        </button>
+
         {/* Google */}
         <button
           onClick={handleGoogleSignIn}

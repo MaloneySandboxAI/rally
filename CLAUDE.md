@@ -123,6 +123,17 @@ The Supabase browser client stores the session in a first-party cookie (`sb-*`),
 
 The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is implemented — see "iOS Universal Links" below.
 
+### Sign in with Apple
+Rally supports Sign in with Apple via `lib/auth-apple.ts` (`signInWithApple(redirectTo?)`), wired into the "Continue with Apple" button at the top of `app/login/page.tsx` (above Google — Apple's iOS convention). On iOS native (Capacitor) it invokes the native Face ID / Touch ID sheet, then hands the returned identity token to Supabase via `signInWithIdToken({ provider: "apple" })` — no browser redirect. On web and Android it falls back to Supabase's standard `signInWithOAuth({ provider: "apple" })` redirect flow.
+
+Like the rest of the codebase, the helper reaches the native plugin through the global `window.Capacitor.Plugins.SignInWithApple` bridge rather than importing `@capacitor-community/apple-sign-in` / `@capacitor/core` (matches `lib/use-platform.ts` and `lib/capacitor-deep-links.ts`) — so the web bundle has no hard Capacitor dependency and the web build needs no npm install. The native iOS project still needs the plugin: `pnpm add @capacitor-community/apple-sign-in` then `npx cap sync ios` (on the user's Mac), which registers the bridge.
+
+Configured providers in Supabase (Authentication → Providers → Apple):
+- Client IDs: `com.rallyplaylive.web,com.rallyplaylive.app` (Services ID for web, Bundle ID for native)
+- Secret Key: 180-day JWT signed with the .p8 key (Key ID `866P6U22N8`, Team ID `U9VU383K79`) from the Apple Developer Portal — regenerate every ~180 days (calendar reminder for end of November 2026) with `~/Documents/Rally/generate-apple-jwt.mjs` and paste into Supabase before web sign-in breaks.
+
+Apple Guideline 4.8: required because Rally offers Google OAuth.
+
 ### iOS Universal Links — open challenge links in the app
 So iMessage challenge links open the native Rally app (where the student is already authenticated) instead of a fresh Safari context, the app serves an Apple App Site Association (AASA) file and the native shell routes incoming links to the matching in-app page.
 
