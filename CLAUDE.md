@@ -121,7 +121,20 @@ v1.1 plan: replace the hidden UI with native StoreKit IAP via a Capacitor plugin
 ### Session storage — cookie-based (not localStorage)
 The Supabase browser client stores the session in a first-party cookie (`sb-*`), not localStorage. This survives Safari ITP's 7-day idle purge, which was causing students to re-log in every time they clicked a new challenge link from iMessage. Cookie config: `Max-Age=30 days`, `SameSite=Lax`, `Secure`.
 
-The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is pending Apple Developer Program enrollment.
+The companion fix (iOS Universal Links so iMessage opens the Rally app directly instead of Safari) is implemented — see "iOS Universal Links" below.
+
+### iOS Universal Links — open challenge links in the app
+So iMessage challenge links open the native Rally app (where the student is already authenticated) instead of a fresh Safari context, the app serves an Apple App Site Association (AASA) file and the native shell routes incoming links to the matching in-app page.
+
+- **AASA route**: `app/.well-known/apple-app-site-association/route.ts` serves the AASA JSON with `Content-Type: application/json`. It reads `process.env.APPLE_TEAM_ID` at request time (`dynamic = "force-dynamic"`) and pairs it with the bundle ID `com.rallyplaylive.app`. Linked paths: `/challenge/*`, `/group/*`, `/c/*`, `/g/*`, `/join`, `/home`.
+- **Deep-link handler**: `lib/capacitor-deep-links.ts` (`initDeepLinks()`) listens for Capacitor's `appUrlOpen` event and `window.location.replace()`s to `pathname + search` for `*.rallyplaylive.com` URLs so the auth gate runs on the destination. It reaches the App plugin via the global `window.Capacitor.Plugins.App` bridge rather than importing `@capacitor/app`/`@capacitor/core` — same no-hard-dependency, SSR-safe pattern as `lib/use-platform.ts`, so nothing is added to the web bundle and no npm install is needed for the web build. `components/rally/deep-link-init.tsx` (`<DeepLinkInit />`, mounted in `app/layout.tsx`) calls it once on mount; it's a no-op outside the native iOS shell.
+
+**Manual steps required (one-time, outside this repo):**
+1. **Apple Team ID** — from developer.apple.com → Membership Details (10-char alphanumeric). _(Already set in Vercel for this project per the build instructions.)_
+2. **Vercel env** — add `APPLE_TEAM_ID=XXXXXXXXXX` for Production + Preview, then redeploy so the AASA route serves the real value (not `REPLACE_WITH_TEAM_ID`).
+3. **Native iOS project** — install the App plugin so `appUrlOpen` fires: `pnpm add @capacitor/app` then `npx cap sync ios` (run on the user's Mac; the sandbox can't reach npm).
+4. **Xcode** — `npx cap open ios`, select the Rally target → Signing & Capabilities → "+ Capability" → **Associated Domains**, add `applinks:www.rallyplaylive.com` and `applinks:rallyplaylive.com`. Confirm the Team is selected under Signing.
+5. **Verify** — visit `https://www.rallyplaylive.com/.well-known/apple-app-site-association` (should return JSON with the real team + bundle ID), validate at `https://search.developer.apple.com/appsearch-validation-tool/`, then test on a **physical device** (Universal Links don't work in the simulator from iMessage): send a challenge link via iMessage from another phone, tap it → opens the Rally app at `/challenge/CODE`, already logged in.
 
 ### Reviewer bypass (App Store submission only)
 `app/auth/reviewer/route.ts` accepts `?token=XXX` and signs the browser in as `reviewer@rallyplaylive.com` if the token matches `REVIEWER_BYPASS_TOKEN`. Used solely for Apple's App Store reviewer who cannot receive magic link emails. The route returns 404 if the env var is missing, so removing the env var from Vercel disables the bypass cleanly without a code change. Remove after v1 is approved.
@@ -262,7 +275,7 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 - [ ] Desmos API: obtain production API key (partnership email sent May 26, 2026 — awaiting reply; currently using demo key)
 - [ ] Decide on parent dashboard: either run migration 008 to create `parent_tokens` table (the `/parent/[token]` route is shipped in code but non-functional in prod), or remove the route from the app
 - [ ] iOS App Store launch — execute `APP-STORE-LAUNCH-PLAN.md` (Capacitor wrap of the live Next.js site → TestFlight → submit). Done in Cowork. Guideline 3.1.1 (Stripe vs Apple IAP) handled for v1 by hiding upgrade UI on iOS (see "iOS native platform — upgrade UI hidden"). Remaining risks: Google OAuth in webview, Sign in with Apple.
-- [ ] iOS Universal Links — now unblocked (Apple Developer enrollment complete); enables iMessage challenge links to open the app directly
+- [x] iOS Universal Links — web side implemented (AASA route + Capacitor deep-link handler); see "iOS Universal Links" section. Remaining: manual native steps (set `APPLE_TEAM_ID` is done in Vercel; `pnpm add @capacitor/app` + `npx cap sync ios`; Xcode Associated Domains; physical-device test)
 
 ## App Store Launch (June 26, 2026)
 - **Approach:** wrap the existing Next.js app in a **Capacitor** native iOS shell loading the live site (`https://rallyplaylive.com`). **No Flutter rebuild.** FoxDog was used **only** for the legal/account foundation and is scoped out of the build (its Flutter scaffold/ship pipeline doesn't apply to Next.js).
@@ -270,6 +283,7 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 - **Full plan + Cowork handoff:** see `APP-STORE-LAUNCH-PLAN.md` at repo root.
 
 ## Recently Completed (June 26, 2026)
+- [x] iOS Universal Links (web side) — AASA file served at `app/.well-known/apple-app-site-association/route.ts` (keyed off `APPLE_TEAM_ID` + bundle `com.rallyplaylive.app`), Capacitor `appUrlOpen` deep-link handler in `lib/capacitor-deep-links.ts` via the `window.Capacitor` bridge (no `@capacitor/app` web import — matches `lib/use-platform.ts` pattern), wired into `app/layout.tsx` through `components/rally/deep-link-init.tsx`. Branch `MaloneySandboxAI/universal-links`, not yet pushed/merged. Part 2 (cookie session) was already live on main. Remaining = native-project manual steps (see "iOS Universal Links").
 - [x] Apple Guideline 3.1.1 compliance — hide all Stripe upgrade UI on iOS native via `useIsNativeIOS()` (`lib/use-platform.ts`); see "iOS native platform — upgrade UI hidden" for the full list of gated entry points (PR #7, live on prod). Verified hiding logic in-browser with a simulated `window.Capacitor`, then removed the temporary `?fakeios` QA toggle (PR #8). Web/Android unchanged. Still TODO: final check on a real device via TestFlight.
 
 ## Recently Completed (May 29, 2026)

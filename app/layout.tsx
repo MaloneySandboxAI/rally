@@ -7,6 +7,7 @@ import { GemProvider } from '@/lib/gem-context'
 import { PremiumProvider } from '@/lib/premium-context'
 import { QuestionTrackerProvider } from '@/lib/question-tracker-context'
 import { AuthGate } from '@/components/rally/auth-gate'
+import { DeepLinkInit } from '@/components/rally/deep-link-init'
 import { Toaster } from 'sonner'
 import './globals.css'
 
@@ -83,6 +84,7 @@ export default function RootLayout({
             <PremiumProvider>
             <QuestionTrackerProvider>
               <AuthGate>
+                <DeepLinkInit />
                 {children}
                 <FeedbackButton />
                 <Toaster position="top-center" />
