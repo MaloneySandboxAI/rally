@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: June 28, 2026 (Account deletion — Apple 5.1.1(v))*
+*Last updated: June 28, 2026 (Gameplay fixes — timeout auto-skip + gem-display copy)*
 
 ## Completed Features
 
@@ -66,6 +66,11 @@
 - [x] Guest mode 404 and broken flows
 - [x] Challenge showing score instead of accept screen
 
+### Bug Fixes & QA (June 28, 2026)
+- [x] **Phantom timeout auto-skipping the next question** (commit `25bf1fa`, live on prod) — when a question's timer hit 0, the next question loaded then *instantly* auto-failed itself and skipped ahead (console showed two back-to-back "Next question" fetches with no input). Root cause: the time-up effect fires on `timeRemaining===0 && selectedAnswer===null`, and right after an auto-advance the new question briefly inherited the stale `timeRemaining===0` before the (later-defined) reset-timer effect re-initialized the clock. Fix: gate the time-up effect on `isTimerActive` and set `isTimerActive=false` during the swap in `advanceToNextQuestion()`.
+- [x] **Timeout transition double-render** (commit `2c3937a`, live on prod) — hardened the question swap: `advanceToNextQuestion()` holds the `isLoadingNext` spinner across the entire swap (fetch + increment + answer reset) as one batched commit, so no frame can paint the next question while the timed-out answer reveal is still showing. Fixes the unmasked transition that was visible in challenge/group (pool) mode.
+- [x] **Gem milestone copy** (commit `2c3937a`, live on prod) — the big end-of-round `GemMilestoneCelebration` overlay (fires when crossing a *lifetime* total like 500) now reads "N total gems!" / "you've reached…" instead of "gems earned!", so it isn't misread as this round's earnings. Per-question gem popups and the daily-cap math were left unchanged (they're correct).
+
 ### App Store Launch — Legal/Account Foundation (June 26, 2026)
 - [x] Legal entity / LLC formed, registered agent address on file, EIN + DUNS obtained (via FoxDog)
 - [x] Apple Developer Program enrollment + store account setup complete
@@ -126,7 +131,7 @@
 ---
 
 ## Technical Debt
-- `app/play/page.tsx` is ~1900 lines — could be split into smaller components
+- `app/play/page.tsx` is ~1160 lines with tightly-coupled timer/answer/advance effects — the timeout/advance flow is subtle (see CLAUDE.md > "Question transition + the phantom-timeout bug"); could be split into smaller components/hooks
 - `next.config.mjs` has `ignoreBuildErrors: true` — should fix underlying type errors
 - Calculator stack migrated to open-source (was Desmos $100/mo demo key)
 - No automated tests

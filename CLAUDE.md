@@ -321,6 +321,11 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 - **Legal/account foundation (complete via FoxDog):** LLC formed, registered agent, EIN, DUNS, Apple Developer enrollment, store account.
 - **Full plan + Cowork handoff:** see `APP-STORE-LAUNCH-PLAN.md` at repo root.
 
+## Recently Completed (June 28, 2026)
+- [x] Fixed **phantom timeout auto-skipping the next question** (commit `25bf1fa`, live on prod) — after a question timed out, the next one instantly auto-failed and skipped ahead. The time-up effect was re-firing on the fresh question's stale `timeRemaining===0` before the reset-timer effect re-initialized the clock. Gated the time-up effect on `isTimerActive` and set `isTimerActive=false` during the swap. See "Question transition + the phantom-timeout bug".
+- [x] Hardened the timeout→next-question transition (commit `2c3937a`, live on prod) — `advanceToNextQuestion()` holds the spinner across the whole swap as one batched commit; `fetchNextQuestion()` is now append-only.
+- [x] Gem milestone overlay copy (commit `2c3937a`, live on prod) — "N total gems!"/"you've reached…" instead of "gems earned!" so the lifetime-milestone celebration isn't misread as round earnings. See "Gem display notes".
+
 ## Recently Completed (June 26, 2026)
 - [x] iOS Universal Links (web side) — AASA file served at `app/.well-known/apple-app-site-association/route.ts` (keyed off `APPLE_TEAM_ID` + bundle `com.rallyplaylive.app`), Capacitor `appUrlOpen` deep-link handler in `lib/capacitor-deep-links.ts` via the `window.Capacitor` bridge (no `@capacitor/app` web import — matches `lib/use-platform.ts` pattern), wired into `app/layout.tsx` through `components/rally/deep-link-init.tsx`. Branch `MaloneySandboxAI/universal-links`, not yet pushed/merged. Part 2 (cookie session) was already live on main. Remaining = native-project manual steps (see "iOS Universal Links").
 - [x] Apple Guideline 3.1.1 compliance — hide all Stripe upgrade UI on iOS native via `useIsNativeIOS()` (`lib/use-platform.ts`); see "iOS native platform — upgrade UI hidden" for the full list of gated entry points (PR #7, live on prod). Verified hiding logic in-browser with a simulated `window.Capacitor`, then removed the temporary `?fakeios` QA toggle (PR #8). Web/Android unchanged. Still TODO: final check on a real device via TestFlight.
