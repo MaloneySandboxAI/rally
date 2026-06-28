@@ -37,15 +37,25 @@ export async function POST() {
     }
   }
 
-  // --- Preserve other players' games: anonymize the user's link, keep the row ---
-  await step("challenges.creator_id", () =>
-    admin.from("challenges").update({ creator_id: null }).eq("creator_id", uid))
-  await step("challenges.challenger_id", () =>
-    admin.from("challenges").update({ challenger_id: null }).eq("challenger_id", uid))
-  await step("group_challenges.creator_id", () =>
-    admin.from("group_challenges").update({ creator_id: null }).eq("creator_id", uid))
-  await step("group_challenge_entries.player_id", () =>
-    admin.from("group_challenge_entries").update({ player_id: null }).eq("player_id", uid))
+  // --- Challenges ---
+  // The challenges_protect_fields BEFORE UPDATE trigger (migration 022) blocks
+  // anyone but the creator from changing creator_* columns, and the service
+  // role has no auth.uid(), so we cannot null creator_id via UPDATE. DELETE
+  // isn't guarded by that trigger and also removes creator_name/score/results
+  // (the user's data), which is what deletion compliance actually requires.
+  await step("challenges.creator (delete)", () =>
+    admin.from("challenges").delete().eq("creator_id", uid))
+  // Where the user was only the challenger, keep the creator's game but strip
+  // the user's identity. challenger_* are not creator fields, so the trigger
+  // allows this update.
+  await step("challenges.challenger (anonymize)", () =>
+    admin.from("challenges").update({ challenger_id: null, challenger_name: null }).eq("challenger_id", uid))
+  // Group challenges: name columns are NOT NULL, so anonymize rather than null,
+  // keeping the shared game intact for other participants.
+  await step("group_challenges.creator", () =>
+    admin.from("group_challenges").update({ creator_id: null, creator_name: "Deleted user" }).eq("creator_id", uid))
+  await step("group_challenge_entries.player", () =>
+    admin.from("group_challenge_entries").update({ player_id: null, player_name: "Deleted user" }).eq("player_id", uid))
   await step("feedback.user_id", () =>
     admin.from("feedback").update({ user_id: null }).eq("user_id", uid))
   // users.referred_by references public.users(id) — null it on anyone this user referred
