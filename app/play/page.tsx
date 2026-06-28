@@ -157,12 +157,12 @@ function PlayPageContent() {
       if (!check.allowed) {
         setSoloBlocked(check.reason)
       }
-      // Also block if daily gem cap is already reached
-      if (dailyGemsCapped) {
-        setSoloBlocked("you've hit today's gem limit")
-      }
+      // Note: dailyGemsCapped no longer blocks gameplay — earning is capped
+      // automatically in the results screen via recordGemsEarned + Math.min().
+      // Users always get to play; they just stop accumulating gems past the
+      // daily cap.
     }
-  }, [dailyGemsCapped])
+  }, [])
 
   // Helper: draw the next question from challenge pool at current difficulty
   function drawFromPool(difficulty: string): Question | null {
@@ -668,9 +668,10 @@ function PlayPageContent() {
         if (wasCapped) {
           if (isNativeIOS) {
             // Apple Guideline 3.1.1: no upgrade upsell on iOS — just inform.
-            toast("you hit today’s gem limit!", {
-              description: "come back tomorrow for more gems",
-              duration: 6000,
+            // Gameplay isn't blocked, so frame it positively.
+            toast("you’ve maxed out today’s gems!", {
+              description: "keep playing for streak + practice",
+              duration: 4000,
             })
           } else {
             toast("you hit today’s gem limit!", {
@@ -764,9 +765,10 @@ function PlayPageContent() {
       if (wasCapped) {
         if (isNativeIOS) {
           // Apple Guideline 3.1.1: no upgrade upsell on iOS \u2014 just inform.
-          toast("you hit today\u2019s gem limit!", {
-            description: "come back tomorrow for more gems",
-            duration: 6000,
+          // Gameplay isn't blocked, so frame it positively.
+          toast("you\u2019ve maxed out today\u2019s gems!", {
+            description: "keep playing for streak + practice",
+            duration: 4000,
           })
         } else {
           toast("you hit today\u2019s gem limit!", {
@@ -879,52 +881,33 @@ function PlayPageContent() {
 
   // Solo play blocked (no hearts, daily round limit, or gem cap reached)
   if (soloBlocked && !isChallenge) {
-    const isGemCap = dailyGemsCapped
+    // Gem cap no longer reaches this branch — it only handles hearts/round-limit
+    // gating, where the user can refill hearts with gems to keep playing.
     return (
       <div className="min-h-screen bg-[#021f3d] flex flex-col items-center justify-center px-6 text-center">
-        {isGemCap ? (
-          <Diamond className="w-16 h-16 text-[#EF9F27] mb-4" />
-        ) : (
-          <Heart className="w-16 h-16 text-red-400 mb-4" />
-        )}
+        <Heart className="w-16 h-16 text-red-400 mb-4" />
         <h1 className="text-2xl font-extrabold text-white mb-2">{soloBlocked}</h1>
         <p className="text-[#85B7EB]/60 text-sm mb-2">
-          {isGemCap
-            ? isNativeIOS
-              ? "free players can earn 100 gems per day. come back tomorrow!"
-              : "free players can earn 100 gems per day. upgrade for unlimited."
-            : "wrong answers cost hearts. come back tomorrow or refill now."}
+          wrong answers cost hearts. come back tomorrow or refill now.
         </p>
         <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
-          {isGemCap ? (
-            // Apple Guideline 3.1.1: no Stripe upgrade button inside the iOS app.
-            isNativeIOS ? null : (
-              <a
-                href="/upgrade?reason=gem_cap"
-                className="bg-gradient-to-r from-[#378ADD] to-[#A855F7] text-white rounded-2xl py-3 px-6 font-bold text-center"
-              >
-                unlock unlimited gems
-              </a>
-            )
-          ) : (
-            <button
-              onClick={() => {
-                const success = refillHearts(totalGems, addGems)
-                if (success) {
-                  setHearts(HEARTS_CONFIG.maxHearts)
-                  setSoloBlocked(null)
-                  toast.success("hearts refilled!", { duration: 2000 })
-                } else {
-                  toast.error("not enough gems", { duration: 2000 })
-                }
-              }}
-              className="bg-[#EF9F27] text-white rounded-2xl py-3 px-6 font-bold flex items-center justify-center gap-2"
-            >
-              <Diamond className="w-4 h-4 fill-white" />
-              refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
-            </button>
-          )}
-          <a
+          <button
+            onClick={() => {
+              const success = refillHearts(totalGems, addGems)
+              if (success) {
+                setHearts(HEARTS_CONFIG.maxHearts)
+                setSoloBlocked(null)
+                toast.success("hearts refilled!", { duration: 2000 })
+              } else {
+                toast.error("not enough gems", { duration: 2000 })
+              }
+            }}
+            className="bg-[#EF9F27] text-white rounded-2xl py-3 px-6 font-bold flex items-center justify-center gap-2"
+          >
+            <Diamond className="w-4 h-4 fill-white" />
+            refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
+          </button>
+          <
             href="/home"
             className="bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-3 px-6 font-bold text-center"
           >
@@ -980,6 +963,7 @@ function PlayPageContent() {
           sessionQuestions={sessionQuestions}
           creatorScore={creatorScore}
           isUntimed={isUntimed}
+          gemsCapped={dailyGemsCapped}
         />
         {gemMilestone && (
           <GemMilestoneCelebration
