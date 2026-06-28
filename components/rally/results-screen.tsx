@@ -55,9 +55,10 @@ export interface ResultsScreenProps {
   sessionQuestions: Question[]
   creatorScore: number | null
   isUntimed?: boolean
+  gemsCapped?: boolean
 }
 
-export function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore, isUntimed }: ResultsScreenProps) {
+export function ResultsScreen({ score, isChallenge, isCreatorChallenge, challengeCode, creatorChallengeCode, categoryId, categoryName, onPlayAgain, answerResults, sessionQuestions, creatorScore, isUntimed, gemsCapped }: ResultsScreenProps) {
   const { totalGems } = useGems()
   const [isGuest, setIsGuest] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -207,6 +208,11 @@ export function ResultsScreen({ score, isChallenge, isCreatorChallenge, challeng
             </div>
           ))}
         </div>
+        {gemsCapped && !isChallenge && (
+          <div className="text-xs text-[#EF9F27] mt-2 text-center">
+            ⭐ you've earned today's max gems — keep playing for streak + practice
+          </div>
+        )}
       </div>
 
       {/* Streak + Difficulty Reached + Weak Spot Nudge */}

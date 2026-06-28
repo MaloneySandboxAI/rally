@@ -28,6 +28,11 @@ Defined in `lib/categories.ts` with `isMath` flag:
 - Speed bonus: 1.5x for fast answers (timed only — no speed bonus in untimed)
 - Untimed practice: same as solo timed rates (Easy 10, Medium 20, Hard 40); daily gem cap still applies for free users
 
+### Daily gem cap (earning-only — never blocks gameplay)
+Free users earn up to 100 gems/day. This is an **EARNING** cap, not a gameplay cap — users always get to play and earn streak credit even after hitting it. The cap is enforced via `recordGemsEarned` + `Math.min(totalEarned, dailyGemsRemaining)` in the results-awarding flow in `app/play/page.tsx`; `dailyGemsCapped` no longer sets `soloBlocked` (the `soloBlocked` screen now only handles hearts/round-limit gating, where the user can refill hearts with gems). When capped, the results screen shows a positive "you've earned today's max gems" notice (via the `gemsCapped` prop on `ResultsScreen`).
+
+On iOS native, no upsell is shown (Guideline 3.1.1) — capped users see a friendly "you've maxed out today's gems! keep playing for streak + practice" toast instead of an upgrade prompt. Web/Android keep the existing "upgrade for unlimited gems" toast. v1.1 plan: add IAP and re-introduce an iOS upgrade path.
+
 ### Challenge System
 - **Flow**: Creator picks category -> shares link -> THEN plays their round (link must be shared before play unlocks)
 - **Scoring**: Winner determined by total gems earned (not correct count) — rewards harder difficulty
