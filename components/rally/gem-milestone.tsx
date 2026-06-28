@@ -27,11 +27,11 @@ export function checkGemMilestone(gemsBefore: number, gemsAfter: number): number
 }
 
 function getGemMilestoneMessage(milestone: number): string {
-  if (milestone >= 10000) return `Legendary! ${milestone.toLocaleString()} gems earned!`
-  if (milestone >= 5000) return `Incredible! ${milestone.toLocaleString()} gems!`
-  if (milestone >= 1000) return `You've earned ${milestone.toLocaleString()} gems! You're on your way!`
-  if (milestone >= 500) return `${milestone} gems earned! Keep going!`
-  return `First milestone — ${milestone} gems!`
+  if (milestone >= 10000) return `Legendary! ${milestone.toLocaleString()} gems total!`
+  if (milestone >= 5000) return `Incredible! ${milestone.toLocaleString()} total gems!`
+  if (milestone >= 1000) return `You've reached ${milestone.toLocaleString()} gems! You're on your way!`
+  if (milestone >= 500) return `${milestone} total gems! Keep going!`
+  return `First milestone — ${milestone} gems total!`
 }
 
 interface GemMilestoneProps {
@@ -91,7 +91,7 @@ export function GemMilestoneCelebration({ milestone, onDismiss }: GemMilestonePr
         <h2 className="text-4xl font-extrabold text-[#F59E0B] mb-2">
           {milestone.toLocaleString()}
         </h2>
-        <p className="text-white font-bold text-lg mb-1">gems earned!</p>
+        <p className="text-white font-bold text-lg mb-1">total gems!</p>
         <p className="text-[#85B7EB]/60 text-sm mb-6">
           {getGemMilestoneMessage(milestone)}
         </p>

@@ -71,6 +71,13 @@ Logged-in users have their seen questions tracked in `user_question_history` (Su
 - Stats, subtopic levels, streaks, and gems all adjust on round completion; daily gem cap applies for free users
 - Gem-earned summary card shown on results screen with breakdown by difficulty
 
+### Question transition (no double-render)
+Advancing to the next question (timeout auto-advance AND the "next" button) goes through `advanceToNextQuestion()` in `app/play/page.tsx`. It holds the `isLoadingNext` spinner up across the **entire** swap — `fetchNextQuestion()` only *appends* to `sessionQuestions`; the `currentQuestion` increment + `selectedAnswer`/`pendingAnswer` reset + spinner clear all land in one batched commit. This is intentional: previously challenge/group (pool) mode flipped `isLoadingNext` true→false synchronously inside `fetchNextQuestion`, so no spinner masked the swap and a frame could paint the next question while the timed-out answer reveal (`selectedAnswer === -1`) was still on screen. Don't move `isLoadingNext` management back into `fetchNextQuestion`.
+
+### Gem display notes
+- The per-correct-answer floating popup (`FloatingGemIndicator`) shows that **single question's** value (challenge hard = 160, etc.) — accurate, not a bug. It can exceed the round summary because the **daily gem cap** trims the actual award (`Math.min(totalEarned, dailyGemsRemaining)`) below the sum of per-question values. Expected behavior.
+- The big end-of-round "N total gems!" overlay is `GemMilestoneCelebration` (`components/rally/gem-milestone.tsx`), which fires when crossing a **lifetime** total (100/500/1000…), not round earnings. Copy says "total gems" / "you've reached" precisely so it isn't misread as this round's haul.
+
 ### Calculator Integration
 - Component: `components/rally/free-calculator.tsx` (MathLive + math.js + function-plot — MIT/Apache 2.0)
 - WorkArea (`components/rally/work-area.tsx`) conditionally renders FreeCalculator for math categories, basic calculator for non-math

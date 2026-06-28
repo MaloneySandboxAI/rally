@@ -315,9 +315,12 @@ function PlayPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, isQuestionsReady, categoryParam, challengeCode, creatorChallengeCode, groupCode])
 
-  // Fetch the NEXT question adaptively after each answer
+  // Fetch the NEXT question adaptively after each answer.
+  // NOTE: this only APPENDS to sessionQuestions — it does NOT manage the
+  // isLoadingNext spinner or advance currentQuestion. The transition (spinner
+  // masking + atomic state swap) is owned by advanceToNextQuestion so that no
+  // intermediate frame can render the next question with a stale answer reveal.
   const fetchNextQuestion = useCallback(async () => {
-    setIsLoadingNext(true)
     try {
       // CHALLENGE MODE: draw from shared pool (instant, no fetch)
       if (challengePoolRef.current) {
@@ -326,7 +329,6 @@ function PlayPageContent() {
           setSessionQuestions(prev => [...prev, question])
           console.log(`[rally] Pool draw — difficulty: ${difficultyRef.current}, question id: ${question.id}`)
         }
-        setIsLoadingNext(false)
         return
       }
 
@@ -351,8 +353,6 @@ function PlayPageContent() {
       }
     } catch (err) {
       console.error("[v0] Error fetching next question:", err)
-    } finally {
-      setIsLoadingNext(false)
     }
   }, [categoryParam])
 
@@ -380,6 +380,24 @@ function PlayPageContent() {
   // Speed bonus tracking for current question
   const questionStartTimeRef = useRef(Date.now())
   const [currentQuestionSpeedBonus, setCurrentQuestionSpeedBonus] = useState(false)
+
+  // Atomically advance to the next question. Holds the loading spinner up
+  // across the ENTIRE swap so no frame can render the next question while the
+  // previous answer reveal (selectedAnswer) is still set. fetchNextQuestion
+  // only appends; the increment + answer reset land in a single batched commit
+  // alongside clearing isLoadingNext, so the transition is glitch-free in both
+  // solo (real fetch) and challenge/group (instant pool draw) modes.
+  const advanceToNextQuestion = useCallback(async () => {
+    setIsLoadingNext(true)
+    try {
+      await fetchNextQuestion()
+    } finally {
+      setCurrentQuestion(prev => prev + 1)
+      setPendingAnswer(null)
+      setSelectedAnswer(null)
+      setIsLoadingNext(false)
+    }
+  }, [fetchNextQuestion])
 
   // Compute derived values (safe even when questions not ready - will use defaults)
   const question = sessionQuestions[currentQuestion]
@@ -452,10 +470,7 @@ function PlayPageContent() {
 
     setTimeout(async () => {
       if (currentQuestion < TOTAL_QUESTIONS - 1) {
-        await fetchNextQuestion()
-        setCurrentQuestion(prev => prev + 1)
-        setPendingAnswer(null)
-        setSelectedAnswer(null)
+        await advanceToNextQuestion()
       } else {
         setShowResults(true)
       }
@@ -563,21 +578,15 @@ function PlayPageContent() {
 
   const handleNextQuestion = useCallback(async () => {
     if (isUntimed) {
-      // Untimed: always fetch next, endless play
-      await fetchNextQuestion()
-      setCurrentQuestion(prev => prev + 1)
-      setPendingAnswer(null)
-      setSelectedAnswer(null)
+      // Untimed: always advance, endless play
+      await advanceToNextQuestion()
     } else if (currentQuestion < TOTAL_QUESTIONS - 1) {
-      // fetchNextQuestion handles both modes: draws from pool in challenge, fetches from Supabase in solo
-      await fetchNextQuestion()
-      setCurrentQuestion(prev => prev + 1)
-      setPendingAnswer(null)
-      setSelectedAnswer(null)
+      // advanceToNextQuestion handles both modes: draws from pool in challenge, fetches from Supabase in solo
+      await advanceToNextQuestion()
     } else {
       setShowResults(true)
     }
-  }, [currentQuestion, fetchNextQuestion, isUntimed])
+  }, [currentQuestion, advanceToNextQuestion, isUntimed])
 
   // Untimed mode: done practicing — go to results
   const handleDonePracticing = useCallback(() => {
