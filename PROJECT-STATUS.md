@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: June 26, 2026 (Sign in with Apple)*
+*Last updated: June 28, 2026 (Account deletion — Apple 5.1.1(v))*
 
 ## Completed Features
 
@@ -25,6 +25,7 @@
 - [x] Guest play mode
 - [x] Age verification (COPPA)
 - [x] Profile setup flow
+- [x] **Account deletion (Apple Guideline 5.1.1(v))** — `POST /api/account/delete` hard-deletes the caller's `auth.users` row (service role), explicitly cleaning up every referencing table first so NO ACTION foreign keys can't block the delete; client clears all `rally_*` localStorage. Key gotcha: creator challenges must be DELETED (not nulled) because the `challenges_protect_fields` BEFORE UPDATE trigger blocks the service role. PRs #13 + #14, live on prod.
 - [ ] Parent dashboard — route `/parent/[token]` shipped in code, but `parent_tokens` table never created in prod (migration 008 not applied). Non-functional until either migration runs or route is removed.
 
 ### Social & Competition
@@ -92,7 +93,7 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
-- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep); Guideline 4.8 (Sign in with Apple) now satisfied (web side built — see iOS Build Prep). Remaining risk: Google OAuth in webview. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
+- [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep); Guideline 4.8 (Sign in with Apple) now satisfied (web side built — see iOS Build Prep); Guideline 5.1.1(v) (account deletion) now satisfied (see Auth & Accounts), verified deleting a live account on-device. Remaining risk: Google OAuth in webview. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
 - [x] ~~iOS Universal Links (web side)~~ — AASA route + Capacitor deep-link handler implemented (branch `MaloneySandboxAI/universal-links`, not yet merged); native Xcode steps remain (see iOS Build Prep)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
 - [x] ~~Desmos production API key~~ — replaced with open-source stack (MathLive + math.js + function-plot); no recurring cost- [ ] **Decide on parent dashboard** — either apply migration 008 to create `parent_tokens` table (enables `/parent/[token]`), or remove the route from the app
