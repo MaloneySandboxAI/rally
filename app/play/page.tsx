@@ -392,6 +392,10 @@ function PlayPageContent() {
     try {
       await fetchNextQuestion()
     } finally {
+      // Deactivate the timer as part of the swap so the time-up effect can't
+      // fire a phantom timeout on the new question off the stale timeRemaining===0
+      // before the reset-timer effect re-initializes the clock for it.
+      setIsTimerActive(false)
       setCurrentQuestion(prev => prev + 1)
       setPendingAnswer(null)
       setSelectedAnswer(null)
@@ -440,7 +444,14 @@ function PlayPageContent() {
   // Handle time up in a separate effect to avoid stale closure
   useEffect(() => {
     if (isUntimed) return // no timeout in untimed practice
-    if (!isQuestionsReady || timeRemaining !== 0 || selectedAnswer !== null) return
+    // `isTimerActive` guard is critical: after an auto-advance the new question's
+    // timeRemaining is momentarily still 0 (stale from the question that just
+    // timed out) and selectedAnswer has been reset to null. Without this guard
+    // the effect runs before the reset-timer effect re-initializes the clock and
+    // fires a PHANTOM timeout on the fresh question — auto-failing and skipping it.
+    // advanceToNextQuestion sets isTimerActive=false during the swap; the
+    // reset-timer effect re-activates it (with a full timeRemaining) afterward.
+    if (!isQuestionsReady || !isTimerActive || timeRemaining !== 0 || selectedAnswer !== null) return
 
     // Timeout counts as wrong — drop difficulty
     if (subtopicParam) {
@@ -476,8 +487,8 @@ function PlayPageContent() {
       }
     }, 2000)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isQuestionsReady, timeRemaining, selectedAnswer, currentQuestion, question])
-  
+  }, [isQuestionsReady, isTimerActive, timeRemaining, selectedAnswer, currentQuestion, question])
+
   // Reset timer when moving to next question — use difficulty-based time
   useEffect(() => {
     if (!isQuestionsReady) return

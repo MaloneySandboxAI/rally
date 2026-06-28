@@ -71,8 +71,12 @@ Logged-in users have their seen questions tracked in `user_question_history` (Su
 - Stats, subtopic levels, streaks, and gems all adjust on round completion; daily gem cap applies for free users
 - Gem-earned summary card shown on results screen with breakdown by difficulty
 
-### Question transition (no double-render)
-Advancing to the next question (timeout auto-advance AND the "next" button) goes through `advanceToNextQuestion()` in `app/play/page.tsx`. It holds the `isLoadingNext` spinner up across the **entire** swap — `fetchNextQuestion()` only *appends* to `sessionQuestions`; the `currentQuestion` increment + `selectedAnswer`/`pendingAnswer` reset + spinner clear all land in one batched commit. This is intentional: previously challenge/group (pool) mode flipped `isLoadingNext` true→false synchronously inside `fetchNextQuestion`, so no spinner masked the swap and a frame could paint the next question while the timed-out answer reveal (`selectedAnswer === -1`) was still on screen. Don't move `isLoadingNext` management back into `fetchNextQuestion`.
+### Question transition + the phantom-timeout bug
+Advancing to the next question (timeout auto-advance AND the "next" button) goes through `advanceToNextQuestion()` in `app/play/page.tsx`. Two things matter here:
+
+1. **Phantom timeout (the real "double-advance" bug).** The time-up effect fires on `timeRemaining === 0 && selectedAnswer === null`. After a timeout auto-advance, the *new* question's `timeRemaining` is momentarily still `0` (stale from the question that just timed out) and `selectedAnswer` has been reset to `null`. Because the time-up effect is defined **before** the reset-timer effect, it ran first and fired a **phantom timeout** on the fresh question — instantly auto-failing and skipping it (console showed two back-to-back "Next question" logs with no input). Fix: the time-up effect is gated on **`isTimerActive`**, and `advanceToNextQuestion` sets `setIsTimerActive(false)` as part of the swap. The reset-timer effect (fires on `currentQuestion` change) re-activates the timer with a full `timeRemaining`, so the new question starts clean. **Don't remove the `isTimerActive` guard or the `setIsTimerActive(false)` in the advance.**
+
+2. **Transition masking.** `advanceToNextQuestion` holds the `isLoadingNext` spinner up across the **entire** swap — `fetchNextQuestion()` only *appends* to `sessionQuestions`; the `currentQuestion` increment + answer reset + `isTimerActive=false` + spinner clear all land in one batched commit. Don't move `isLoadingNext` management back into `fetchNextQuestion`.
 
 ### Gem display notes
 - The per-correct-answer floating popup (`FloatingGemIndicator`) shows that **single question's** value (challenge hard = 160, etc.) — accurate, not a bug. It can exceed the round summary because the **daily gem cap** trims the actual award (`Math.min(totalEarned, dailyGemsRemaining)`) below the sum of per-question values. Expected behavior.
