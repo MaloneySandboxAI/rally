@@ -907,7 +907,7 @@ function PlayPageContent() {
             <Diamond className="w-4 h-4 fill-white" />
             refill 5 hearts ({HEARTS_CONFIG.refillCost} gems)
           </button>
-          <
+          <a
             href="/home"
             className="bg-[#0a2d4a] text-[#85B7EB] rounded-2xl py-3 px-6 font-bold text-center"
           >
