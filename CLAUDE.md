@@ -339,6 +339,12 @@ Zero metered cost. Agent reasoning uses Claude Pro/Max subscription.
 - **Legal/account foundation (complete via FoxDog):** LLC formed, registered agent, EIN, DUNS, Apple Developer enrollment, store account.
 - **Full plan + Cowork handoff:** see `APP-STORE-LAUNCH-PLAN.md` at repo root.
 
+## Recently Completed (June 29, 2026)
+- [x] **Hearts never decremented / reset between rounds (#38, #42)** — root cause was the live state-sync layer, not the hearts module. `syncToServer`'s upsert wrote `subtopic_levels`/`diagnostic` columns that don't exist in `user_state` (migration 006), so every write failed silently and `syncFromServer` ("server wins", runs every navigation) restored the frozen value over the local decrement. Fixed by removing hearts/rounds from sync entirely — they're now localStorage-only (PRs #18 reorder attempt, then #19). See "Hearts (lives)".
+- [x] **Speed-bonus popup showed a hardcoded `+150 gems`** — `SpeedBonusAnimation` (`components/rally/countdown-timer.tsx`) had a literal; real solo speed values are 15/30/60. Now takes an `amount` prop fed `speedGemPerCorrect` (PR #19). See "Gem display notes".
+- [x] **Gems reset to 300 on navigation** — same broken sync (frozen-default server row clobbering local). First disabled the whole round-trip (PR #20), then…
+- [x] **Real cross-device state sync** (PR #22, commit `97135f9`, live on prod) — `lib/sync.ts` rewritten to last-write-wins: debounced full-snapshot write-through + `updated_at`-timestamped restore, with a **first-contact "richer side wins" guard** so a default/empty server row can never wipe real local data. Requires migration `026_user_state_sync_columns.sql` (**applied in prod by user June 29**). Hearts/rounds stay localStorage-only. See "State sync — last-write-wins".
+
 ## Recently Completed (June 28, 2026)
 - [x] Fixed **phantom timeout auto-skipping the next question** (commit `25bf1fa`, live on prod) — after a question timed out, the next one instantly auto-failed and skipped ahead. The time-up effect was re-firing on the fresh question's stale `timeRemaining===0` before the reset-timer effect re-initialized the clock. Gated the time-up effect on `isTimerActive` and set `isTimerActive=false` during the swap. See "Question transition + the phantom-timeout bug".
 - [x] Hardened the timeout→next-question transition (commit `2c3937a`, live on prod) — `advanceToNextQuestion()` holds the spinner across the whole swap as one batched commit; `fetchNextQuestion()` is now append-only.
