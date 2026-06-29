@@ -83,36 +83,20 @@ async function getUserId(): Promise<string | null> {
  * Call this after any state mutation to persist server-side
  */
 export async function syncToServer(): Promise<void> {
-  if (typeof window === "undefined") return
-  const userId = await getUserId()
-  if (!userId) return // guest or not logged in
-
-  try {
-    const supabase = createClient()
-    // NOTE: hearts/rounds are deliberately NOT synced to the server. They reset
-    // daily and are managed purely in localStorage by lib/hearts.ts. Round-
-    // tripping them through the server caused hearts to never decrement / reset
-    // between rounds: syncFromServer() ("server wins") runs on every navigation,
-    // so any stale server value would clobber the local decrement. See the
-    // "Hearts (lives)" section in CLAUDE.md.
-    const state = {
-      user_id: userId,
-      gems: parseInt(localStorage.getItem(KEYS.gems) || "300", 10),
-      streak: parseInt(localStorage.getItem(KEYS.streak) || "0", 10),
-      last_played: localStorage.getItem(KEYS.lastPlayed),
-      streak_freeze: localStorage.getItem(KEYS.streakFreeze) === "true",
-      stats_deep_dive: localStorage.getItem(KEYS.statsDeepDive) === "true",
-      stats: JSON.parse(localStorage.getItem(KEYS.stats) || "null"),
-      subtopic_levels: JSON.parse(localStorage.getItem(KEYS.subtopicLevels) || "null"),
-      diagnostic: JSON.parse(localStorage.getItem(KEYS.diagnostic) || "null"),
-      last_login_date: localStorage.getItem(KEYS.lastLogin),
-      updated_at: new Date().toISOString(),
-    }
-
-    await supabase.from("user_state").upsert(state, { onConflict: "user_id" })
-  } catch {
-    // Silently fail — local state is the source of truth until sync succeeds
-  }
+  // DISABLED — server sync is intentionally a no-op (localStorage is the single
+  // source of truth) until a real conflict-resolution layer is built in v1.1.
+  //
+  // Why: the previous upsert wrote `subtopic_levels` and `diagnostic` columns
+  // that do NOT exist in the `user_state` table (see migration 006), so every
+  // write failed silently — the server row stayed frozen at its DEFAULTS
+  // (gems = 300, streak = 0, etc.). syncFromServer() then restored those
+  // defaults over good local data on every navigation, resetting the user's
+  // gems to 300 (and streak to 0). Simply "fixing the columns" is NOT safe: the
+  // first load would read the frozen 300 and wipe every existing user's real
+  // gem balance once. So the whole round-trip is disabled here; lib/hearts.ts
+  // and lib/gem-context.tsx already persist to localStorage on their own.
+  // See "State sync is disabled" in CLAUDE.md.
+  return
 }
 
 /**
@@ -120,39 +104,13 @@ export async function syncToServer(): Promise<void> {
  * Call this on app load / login to restore server state
  */
 export async function syncFromServer(): Promise<boolean> {
-  if (typeof window === "undefined") return false
-  const userId = await getUserId()
-  if (!userId) return false
-
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("user_state")
-      .select("*")
-      .eq("user_id", userId)
-      .single()
-
-    if (error || !data) return false
-
-    // Server wins on conflicts — overwrite local state.
-    // hearts/rounds are intentionally excluded: they're localStorage-only and
-    // managed by lib/hearts.ts (daily reset). Restoring them here would clobber
-    // the local decrement on every navigation — the hearts "never decrement /
-    // reset between rounds" bug. See "Hearts (lives)" in CLAUDE.md.
-    localStorage.setItem(KEYS.gems, String(data.gems))
-    localStorage.setItem(KEYS.streak, String(data.streak))
-    if (data.last_played) localStorage.setItem(KEYS.lastPlayed, data.last_played)
-    localStorage.setItem(KEYS.streakFreeze, String(data.streak_freeze))
-    localStorage.setItem(KEYS.statsDeepDive, String(data.stats_deep_dive))
-    if (data.stats) localStorage.setItem(KEYS.stats, JSON.stringify(data.stats))
-    if (data.subtopic_levels) localStorage.setItem(KEYS.subtopicLevels, JSON.stringify(data.subtopic_levels))
-    if (data.diagnostic) localStorage.setItem(KEYS.diagnostic, JSON.stringify(data.diagnostic))
-    if (data.last_login_date) localStorage.setItem(KEYS.lastLogin, data.last_login_date)
-
-    return true
-  } catch {
-    return false
-  }
+  // DISABLED — see syncToServer() above. This used to overwrite local state
+  // ("server wins") on every navigation, but the server row is frozen at its
+  // defaults (writes always failed), so it was resetting users' gems to 300 and
+  // streaks to 0. Returning false leaves local state untouched (initSync treats
+  // false as "no server state — local stands as-is").
+  // See "State sync is disabled" in CLAUDE.md.
+  return false
 }
 
 /**
