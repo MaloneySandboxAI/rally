@@ -64,6 +64,23 @@ export function GemProvider({ children }: { children: ReactNode }) {
     syncToServer()
   }, [totalGems])
 
+  // When syncFromServer adopts a newer server balance (cross-device / reinstall),
+  // it writes localStorage and fires this event so the in-memory value updates
+  // live instead of waiting for a remount. Re-arm the initial-mount guard so the
+  // resulting state change doesn't immediately push the same value back up.
+  useEffect(() => {
+    function onRestored() {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored === null) return
+      const parsed = parseInt(stored, 10)
+      if (isNaN(parsed)) return
+      isInitialMount.current = true
+      setTotalGemsState(parsed)
+    }
+    window.addEventListener("rally-state-restored", onRestored)
+    return () => window.removeEventListener("rally-state-restored", onRestored)
+  }, [])
+
   const addGems = useCallback((amount: number) => {
     setTotalGemsState((prev) => prev + amount)
   }, [])
