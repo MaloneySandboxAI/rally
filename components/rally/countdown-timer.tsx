@@ -42,12 +42,12 @@ export function CountdownTimer({
   )
 }
 
-export function SpeedBonusAnimation() {
+export function SpeedBonusAnimation({ amount }: { amount: number }) {
   return (
     <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50 animate-in fade-in zoom-in duration-300">
       <div className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
         <Zap className="w-6 h-6 fill-white" />
-        <span className="text-lg font-extrabold">+150 gems</span>
+        <span className="text-lg font-extrabold">+{amount} gems</span>
         <span className="text-sm font-bold opacity-80">speed bonus!</span>
       </div>
     </div>

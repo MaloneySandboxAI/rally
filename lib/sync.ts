@@ -89,13 +89,15 @@ export async function syncToServer(): Promise<void> {
 
   try {
     const supabase = createClient()
+    // NOTE: hearts/rounds are deliberately NOT synced to the server. They reset
+    // daily and are managed purely in localStorage by lib/hearts.ts. Round-
+    // tripping them through the server caused hearts to never decrement / reset
+    // between rounds: syncFromServer() ("server wins") runs on every navigation,
+    // so any stale server value would clobber the local decrement. See the
+    // "Hearts (lives)" section in CLAUDE.md.
     const state = {
       user_id: userId,
       gems: parseInt(localStorage.getItem(KEYS.gems) || "300", 10),
-      hearts: parseInt(localStorage.getItem(KEYS.hearts) || "5", 10),
-      hearts_date: localStorage.getItem(KEYS.heartsDate),
-      rounds_today: parseInt(localStorage.getItem(KEYS.roundsToday) || "0", 10),
-      rounds_date: localStorage.getItem(KEYS.roundsDate),
       streak: parseInt(localStorage.getItem(KEYS.streak) || "0", 10),
       last_played: localStorage.getItem(KEYS.lastPlayed),
       streak_freeze: localStorage.getItem(KEYS.streakFreeze) === "true",
@@ -132,12 +134,12 @@ export async function syncFromServer(): Promise<boolean> {
 
     if (error || !data) return false
 
-    // Server wins on conflicts — overwrite local state
+    // Server wins on conflicts — overwrite local state.
+    // hearts/rounds are intentionally excluded: they're localStorage-only and
+    // managed by lib/hearts.ts (daily reset). Restoring them here would clobber
+    // the local decrement on every navigation — the hearts "never decrement /
+    // reset between rounds" bug. See "Hearts (lives)" in CLAUDE.md.
     localStorage.setItem(KEYS.gems, String(data.gems))
-    localStorage.setItem(KEYS.hearts, String(data.hearts))
-    if (data.hearts_date) localStorage.setItem(KEYS.heartsDate, data.hearts_date)
-    localStorage.setItem(KEYS.roundsToday, String(data.rounds_today))
-    if (data.rounds_date) localStorage.setItem(KEYS.roundsDate, data.rounds_date)
     localStorage.setItem(KEYS.streak, String(data.streak))
     if (data.last_played) localStorage.setItem(KEYS.lastPlayed, data.last_played)
     localStorage.setItem(KEYS.streakFreeze, String(data.streak_freeze))
