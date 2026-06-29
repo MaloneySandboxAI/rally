@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: June 28, 2026 (Gameplay fixes — timeout auto-skip + gem-display copy)*
+*Last updated: June 29, 2026 (Hearts/gem sync fixes + cross-device state sync)*
 
 ## Completed Features
 
@@ -55,6 +55,7 @@
 - [x] Stripe subscription integration
 - [x] Vercel auto-deploy from main branch
 - [x] Marketing landing page (polished, multi-section)
+- [x] Cross-device / reinstall state sync (gems, streak, stats, subtopic levels, diagnostic, target score) — last-write-wins via `lib/sync.ts` + `user_state` table; hearts intentionally localStorage-only
 
 ### Bug Fixes & QA (May 2026)
 - [x] H2H record inflation guard (prevent double-counting)
@@ -70,6 +71,12 @@
 - [x] **Phantom timeout auto-skipping the next question** (commit `25bf1fa`, live on prod) — when a question's timer hit 0, the next question loaded then *instantly* auto-failed itself and skipped ahead (console showed two back-to-back "Next question" fetches with no input). Root cause: the time-up effect fires on `timeRemaining===0 && selectedAnswer===null`, and right after an auto-advance the new question briefly inherited the stale `timeRemaining===0` before the (later-defined) reset-timer effect re-initialized the clock. Fix: gate the time-up effect on `isTimerActive` and set `isTimerActive=false` during the swap in `advanceToNextQuestion()`.
 - [x] **Timeout transition double-render** (commit `2c3937a`, live on prod) — hardened the question swap: `advanceToNextQuestion()` holds the `isLoadingNext` spinner across the entire swap (fetch + increment + answer reset) as one batched commit, so no frame can paint the next question while the timed-out answer reveal is still showing. Fixes the unmasked transition that was visible in challenge/group (pool) mode.
 - [x] **Gem milestone copy** (commit `2c3937a`, live on prod) — the big end-of-round `GemMilestoneCelebration` overlay (fires when crossing a *lifetime* total like 500) now reads "N total gems!" / "you've reached…" instead of "gems earned!", so it isn't misread as this round's earnings. Per-question gem popups and the daily-cap math were left unchanged (they're correct).
+
+### Bug Fixes & QA (June 29, 2026)
+- [x] **Hearts never decremented / reset between rounds (#38, #42)** — caught during TestFlight testing. Root cause was the live state-sync layer, not `lib/hearts.ts`: `syncToServer`'s upsert wrote `subtopic_levels`/`diagnostic` columns that don't exist in `user_state` (migration 006), so every server write failed silently; `syncFromServer` ("server wins," runs on every navigation) then restored the frozen value over the local decrement. Removed hearts/rounds from sync — now localStorage-only (PR #18 reorder attempt didn't work because the write never landed; PR #19 was the real fix).
+- [x] **Speed-bonus popup showed hardcoded `+150 gems`** (PR #19) — `SpeedBonusAnimation` had a literal; now takes an `amount` prop fed the real `speedGemPerCorrect` (solo speed values 15/30/60). This was the "+150 on a correct answer in solo" testers reported.
+- [x] **Gems reset to 300 on navigation** (PR #20) — same frozen-default-server-row clobber, hitting gems (and silently streak/stats). Disabled the broken sync round-trip as an immediate stop-gap.
+- [x] **Real cross-device state sync** (PR #22, commit `97135f9`, live on prod) — rewrote `lib/sync.ts` to last-write-wins: debounced full-snapshot write-through + `updated_at`-timestamped restore, with a first-contact "richer side wins" guard so a default/empty server row can never wipe real local data. Persists gems/streak/stats/subtopic-levels/diagnostic/target-score across devices + reinstall; hearts stay localStorage-only. **Migration `026_user_state_sync_columns.sql` applied in prod by user June 29.**
 
 ### App Store Launch — Legal/Account Foundation (June 26, 2026)
 - [x] Legal entity / LLC formed, registered agent address on file, EIN + DUNS obtained (via FoxDog)
