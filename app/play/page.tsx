@@ -728,14 +728,10 @@ function PlayPageContent() {
         recordGemsEarned(totalEarned)
       }
 
-      // Persist the hearts/rounds decrement BEFORE awarding gems. Both addGems
-      // and markRoundCompleted trigger syncToServer(), which snapshots the
-      // hearts value straight from localStorage. If the decrement ran after
-      // them, the server would receive the stale pre-decrement count and then
-      // overwrite the local decrement on the next syncFromServer() — auth-gate
-      // runs that on every navigation. That round-trip was the root cause of
-      // hearts "never decrementing" (#38) and "resetting between rounds" (#42).
-      // See "Hearts (lives)" in CLAUDE.md.
+      // Deduct hearts + count the round at the end of solo play. Hearts are
+      // localStorage-only (see lib/hearts.ts / lib/sync.ts) — they are NOT
+      // synced to the server, so this survives navigation. See "Hearts (lives)"
+      // in CLAUDE.md.
       if (!isChallenge) {
         incrementRoundsToday()
         // Deduct hearts at end of round — 1 per wrong answer
@@ -1014,7 +1010,7 @@ function PlayPageContent() {
   return (
     <div className="h-[100dvh] bg-[#021f3d] flex flex-col overflow-hidden">
       {/* Speed Bonus Animation */}
-      {showSpeedBonus && !isUntimed && <SpeedBonusAnimation />}
+      {showSpeedBonus && !isUntimed && <SpeedBonusAnimation amount={speedGemPerCorrect} />}
 
       {/* Header — compact */}
       <header className="flex-shrink-0 bg-[#021f3d] px-4 pt-3 pb-2">
