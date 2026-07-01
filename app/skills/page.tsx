@@ -144,7 +144,7 @@ function SkillMapContent() {
       <div className="flex-1 px-4 pb-24 space-y-2">
         {subtopics.map(sub => {
           const levelNum = sub.level.level
-          const levelLabel = LEVEL_LABELS[levelNum] || "beginner"
+          const levelLabel = LEVEL_LABELS[levelNum] || "Level 1"
           const levelColor = LEVEL_COLORS[levelNum] || "#85B7EB"
           const accuracy = sub.level.totalAnswered > 0
             ? Math.round((sub.level.totalCorrect / sub.level.totalAnswered) * 100)
@@ -169,7 +169,7 @@ function SkillMapContent() {
                       color: levelColor,
                     }}
                   >
-                    lv {levelNum} · {levelLabel}
+                    {levelLabel}
                   </span>
                 </div>
               </div>

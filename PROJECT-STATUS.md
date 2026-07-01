@@ -1,6 +1,6 @@
 # Rally Project Status & Roadmap
 
-*Last updated: June 29, 2026 (Hearts/gem sync fixes + cross-device state sync)*
+*Last updated: June 30, 2026 (Adaptive difficulty rework — PR #24, awaiting review)*
 
 ## Completed Features
 
@@ -72,6 +72,11 @@
 - [x] **Timeout transition double-render** (commit `2c3937a`, live on prod) — hardened the question swap: `advanceToNextQuestion()` holds the `isLoadingNext` spinner across the entire swap (fetch + increment + answer reset) as one batched commit, so no frame can paint the next question while the timed-out answer reveal is still showing. Fixes the unmasked transition that was visible in challenge/group (pool) mode.
 - [x] **Gem milestone copy** (commit `2c3937a`, live on prod) — the big end-of-round `GemMilestoneCelebration` overlay (fires when crossing a *lifetime* total like 500) now reads "N total gems!" / "you've reached…" instead of "gems earned!", so it isn't misread as this round's earnings. Per-question gem popups and the daily-cap math were left unchanged (they're correct).
 
+### Adaptive Difficulty Rework (June 30, 2026)
+- [x] **Threshold + fast-track + safety net per subtopic** (PR #24, commit `f2eded8`, **merged + live on prod**) — fixes the confirmed over-aggressive promotion bug (one correct answer instantly bumped easy→medium; a user at 33% easy accuracy was promoted). Replaced the per-question instant bump with a rolling-window system on the existing per-subtopic 1–5 levels: `recordAttempt()` promotes on 4-in-a-row OR ≥75%/6, demotes on 4-wrong OR <40%/6 (new-user floor: no demotion until >20 lifetime attempts), reset window+streak on any change. Promotions toast, demotions silent. **Challenges now count** toward leveling (each pool question feeds its subtopic — a key differentiator) while keeping the competitive shared-pool bump; **untimed doesn't count** but nudges "play timed to level up" when a run would have promoted.
+- [ ] **Level labels + mapping retune** (follow-up PR, branch `MaloneySandboxAI/tier-promotion-rules`) — renamed the 5 tiers from beginner/developing/… to plain **Level 1–Level 5** (`LEVEL_LABELS`, surfaced in the level-up toast, skills, category rings, AP page, parent dashboard). Retuned `levelToDifficulty` so **Level 2 leans medium (60% medium / 40% easy)** instead of easy — fixes the "I leveled up but got an easy question" confusion (an easy-lean L2 made level-ups feel like nothing changed). Only 3 underlying question difficulties exist; the 5 tiers are gradations with L2/L4 as blends.
+- [ ] **Interactive promote/demote/nudge testing still pending** — walk the cases in a browser (needs a real Supabase key locally, now added — see Technical Debt).
+
 ### Bug Fixes & QA (June 29, 2026)
 - [x] **Hearts never decremented / reset between rounds (#38, #42)** — caught during TestFlight testing. Root cause was the live state-sync layer, not `lib/hearts.ts`: `syncToServer`'s upsert wrote `subtopic_levels`/`diagnostic` columns that don't exist in `user_state` (migration 006), so every server write failed silently; `syncFromServer` ("server wins," runs on every navigation) then restored the frozen value over the local decrement. Removed hearts/rounds from sync — now localStorage-only (PR #18 reorder attempt didn't work because the write never landed; PR #19 was the real fix).
 - [x] **Speed-bonus popup showed hardcoded `+150 gems`** (PR #19) — `SpeedBonusAnimation` had a literal; now takes an `amount` prop fed the real `speedGemPerCorrect` (solo speed values 15/30/60). This was the "+150 on a correct answer in solo" testers reported.
@@ -105,6 +110,7 @@
 ## In Progress / Pending
 
 ### Immediate (This Sprint)
+- [ ] **Interactively test adaptive difficulty** — PR #24 is merged + live; still walk the promote (threshold + 4-in-a-row), silent-demote, 20-question floor, per-subtopic isolation, untimed nudge, and challenge-counts cases in a browser. Merge the labels + mapping-retune follow-up PR alongside. Local testing needs the real Supabase anon key in `.env.local` (now added — see Technical Debt).
 - [ ] **iOS App Store launch** — execute `APP-STORE-LAUNCH-PLAN.md` in Cowork: Capacitor wrap → TestFlight → submit. Guideline 3.1.1 (Stripe-vs-Apple-IAP) mitigated for v1 by hiding upgrade UI on iOS (see App Store Launch — iOS Build Prep); Guideline 4.8 (Sign in with Apple) now satisfied (web side built — see iOS Build Prep); Guideline 5.1.1(v) (account deletion) now satisfied (see Auth & Accounts), verified deleting a live account on-device. Remaining risk: Google OAuth in webview. v1.1: native StoreKit IAP, then restore upgrade UI routed through IAP.
 - [x] ~~iOS Universal Links (web side)~~ — AASA route + Capacitor deep-link handler implemented (branch `MaloneySandboxAI/universal-links`, not yet merged); native Xcode steps remain (see iOS Build Prep)
 - [x] ~~Push landing page to production~~ — landed on main; live at rallyplaylive.com
@@ -144,6 +150,7 @@
 - No automated tests
 - No CI/CD beyond Vercel auto-deploy
 - No Supabase CLI — migrations applied manually via dashboard SQL Editor; prod can drift from `supabase/migrations/` file history (some files pre-applied in prod, some never run). All new migrations must be idempotent — see CLAUDE.md > Database Migrations.
+- **Conductor workspace `.env.local` is a scrubbed template** — the Supabase `anon` key is a literal placeholder (`eyJ...`), so all client queries 401 and the app can't load data locally ("couldn't load questions"). Also affects the service-role key and Stripe/PostHog/etc. To run the app locally, paste the real anon key (dashboard → Settings → API, project `rmbzpxvsejbugsgflqsv`, or Vercel) into `.env.local`. Production is unaffected (real keys live in Vercel). Note: `pnpm install`/`pnpm dev` need the per-command network sandbox disabled.
 
 ---
 

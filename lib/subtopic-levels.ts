@@ -9,9 +9,9 @@
  *
  * Level → Difficulty mapping:
  *   1 = easy only
- *   2 = easy + medium mix (weighted toward easy)
+ *   2 = medium + easy mix (weighted toward medium — leveling up feels decisive)
  *   3 = medium only
- *   4 = medium + hard mix (weighted toward hard)
+ *   4 = hard + medium mix (weighted toward hard)
  *   5 = hard only
  *
  * Storage: localStorage (instant) + Supabase user_state.subtopic_levels (persistent)
@@ -71,13 +71,13 @@ export const STREAK_DEMOTE = 4
  */
 export const DEMOTE_FLOOR = 20
 
-/** Level labels for UI display */
+/** Level labels for UI display — simple numeric tiers (1–5). */
 export const LEVEL_LABELS: Record<number, string> = {
-  1: "beginner",
-  2: "developing",
-  3: "intermediate",
-  4: "advanced",
-  5: "mastery",
+  1: "Level 1",
+  2: "Level 2",
+  3: "Level 3",
+  4: "Level 4",
+  5: "Level 5",
 }
 
 /** Level colors for UI display */
@@ -96,7 +96,7 @@ export const LEVEL_COLORS: Record<number, string> = {
 export function levelToDifficulty(level: number): { primary: string; secondary?: string } {
   switch (level) {
     case 1: return { primary: "easy" }
-    case 2: return { primary: "easy", secondary: "medium" }
+    case 2: return { primary: "medium", secondary: "easy" }
     case 3: return { primary: "medium" }
     case 4: return { primary: "hard", secondary: "medium" }
     case 5: return { primary: "hard" }

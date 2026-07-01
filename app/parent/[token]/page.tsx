@@ -201,7 +201,7 @@ export default function ParentDashboardPage({ params }: { params: { token: strin
                   {/* Subtopic breakdown */}
                   <div className="space-y-2">
                     {(subtopicData.length > 0 ? subtopicData : subtopics.map(s => ({ id: s.id, label: s.label, level: 1 }))).map(sub => {
-                      const levelLabel = LEVEL_LABELS[sub.level] || "beginner"
+                      const levelLabel = LEVEL_LABELS[sub.level] || "Level 1"
                       const levelColor = LEVEL_COLORS[sub.level] || "#85B7EB"
                       return (
                         <div key={sub.id}>
@@ -211,7 +211,7 @@ export default function ParentDashboardPage({ params }: { params: { token: strin
                               className="text-[9px] font-bold"
                               style={{ color: levelColor }}
                             >
-                              lv {sub.level} · {levelLabel}
+                              {levelLabel}
                             </span>
                           </div>
                           <LevelBar level={sub.level} />
