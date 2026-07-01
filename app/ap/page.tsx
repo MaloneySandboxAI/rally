@@ -56,7 +56,7 @@ export default function APTestsPage() {
             const pct = accuracy[cat]
             const progress = avg / MAX_LEVEL
             const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
-            const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+            const levelLabel = LEVEL_LABELS[Math.round(avg)] || "Level 1"
 
             return (
               <Link

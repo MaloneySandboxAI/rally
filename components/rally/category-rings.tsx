@@ -48,7 +48,7 @@ export function CategoryRings() {
       const pct = accuracy[cat]
       const progress = avg / MAX_LEVEL // 0–1
       const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
-      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "Level 1"
 
       return (
         <Link
@@ -149,7 +149,7 @@ export function APCategoryRings() {
       const pct = accuracy[cat]
       const progress = avg / MAX_LEVEL
       const subtopicCount = (SUBTOPIC_MAP[cat] || []).length
-      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "beginner"
+      const levelLabel = LEVEL_LABELS[Math.round(avg)] || "Level 1"
 
       return (
         <Link
