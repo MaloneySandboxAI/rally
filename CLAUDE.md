@@ -85,8 +85,27 @@ Logged-in users have their seen questions tracked in `user_question_history` (Su
 - No timer, no hearts/lives, no speed bonus; earns gems at solo rate (same as timed)
 - Endless play — user taps "done" in header when finished
 - Full explanation shown after each answer (not line-clamped)
-- Stats, subtopic levels, streaks, and gems all adjust on round completion; daily gem cap applies for free users
+- Stats, streaks, and gems all adjust on round completion; daily gem cap applies for free users
+- **Does NOT count toward subtopic leveling** (see "Adaptive difficulty"). Instead, when an untimed run would have earned a promotion, a mid-round toast nudges the user to timed mode ("play timed mode to level up!"). Uses a session-local shadow window; never persists.
 - Gem-earned summary card shown on results screen with breakdown by difficulty
+
+### Adaptive difficulty (per-subtopic levels)
+Each subtopic (not category) has an independent level **1–5** for the signed-in user, mapping to question difficulty via `levelToDifficulty` (L1 easy → L5 hard; L2/L4 are mixes). The diagnostic seeds starting levels; live play adjusts them. State lives in `lib/subtopic-levels.ts`, localStorage key `rally_subtopic_levels`, and is server-synced via `user_state.subtopic_levels` (rides along in the sync snapshot — see "State sync").
+
+**Adjusted PER ATTEMPT** (not per round) via `recordAttempt(subtopicId, isCorrect)`, called once per graded question from `applyAdaptiveAttempt` in `app/play/page.tsx`. Rolling window + streak are tracked **per subtopic × current level** (`recentAttempts: boolean[]` ≤6, `streak: number` where + = correct run, − = wrong run).
+
+- **Promote** (level +1): 4 correct in a row (fast-track), OR ≥75% across a full 6-attempt window.
+- **Demote** (level −1): 4 wrong in a row (safety net), OR <40% across a full window. **Suppressed until >20 lifetime attempts** in the subtopic (new-user floor). Promotions are never floored.
+- **Reset on change**: `recentAttempts` + `streak` clear to empty on any level change; lifetime totals persist.
+- **UI**: promotions fire a `toast.success("💪 leveled up to <label>!")`; **demotions are silent** (no message — users shouldn't feel called out).
+
+**Which modes count:**
+- **Solo timed (with subtopic)**: counts; the level drives the next question's difficulty. This replaced the old aggressive within-round bump (one correct answer instantly jumped easy→medium) — the confirmed bug.
+- **Challenges**: **count** — each answered pool question feeds `recordAttempt(question.subtopic, …)`, so competing is a real way to level up (a key differentiator). The competitive shared-pool difficulty bump (both players escalate identically) is unchanged; leveling rides on top of it.
+- **Untimed practice**: does NOT count (see above — shadow nudge only).
+- **Solo timed without a subtopic** (e.g. "practice weakest category" links): no persistent level exists, so it keeps the legacy within-round easy↔medium↔hard bump; nothing persisted.
+
+Tuning constants (`WINDOW_SIZE`, `PROMOTE_RATIO`, `DEMOTE_RATIO`, `STREAK_PROMOTE`, `STREAK_DEMOTE`, `DEMOTE_FLOOR`) are all in `lib/subtopic-levels.ts` — easy to nudge.
 
 ### Question transition + the phantom-timeout bug
 Advancing to the next question (timeout auto-advance AND the "next" button) goes through `advanceToNextQuestion()` in `app/play/page.tsx`. Two things matter here:

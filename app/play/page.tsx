@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/client"
 import { SUBTOPIC_MAP } from "@/lib/diagnostic"
 import { StreakCelebration } from "@/components/rally/streak-celebration"
 import { haptics } from "@/lib/haptics"
-import { getSubtopicLevel, pickDifficultyForLevel, adjustSubtopicLevel } from "@/lib/subtopic-levels"
+import { getSubtopicLevel, pickDifficultyForLevel, recordAttempt, wouldPromote, pushAttempt, LEVEL_LABELS } from "@/lib/subtopic-levels"
 import { updateParentSnapshot } from "@/lib/parent-dashboard"
 import { MathText } from "@/components/rally/math-text"
 import { ALL_CATEGORIES } from "@/lib/categories"
@@ -136,6 +136,12 @@ function PlayPageContent() {
   // Within-round adaptive difficulty — uses useRef so it's never lost on re-render
   // and NEVER depends on localStorage. Resets to 'easy' at the start of every round.
   const difficultyRef = useRef<string>("easy")
+
+  // Untimed practice does NOT count toward subtopic leveling. We still run a
+  // session-local shadow of the rolling window + streak so we can nudge the user
+  // ("play timed to level up!") the moment their answers WOULD have earned a
+  // promotion. Never persisted. Reset after each nudge so it can fire again.
+  const untimedShadowRef = useRef<{ recentAttempts: boolean[]; streak: number }>({ recentAttempts: [], streak: 0 })
 
   // Current Supabase user id, resolved once per round and reused by both the
   // initial fetch and fetchNextQuestion so getOneQuestion can layer the
@@ -420,6 +426,73 @@ function PlayPageContent() {
     { letter: "D", text: question.option_d },
   ] : []
 
+  // Apply ONE graded attempt to adaptive difficulty. Owns both the next-question
+  // difficulty and the persistent per-subtopic level. Called once per graded
+  // question (answer confirm + timeout). See "Adaptive difficulty" in CLAUDE.md.
+  //
+  // - Untimed practice: never levels up. Runs a session-local shadow window and
+  //   nudges toward timed mode the moment a run WOULD have promoted. Difficulty
+  //   stays pinned to the persisted level.
+  // - Challenges: keep the competitive shared-pool bump (both players escalate
+  //   identically) AND feed each question's subtopic into the persistent level —
+  //   competing is a real way to level up (key differentiator).
+  // - Solo timed w/ subtopic: threshold + fast-track + safety-net drive the
+  //   level; difficulty follows the (possibly new) level.
+  // - Solo timed w/o subtopic (e.g. "practice weakest category"): legacy
+  //   within-round bump, nothing persisted.
+  const applyAdaptiveAttempt = useCallback((isCorrect: boolean) => {
+    const bumpUp = () => {
+      if (difficultyRef.current === "easy") difficultyRef.current = "medium"
+      else if (difficultyRef.current === "medium") difficultyRef.current = "hard"
+    }
+    const bumpDown = () => {
+      if (difficultyRef.current === "hard") difficultyRef.current = "medium"
+      else if (difficultyRef.current === "medium") difficultyRef.current = "easy"
+    }
+    const celebrate = (newLevel: number) =>
+      toast.success(`💪 leveled up to ${LEVEL_LABELS[newLevel]}!`, { duration: 4000 })
+
+    // UNTIMED — no leveling; nudge toward timed mode on promotion-worthy runs.
+    if (isUntimed) {
+      const level = subtopicParam ? getSubtopicLevel(subtopicParam).level : 1
+      if (subtopicParam) {
+        const next = pushAttempt(untimedShadowRef.current.recentAttempts, untimedShadowRef.current.streak, isCorrect)
+        untimedShadowRef.current = next
+        if (wouldPromote(next.recentAttempts, next.streak, level)) {
+          toast("⏱️ play timed mode to level up!", {
+            description: "untimed practice doesn’t count toward leveling",
+            duration: 5000,
+          })
+          untimedShadowRef.current = { recentAttempts: [], streak: 0 }
+        }
+      }
+      difficultyRef.current = pickDifficultyForLevel(level)
+      return
+    }
+
+    // CHALLENGE — competitive shared-pool bump + real progression per subtopic.
+    if (isChallenge) {
+      if (isCorrect) bumpUp(); else bumpDown()
+      const sid = question?.subtopic
+      if (sid) {
+        const res = recordAttempt(sid, isCorrect)
+        if (res.promoted) celebrate(res.newLevel)
+      }
+      return
+    }
+
+    // SOLO TIMED with a subtopic — threshold system drives level + difficulty.
+    if (subtopicParam) {
+      const res = recordAttempt(subtopicParam, isCorrect)
+      if (res.promoted) celebrate(res.newLevel) // demotions are silent by design
+      difficultyRef.current = pickDifficultyForLevel(res.newLevel)
+      return
+    }
+
+    // SOLO TIMED without a subtopic — legacy within-round bump only.
+    if (isCorrect) bumpUp(); else bumpDown()
+  }, [isUntimed, isChallenge, subtopicParam, question])
+
   // Timer effect (disabled in untimed mode)
   useEffect(() => {
     if (isUntimed) return // no timer in untimed practice
@@ -453,17 +526,11 @@ function PlayPageContent() {
     // reset-timer effect re-activates it (with a full timeRemaining) afterward.
     if (!isQuestionsReady || !isTimerActive || timeRemaining !== 0 || selectedAnswer !== null) return
 
-    // Timeout counts as wrong — drop difficulty
-    if (subtopicParam) {
-      const subLevel = getSubtopicLevel(subtopicParam)
-      difficultyRef.current = pickDifficultyForLevel(Math.max(subLevel.level - 1, 1))
-    } else {
-      if (difficultyRef.current === "hard") {
-        difficultyRef.current = "medium"
-      } else if (difficultyRef.current === "medium") {
-        difficultyRef.current = "easy"
-      }
-    }
+    // Timeout counts as a wrong graded attempt for adaptive difficulty. Never
+    // fires in untimed (guarded at the top of this effect); in solo it may
+    // demote (silently), in challenges it drops the shared-pool difficulty and
+    // feeds the subtopic level.
+    applyAdaptiveAttempt(false)
 
     // Record wrong answer due to timeout (hearts deducted at end of round, not mid-game)
     setAnswerResults(prev => [...prev, {
@@ -530,18 +597,9 @@ function PlayPageContent() {
 
       const gemsForThis = gemsForAnswer(question?.difficulty || "easy", isChallenge, isSpeedBonus)
 
-      // Adaptive difficulty: bump UP on correct answer
-      // For subtopic mode, re-pick from level (stays in range); for generic, escalate
-      if (subtopicParam) {
-        const subLevel = getSubtopicLevel(subtopicParam)
-        difficultyRef.current = pickDifficultyForLevel(Math.min(subLevel.level + 1, 5))
-      } else {
-        if (difficultyRef.current === "easy") {
-          difficultyRef.current = "medium"
-        } else if (difficultyRef.current === "medium") {
-          difficultyRef.current = "hard"
-        }
-      }
+      // Adaptive difficulty — threshold system / challenge progression / untimed
+      // shadow nudge. See applyAdaptiveAttempt.
+      applyAdaptiveAttempt(true)
 
       // Record correct answer
       setAnswerResults(prev => [...prev, {
@@ -562,17 +620,9 @@ function PlayPageContent() {
       setShowGemAnimation(true)
       setTimeout(() => setShowGemAnimation(false), 1000)
     } else {
-      // Adaptive difficulty: drop DOWN on wrong answer
-      if (subtopicParam) {
-        const subLevel = getSubtopicLevel(subtopicParam)
-        difficultyRef.current = pickDifficultyForLevel(Math.max(subLevel.level - 1, 1))
-      } else {
-        if (difficultyRef.current === "hard") {
-          difficultyRef.current = "medium"
-        } else if (difficultyRef.current === "medium") {
-          difficultyRef.current = "easy"
-        }
-      }
+      // Adaptive difficulty — may demote (silently) / drop challenge difficulty.
+      // See applyAdaptiveAttempt.
+      applyAdaptiveAttempt(false)
 
       // Record wrong answer (hearts deducted at end of round, not mid-game)
       haptics.heavy()
@@ -585,7 +635,7 @@ function PlayPageContent() {
         chosenAnswerIndex: pendingAnswer,
       }])
     }
-  }, [pendingAnswer, selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect])
+  }, [pendingAnswer, selectedAnswer, correctAnswerIndex, currentQuestion, question, isChallenge, baseGemPerCorrect, speedGemPerCorrect, applyAdaptiveAttempt])
 
   const handleNextQuestion = useCallback(async () => {
     if (isUntimed) {
@@ -675,14 +725,9 @@ function PlayPageContent() {
           answerResults,
         })
         if (unlockMessage) toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
-        if (subtopicParam && totalAnswered >= 3) {
-          const levelResult = adjustSubtopicLevel({
-            subtopicId: subtopicParam,
-            correct: correctCount,
-            total: totalAnswered,
-          })
-          if (levelResult.message) toast.success(levelResult.message, { duration: 4000 })
-        }
+        // NOTE: untimed practice does NOT adjust subtopic levels — leveling is
+        // per-attempt (applyAdaptiveAttempt) and untimed is intentionally
+        // excluded. A "play timed to level up" nudge fires mid-round instead.
         updateParentSnapshot()
         setGemsAwarded(true)
         if (wasCapped) {
@@ -771,17 +816,9 @@ function PlayPageContent() {
       if (unlockMessage) {
         toast.success(`\u{1F3AF} ${unlockMessage}`, { duration: 5000 })
       }
-      // Adjust subtopic level after solo round (not challenges)
-      if (!isChallenge && subtopicParam) {
-        const levelResult = adjustSubtopicLevel({
-          subtopicId: subtopicParam,
-          correct: correctCount,
-          total: TOTAL_QUESTIONS,
-        })
-        if (levelResult.message) {
-          toast.success(levelResult.message, { duration: 4000 })
-        }
-      }
+      // NOTE: subtopic levels are adjusted PER ATTEMPT during the round now
+      // (applyAdaptiveAttempt — threshold + fast-track + safety net), for both
+      // solo timed and challenges. No end-of-round adjustment here.
       // Update parent dashboard snapshot (best-effort, non-blocking)
       updateParentSnapshot()
       setGemsAwarded(true)
