@@ -3,14 +3,12 @@ name: Supabase keep-alive
 # Pings the Rally AI Supabase project on a schedule so it doesn't
 # get auto-paused by the free tier's 7-day inactivity rule.
 #
-# Runs every Monday and Thursday at 14:00 UTC (≈9am ET / 6am PT),
-# which keeps the gap well under 7 days even if one run fails.
-# Also supports manual triggering from the Actions tab.
-
+# Runs daily at 14:00 UTC (≈9am ET / 6am PT), keeping the project well under the free tier's
+# 7-day inactivity limit. Manual runs also supported from the Actions tab.
 on:
   schedule:
-    - cron: '0 14 * * 1,4'
-  workflow_dispatch: {}
+      - cron: '0 14 * * *'  # Runs daily at 14:00 UTC (≈9am ET / 6am PT)
+      workflow_dispatch: {}
 
 jobs:
   ping:
